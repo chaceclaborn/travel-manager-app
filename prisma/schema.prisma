@@ -1,0 +1,311 @@
+// Prisma Schema for Travel Manager
+// Database: Supabase (PostgreSQL)
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── User & Auth ───
+
+model User {
+  id        String   @id // matches Supabase auth UUID
+  email     String   @unique
+  name      String?
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  trips       Trip[]
+  vendors     Vendor[]
+  clients     Client[]
+  attachments TripAttachment[]
+  auditLogs   AuditLog[]
+  expenses        Expense[]
+  bookings        Booking[]
+  checklists      ChecklistItem[]
+  tripNotes       TripNote[]
+  travelDocuments TravelDocument[]
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  action    String   // sign_in, sign_out, data_export, account_delete
+  ipAddress String?
+  userAgent String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// ─── Travel Manager ───
+
+enum AttachmentCategory {
+  FLIGHT
+  HOTEL
+  CAR_RENTAL
+  OTHER
+}
+
+enum TripStatus {
+  DRAFT
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum VendorCategory {
+  SUPPLIER
+  HOTEL
+  TRANSPORT
+  RESTAURANT
+  OTHER
+}
+
+enum ExpenseCategory {
+  FLIGHT
+  HOTEL
+  TRANSPORT
+  FOOD
+  ACTIVITIES
+  INSURANCE
+  VISA
+  SHOPPING
+  OTHER
+}
+
+enum BookingType {
+  FLIGHT
+  HOTEL
+  CAR_RENTAL
+  TRAIN
+  BUS
+  OTHER
+}
+
+enum DocumentType {
+  PASSPORT
+  VISA
+  INSURANCE
+  DRIVERS_LICENSE
+  VACCINATION
+  OTHER
+}
+
+model Trip {
+  id          String          @id @default(cuid())
+  userId      String
+  user        User            @relation(fields: [userId], references: [id])
+  title       String
+  destination String?
+  startDate   DateTime?
+  endDate     DateTime?
+  status      TripStatus      @default(DRAFT)
+  notes       String?
+  budget      Float?
+  vendors     TripVendor[]
+  clients     TripClient[]
+  itinerary   ItineraryItem[]
+  attachments TripAttachment[]
+  latitude     Float?
+  longitude    Float?
+  expenses     Expense[]
+  bookings     Booking[]
+  checklists   ChecklistItem[]
+  tripNotes    TripNote[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([userId])
+}
+
+model TripAttachment {
+  id          String             @id @default(cuid())
+  tripId      String
+  trip        Trip               @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User               @relation(fields: [userId], references: [id])
+  fileName    String
+  fileSize    Int
+  mimeType    String
+  storagePath String
+  category    AttachmentCategory @default(OTHER)
+  createdAt   DateTime           @default(now())
+
+  @@index([tripId])
+  @@index([userId])
+}
+
+model Vendor {
+  id       String         @id @default(cuid())
+  userId   String
+  user     User           @relation(fields: [userId], references: [id])
+  name     String
+  category VendorCategory @default(SUPPLIER)
+  email    String?
+  phone    String?
+  address  String?
+  city     String?
+  state    String?
+  website  String?
+  notes    String?
+  trips          TripVendor[]
+  itineraryItems ItineraryItem[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([userId])
+}
+
+model Client {
+  id      String       @id @default(cuid())
+  userId  String
+  user    User         @relation(fields: [userId], references: [id])
+  name    String
+  company String?
+  email   String?
+  phone   String?
+  notes   String?
+  trips          TripClient[]
+  itineraryItems ItineraryItem[]
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@index([userId])
+}
+
+model TripVendor {
+  id       String @id @default(cuid())
+  trip     Trip   @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  tripId   String
+  vendor   Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  vendorId String
+  notes    String?
+
+  @@unique([tripId, vendorId])
+}
+
+model TripClient {
+  id       String @id @default(cuid())
+  trip     Trip   @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  tripId   String
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clientId String
+  notes    String?
+
+  @@unique([tripId, clientId])
+}
+
+model ItineraryItem {
+  id        String   @id @default(cuid())
+  trip      Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  tripId    String
+  title     String
+  date      DateTime
+  endDate   DateTime? // for multi-day/overnight events
+  startTime String?
+  endTime   String?
+  location  String?
+  notes     String?
+  sortOrder Int      @default(0)
+  vendorId  String?
+  vendor    Vendor?  @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  clientId  String?
+  client    Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tripId, date])
+}
+
+model Expense {
+  id          String          @id @default(cuid())
+  tripId      String
+  trip        Trip            @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User            @relation(fields: [userId], references: [id])
+  amount      Float
+  currency    String          @default("USD")
+  category    ExpenseCategory @default(OTHER)
+  description String?
+  date        DateTime
+  receiptPath String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  @@index([tripId])
+  @@index([userId])
+}
+
+model Booking {
+  id              String      @id @default(cuid())
+  tripId          String
+  trip            Trip        @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User        @relation(fields: [userId], references: [id])
+  type            BookingType
+  provider        String
+  confirmationNum String?
+  startDateTime   DateTime?
+  endDateTime     DateTime?
+  location        String?
+  endLocation     String?
+  seat            String?
+  notes           String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  @@index([tripId])
+  @@index([userId])
+}
+
+model ChecklistItem {
+  id        String   @id @default(cuid())
+  tripId    String
+  trip      Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  label     String
+  checked   Boolean  @default(false)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  @@index([tripId])
+  @@index([userId])
+}
+
+model TripNote {
+  id        String   @id @default(cuid())
+  tripId    String
+  trip      Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  date      DateTime
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([tripId])
+  @@index([userId])
+}
+
+model TravelDocument {
+  id         String       @id @default(cuid())
+  userId     String
+  user       User         @relation(fields: [userId], references: [id])
+  type       DocumentType
+  label      String
+  number     String?
+  issueDate  DateTime?
+  expiryDate DateTime?
+  country    String?
+  filePath   String?
+  notes      String?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  @@index([userId])
+}
