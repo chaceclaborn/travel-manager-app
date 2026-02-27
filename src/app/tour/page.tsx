@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
   MapPin,
@@ -15,9 +16,16 @@ import {
   Download,
   Trash2,
   Plane,
+  AlertCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/travelmanager/useAuth';
+
+const errorMessages: Record<string, string> = {
+  session_expired: 'Your session expired. Please sign in again.',
+  email_conflict: 'There was a conflict with your account. Please try again or contact support.',
+  auth: 'There was a problem signing in. Please try again.',
+};
 
 const container = {
   hidden: { opacity: 0 },
@@ -75,6 +83,9 @@ const securityPoints = [
 
 export default function TourPage() {
   const { signInWithGoogle } = useAuth();
+  const searchParams = useSearchParams();
+  const errorCode = searchParams.get('error');
+  const errorMessage = errorCode ? errorMessages[errorCode] ?? errorMessages.auth : null;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-amber-50/60 via-white to-slate-50">
@@ -84,6 +95,16 @@ export default function TourPage() {
         animate="show"
         className="mx-auto max-w-5xl px-4 py-16 sm:px-6 lg:px-8"
       >
+        {errorMessage && (
+          <motion.div
+            variants={item}
+            className="mb-6 flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3"
+          >
+            <AlertCircle className="size-5 shrink-0 text-red-500" />
+            <p className="text-sm text-red-700">{errorMessage}</p>
+          </motion.div>
+        )}
+
         {/* Hero Section */}
         <motion.div variants={item} className="text-center pt-8 pb-16">
           <div className="mx-auto mb-6 flex size-16 items-center justify-center rounded-2xl bg-amber-100">

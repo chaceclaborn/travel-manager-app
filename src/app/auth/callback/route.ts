@@ -7,34 +7,64 @@ export async function GET(request: Request) {
   const code = searchParams.get('code');
 
   if (!code) {
-    return NextResponse.redirect(`${origin}/tour?error=auth`);
+    return NextResponse.redirect(`${origin}/tour?error=session_expired`);
   }
 
   try {
     const supabase = await createSupabaseServerClient();
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
-    if (error || !data.user) {
+    if (error) {
+      const reason = error.message?.toLowerCase().includes('expired')
+        ? 'session_expired'
+        : 'auth';
+      return NextResponse.redirect(`${origin}/tour?error=${reason}`);
+    }
+
+    if (!data.user) {
       return NextResponse.redirect(`${origin}/tour?error=auth`);
     }
 
     const { user } = data;
     const meta = user.user_metadata;
+    const email = user.email ?? '';
 
-    await prisma.user.upsert({
-      where: { id: user.id },
-      update: {
-        email: user.email ?? '',
-        name: meta.full_name ?? '',
-        avatarUrl: meta.avatar_url ?? null,
-      },
-      create: {
-        id: user.id,
-        email: user.email ?? '',
-        name: meta.full_name ?? '',
-        avatarUrl: meta.avatar_url ?? null,
-      },
-    });
+    const existing = await prisma.user.findUnique({ where: { email } });
+
+    if (existing && existing.id !== user.id) {
+      const tables = [
+        'Trip', 'AuditLog', 'Vendor', 'Client', 'Expense',
+        'Booking', 'ChecklistItem', 'TripNote', 'TravelDocument', 'TripAttachment',
+      ] as const;
+
+      await prisma.$transaction(async (tx) => {
+        await tx.$executeRawUnsafe(
+          `UPDATE "User" SET id = $1, name = $2, "avatarUrl" = $3, "updatedAt" = NOW() WHERE email = $4`,
+          user.id, meta.full_name ?? '', meta.avatar_url ?? null, email
+        );
+        for (const table of tables) {
+          await tx.$executeRawUnsafe(
+            `UPDATE "${table}" SET "userId" = $1 WHERE "userId" = $2`,
+            user.id, existing.id
+          );
+        }
+      });
+    } else {
+      await prisma.user.upsert({
+        where: { id: user.id },
+        update: {
+          email,
+          name: meta.full_name ?? '',
+          avatarUrl: meta.avatar_url ?? null,
+        },
+        create: {
+          id: user.id,
+          email,
+          name: meta.full_name ?? '',
+          avatarUrl: meta.avatar_url ?? null,
+        },
+      });
+    }
 
     await prisma.auditLog.create({
       data: {
@@ -49,7 +79,11 @@ export async function GET(request: Request) {
     });
 
     return NextResponse.redirect(`${origin}/`);
-  } catch {
+  } catch (err) {
+    const message = err instanceof Error ? err.message.toLowerCase() : '';
+    if (message.includes('unique') || message.includes('duplicate') || message.includes('conflict')) {
+      return NextResponse.redirect(`${origin}/tour?error=email_conflict`);
+    }
     return NextResponse.redirect(`${origin}/tour?error=auth`);
   }
 }
