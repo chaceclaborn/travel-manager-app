@@ -1,5 +1,6 @@
 'use client';
 
+import { Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -82,6 +83,14 @@ const securityPoints = [
 ];
 
 export default function TourPage() {
+  return (
+    <Suspense>
+      <TourPageContent />
+    </Suspense>
+  );
+}
+
+function TourPageContent() {
   const { signInWithGoogle } = useAuth();
   const searchParams = useSearchParams();
   const errorCode = searchParams.get('error');

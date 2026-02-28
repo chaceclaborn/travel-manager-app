@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { Suspense, useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -64,6 +64,14 @@ function SkeletonCard({ index }: { index: number }) {
 }
 
 export default function TripsPage() {
+  return (
+    <Suspense>
+      <TripsPageContent />
+    </Suspense>
+  );
+}
+
+function TripsPageContent() {
   const searchParams = useSearchParams();
   const [trips, setTrips] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

@@ -15,15 +15,29 @@ export async function getBookings(tripId: string, userId: string) {
   });
 }
 
+export async function getMyBookings(userId: string) {
+  return prisma.booking.findMany({
+    where: { userId },
+    include: { trip: { select: { id: true, title: true, destination: true } } },
+    orderBy: { createdAt: 'desc' },
+  });
+}
+
 export async function getBookingById(id: string, userId: string) {
   const booking = await prisma.booking.findUnique({ where: { id } });
   if (!booking) throw new Error('Booking not found');
-  await verifyTripOwnership(booking.tripId, userId);
+  if (booking.tripId) {
+    await verifyTripOwnership(booking.tripId, userId);
+  } else if (booking.userId !== userId) {
+    throw new Error('Booking not found');
+  }
   return booking;
 }
 
 export async function createBooking(data: CreateBookingInput, userId: string) {
-  await verifyTripOwnership(data.tripId, userId);
+  if (data.tripId) {
+    await verifyTripOwnership(data.tripId, userId);
+  }
   return prisma.booking.create({
     data: {
       type: data.type,
@@ -35,16 +49,20 @@ export async function createBooking(data: CreateBookingInput, userId: string) {
       endLocation: data.endLocation,
       seat: data.seat,
       notes: data.notes,
-      trip: { connect: { id: data.tripId } },
+      ...(data.tripId ? { trip: { connect: { id: data.tripId } } } : {}),
       user: { connect: { id: userId } },
     },
   });
 }
 
 export async function updateBooking(id: string, data: UpdateBookingInput, userId: string) {
-  const booking = await prisma.booking.findUnique({ where: { id }, select: { tripId: true } });
+  const booking = await prisma.booking.findUnique({ where: { id }, select: { tripId: true, userId: true } });
   if (!booking) throw new Error('Booking not found');
-  await verifyTripOwnership(booking.tripId, userId);
+  if (booking.tripId) {
+    await verifyTripOwnership(booking.tripId, userId);
+  } else if (booking.userId !== userId) {
+    throw new Error('Booking not found');
+  }
 
   const updateData: Record<string, unknown> = { ...data };
   if (data.startDateTime !== undefined) updateData.startDateTime = data.startDateTime || null;
@@ -56,9 +74,23 @@ export async function updateBooking(id: string, data: UpdateBookingInput, userId
   });
 }
 
+export async function linkBookingToTrip(bookingId: string, tripId: string, userId: string) {
+  const booking = await prisma.booking.findUnique({ where: { id: bookingId }, select: { userId: true } });
+  if (!booking || booking.userId !== userId) throw new Error('Booking not found');
+  await verifyTripOwnership(tripId, userId);
+  return prisma.booking.update({
+    where: { id: bookingId },
+    data: { tripId },
+  });
+}
+
 export async function deleteBooking(id: string, userId: string) {
-  const booking = await prisma.booking.findUnique({ where: { id }, select: { tripId: true } });
+  const booking = await prisma.booking.findUnique({ where: { id }, select: { tripId: true, userId: true } });
   if (!booking) throw new Error('Booking not found');
-  await verifyTripOwnership(booking.tripId, userId);
+  if (booking.tripId) {
+    await verifyTripOwnership(booking.tripId, userId);
+  } else if (booking.userId !== userId) {
+    throw new Error('Booking not found');
+  }
   return prisma.booking.delete({ where: { id } });
 }

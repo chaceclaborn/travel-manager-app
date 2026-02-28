@@ -12,11 +12,13 @@ import {
   FileText,
   Globe,
   Settings,
+  Plane,
 } from 'lucide-react';
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard, shortcut: 'G D' },
   { href: '/trips', label: 'Trips', icon: MapPin, shortcut: 'G T' },
+  { href: '/bookings', label: 'Bookings', icon: Plane, shortcut: 'G B' },
   { href: '/vendors', label: 'Vendors', icon: Building2, shortcut: 'G V' },
   { href: '/clients', label: 'Clients', icon: Users, shortcut: 'G C' },
   { href: '/analytics', label: 'Analytics', icon: BarChart3, shortcut: 'G A' },

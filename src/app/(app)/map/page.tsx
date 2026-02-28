@@ -5,12 +5,12 @@ import dynamic from 'next/dynamic';
 import { MapPin, Globe as GlobeIcon, Plane, Loader2 } from 'lucide-react';
 import { TMBreadcrumb } from '@/components/travelmanager/TMBreadcrumb';
 
-const TravelGlobe = dynamic(
-  () => import('@/components/travelmanager/TravelGlobe').then(m => ({ default: m.TravelGlobe })),
+const TravelMap = dynamic(
+  () => import('@/components/travelmanager/TravelMap').then(m => ({ default: m.TravelMap })),
   { ssr: false }
 );
 
-interface GlobeTrip {
+interface MapTrip {
   id: string;
   title: string;
   destination: string | null;
@@ -33,11 +33,11 @@ function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: numbe
 }
 
 export default function MapPage() {
-  const [trips, setTrips] = useState<GlobeTrip[]>([]);
+  const [trips, setTrips] = useState<MapTrip[]>([]);
   const [loading, setLoading] = useState(true);
   const [geocoding, setGeocoding] = useState(false);
 
-  const geocodeMissing = useCallback(async (tripsToGeocode: GlobeTrip[]) => {
+  const geocodeMissing = useCallback(async (tripsToGeocode: MapTrip[]) => {
     const missing = tripsToGeocode.filter(
       t => t.destination && t.latitude === null && t.longitude === null
     );
@@ -73,7 +73,7 @@ export default function MapPage() {
         const data = await res.json();
 
         const safeData = Array.isArray(data) ? data : [];
-        const mapped: GlobeTrip[] = safeData.map((t: Record<string, unknown>) => ({
+        const mapped: MapTrip[] = safeData.map((t: Record<string, unknown>) => ({
           id: t.id as string,
           title: t.title as string,
           destination: (t.destination as string) || null,
@@ -130,30 +130,29 @@ export default function MapPage() {
       </div>
 
       <div className="flex-1 flex flex-col lg:flex-row gap-4 p-4 min-h-0">
-        {/* Globe */}
         <div className="flex-1 rounded-xl overflow-hidden border border-slate-200 relative min-h-[400px]">
           {loading ? (
-            <div className="absolute inset-0 flex items-center justify-center bg-slate-950">
+            <div className="absolute inset-0 flex items-center justify-center bg-slate-100">
               <div className="text-center">
-                <Loader2 className="size-6 text-white/60 animate-spin mx-auto mb-2" />
-                <p className="text-white/50 text-sm">Loading trips...</p>
+                <Loader2 className="size-6 text-slate-400 animate-spin mx-auto mb-2" />
+                <p className="text-slate-500 text-sm">Loading trips...</p>
               </div>
             </div>
           ) : (
             <>
-              <TravelGlobe trips={trips} />
+              <TravelMap trips={trips} />
               {geocoding && (
-                <div className="absolute top-3 left-3 bg-slate-900/90 text-white text-xs px-3 py-1.5 rounded-full flex items-center gap-2">
+                <div className="absolute top-3 left-3 z-[1000] bg-slate-900/90 text-white text-xs px-3 py-1.5 rounded-full flex items-center gap-2">
                   <Loader2 className="size-3 animate-spin" />
                   Geocoding destinations...
                 </div>
               )}
               {geoTrips.length === 0 && !geocoding && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="text-center text-white/60">
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[1000]">
+                  <div className="text-center text-slate-500">
                     <GlobeIcon className="size-10 mx-auto mb-2 opacity-40" />
                     <p className="text-sm">No geocoded trips yet</p>
-                    <p className="text-xs mt-1 opacity-60">Add destinations to your trips to see them on the globe</p>
+                    <p className="text-xs mt-1 opacity-60">Add destinations to your trips to see them on the map</p>
                   </div>
                 </div>
               )}
@@ -161,7 +160,6 @@ export default function MapPage() {
           )}
         </div>
 
-        {/* Sidebar Stats */}
         <div className="lg:w-72 flex flex-row lg:flex-col gap-3">
           <div className="flex-1 bg-white border border-slate-200 rounded-xl p-4">
             <div className="flex items-center gap-2 text-slate-500 mb-1">
@@ -194,7 +192,6 @@ export default function MapPage() {
             <p className="text-xs text-slate-400 mt-1">Kilometers traveled</p>
           </div>
 
-          {/* Legend */}
           <div className="flex-1 bg-white border border-slate-200 rounded-xl p-4">
             <p className="text-xs font-medium uppercase tracking-wide text-slate-500 mb-2">Legend</p>
             <div className="space-y-1.5">

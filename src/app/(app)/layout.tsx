@@ -27,6 +27,7 @@ export default function TravelManagerLayout({
 
   const pageTitle = pathname === '/' ? 'Dashboard'
     : pathname.includes('/trips') ? 'Trips'
+    : pathname.includes('/bookings') ? 'Bookings'
     : pathname.includes('/vendors') ? 'Vendors'
     : pathname.includes('/clients') ? 'Clients'
     : pathname.includes('/analytics') ? 'Analytics'

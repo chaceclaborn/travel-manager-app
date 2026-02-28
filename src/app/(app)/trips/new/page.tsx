@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { TripForm } from '@/components/travelmanager/TripForm';
@@ -8,6 +8,14 @@ import { TMBreadcrumb } from '@/components/travelmanager/TMBreadcrumb';
 import { useTMToast } from '@/components/travelmanager/TMToast';
 
 export default function NewTripPage() {
+  return (
+    <Suspense>
+      <NewTripPageContent />
+    </Suspense>
+  );
+}
+
+function NewTripPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { showToast } = useTMToast();

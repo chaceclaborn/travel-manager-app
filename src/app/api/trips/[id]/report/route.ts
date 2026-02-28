@@ -188,9 +188,9 @@ export async function GET(
           b.provider,
           b.confirmationNum ?? '—',
           b.startDateTime && b.endDateTime
-            ? `${formatDate(b.startDateTime)} - ${formatDate(b.endDateTime)}`
+            ? `${formatDate(new Date(b.startDateTime))} - ${formatDate(new Date(b.endDateTime))}`
             : b.startDateTime
-              ? formatDate(b.startDateTime)
+              ? formatDate(new Date(b.startDateTime))
               : '—',
         ]),
         ...tableStyles,

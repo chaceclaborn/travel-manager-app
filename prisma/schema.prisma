@@ -246,8 +246,8 @@ model Expense {
 
 model Booking {
   id              String      @id @default(cuid())
-  tripId          String
-  trip            Trip        @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  tripId          String?
+  trip            Trip?       @relation(fields: [tripId], references: [id], onDelete: Cascade)
   userId          String
   user            User        @relation(fields: [userId], references: [id])
   type            BookingType

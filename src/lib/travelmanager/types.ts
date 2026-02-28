@@ -115,7 +115,7 @@ export interface CreateExpenseInput {
 export interface UpdateExpenseInput extends Partial<Omit<CreateExpenseInput, 'tripId'>> {}
 
 export interface CreateBookingInput {
-  tripId: string;
+  tripId?: string;
   type: BookingType;
   provider: string;
   confirmationNum?: string;
@@ -127,7 +127,9 @@ export interface CreateBookingInput {
   notes?: string;
 }
 
-export interface UpdateBookingInput extends Partial<Omit<CreateBookingInput, 'tripId'>> {}
+export interface UpdateBookingInput extends Partial<Omit<CreateBookingInput, 'tripId'>> {
+  tripId?: string | null;
+}
 
 export interface CreateChecklistItemInput {
   tripId: string;
