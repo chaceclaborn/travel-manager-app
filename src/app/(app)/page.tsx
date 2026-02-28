@@ -9,7 +9,7 @@ import { TMStatsCard } from '@/components/travelmanager/TMStatsCard';
 import { TMStatusBadge } from '@/components/travelmanager/TMStatusBadge';
 import { TMEmptyState } from '@/components/travelmanager/TMEmptyState';
 import { TMCalendarPreview } from '@/components/travelmanager/TMCalendarPreview';
-import { UsageInsights } from '@/components/travelmanager/UsageInsights';
+
 import { useAuth } from '@/lib/travelmanager/useAuth';
 import type { TripWithRelations } from '@/lib/travelmanager/types';
 
@@ -294,11 +294,6 @@ export default function TravelManagerDashboard() {
               status: t.status,
             }))}
         />
-      </motion.div>
-
-      {/* Usage Insights */}
-      <motion.div variants={item}>
-        <UsageInsights />
       </motion.div>
 
       {/* Quick Actions */}
