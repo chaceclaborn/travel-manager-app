@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/travelmanager/auth';
+import { rateLimit } from '@/lib/rate-limit';
 import prisma from '@/lib/prisma';
 
 function getPeriodDate(period: string): Date | null {
@@ -19,6 +20,9 @@ function getPeriodDate(period: string): Date | null {
 
 export async function GET(request: NextRequest) {
   try {
+    const rateLimited = rateLimit(request, 'read');
+    if (rateLimited) return rateLimited;
+
     const { user, response } = await requireAuth();
     if (!user) return response;
 

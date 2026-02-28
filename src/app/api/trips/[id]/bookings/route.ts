@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getBookings, createBooking } from '@/lib/travelmanager/bookings';
 import { requireAuth } from '@/lib/travelmanager/auth';
+import { rateLimit } from '@/lib/rate-limit';
 import { sanitizeObject, validateUUID, validateEnum, validateDateString, BOOKING_TYPE_VALUES } from '@/lib/sanitize';
 
 const BOOKING_ALLOWED_FIELDS = ['type', 'provider', 'confirmationNum', 'startDateTime', 'endDateTime', 'location', 'endLocation', 'seat', 'notes'];
 
-export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const rateLimited = rateLimit(request, 'read');
+    if (rateLimited) return rateLimited;
+
     const { user, response } = await requireAuth();
     if (!user) return response;
 
@@ -24,6 +28,9 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const rateLimited = rateLimit(request, 'write');
+    if (rateLimited) return rateLimited;
+
     const { user, response } = await requireAuth();
     if (!user) return response;
 

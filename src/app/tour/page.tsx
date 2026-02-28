@@ -20,6 +20,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { CookieBanner } from '@/components/travelmanager/CookieBanner';
 import { useAuth } from '@/lib/travelmanager/useAuth';
 
 const errorMessages: Record<string, string> = {
@@ -98,6 +99,7 @@ function TourPageContent() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-amber-50/60 via-white to-slate-50">
+      <CookieBanner />
       <motion.div
         variants={container}
         initial="hidden"

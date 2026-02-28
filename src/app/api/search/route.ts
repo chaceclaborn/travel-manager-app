@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { searchAll } from '@/lib/travelmanager/trips';
 import { requireAuth } from '@/lib/travelmanager/auth';
+import { rateLimit } from '@/lib/rate-limit';
 import { sanitizeString } from '@/lib/sanitize';
 
 export async function GET(request: NextRequest) {
   try {
+    const rateLimited = rateLimit(request, 'read');
+    if (rateLimited) return rateLimited;
+
     const { user, response } = await requireAuth();
     if (!user) return response;
 

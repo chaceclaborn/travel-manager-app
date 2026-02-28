@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Plus, Search, Users } from 'lucide-react';
+import { Plus, Search, Users, AlertCircle, RefreshCw } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
@@ -30,13 +30,20 @@ export default function ClientsPage() {
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState('name-az');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
-  useEffect(() => {
+  const fetchClients = () => {
+    setLoading(true);
+    setError(false);
     fetch('/api/clients')
       .then((res) => res.json())
       .then((data) => setClients(Array.isArray(data) ? data : []))
-      .catch(console.error)
+      .catch(() => setError(true))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchClients();
   }, []);
 
   const filtered = useMemo(() => {
@@ -85,6 +92,32 @@ export default function ClientsPage() {
             </div>
           ))}
         </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <div className="relative mb-6">
+          <div className="size-20 rounded-full bg-red-50 flex items-center justify-center">
+            <AlertCircle className="size-10 text-red-400" />
+          </div>
+          <div className="absolute -bottom-1 -right-1 size-7 rounded-full bg-red-100 flex items-center justify-center">
+            <RefreshCw className="size-3.5 text-red-400" />
+          </div>
+        </div>
+        <h2 className="text-xl font-semibold text-slate-900">Unable to load clients</h2>
+        <p className="mt-2 text-sm text-slate-500 max-w-sm">
+          Something went wrong. Check your connection and try again.
+        </p>
+        <Button
+          onClick={fetchClients}
+          className="mt-6 bg-slate-900 hover:bg-slate-800 text-white shadow-sm"
+        >
+          <RefreshCw className="mr-2 size-4" />
+          Try again
+        </Button>
       </div>
     );
   }

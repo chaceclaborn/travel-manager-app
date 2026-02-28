@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { requireAuth } from '@/lib/travelmanager/auth';
+import { rateLimit } from '@/lib/rate-limit';
 
 function formatDateOnly(date: Date): string {
   const y = date.getUTCFullYear();
@@ -19,8 +20,11 @@ function escapeICalText(text: string): string {
   return text.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
 }
 
-export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const rateLimited = rateLimit(request, 'read');
+    if (rateLimited) return rateLimited;
+
     const { user, response } = await requireAuth();
     if (!user) return response;
 

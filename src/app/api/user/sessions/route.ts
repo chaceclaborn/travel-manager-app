@@ -1,9 +1,13 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getAuditLogs } from '@/lib/travelmanager/trips';
 import { requireAuth } from '@/lib/travelmanager/auth';
+import { rateLimit } from '@/lib/rate-limit';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const rateLimited = rateLimit(request, 'read');
+    if (rateLimited) return rateLimited;
+
     const { user, response } = await requireAuth();
     if (!user) return response;
 

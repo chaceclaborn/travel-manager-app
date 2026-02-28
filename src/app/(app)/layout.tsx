@@ -8,6 +8,7 @@ import { TMSidebar } from '@/components/travelmanager/TMSidebar';
 import { TMToastProvider } from '@/components/travelmanager/TMToast';
 import { TMCommandPalette } from '@/components/travelmanager/TMCommandPalette';
 import { TMUserMenu } from '@/components/travelmanager/TMUserMenu';
+import { CookieBanner } from '@/components/travelmanager/CookieBanner';
 import { useAuth } from '@/lib/travelmanager/useAuth';
 
 export default function TravelManagerLayout({
@@ -245,6 +246,7 @@ export default function TravelManagerLayout({
       </TMToastProvider>
 
       <TMCommandPalette open={searchOpen} onClose={() => setSearchOpen(false)} />
+      <CookieBanner />
     </>
   );
 }

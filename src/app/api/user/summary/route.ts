@@ -3,6 +3,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import prisma from '@/lib/prisma';
 import { requireAuth } from '@/lib/travelmanager/auth';
+import { rateLimit } from '@/lib/rate-limit';
 
 const PERIODS: Record<string, { label: string; months: number }> = {
   '3months': { label: 'Last 3 Months', months: 3 },
@@ -21,6 +22,9 @@ function formatDate(date: Date) {
 
 export async function GET(request: NextRequest) {
   try {
+    const rateLimited = rateLimit(request, 'read');
+    if (rateLimited) return rateLimited;
+
     const { user, response } = await requireAuth();
     if (!user) return response;
 

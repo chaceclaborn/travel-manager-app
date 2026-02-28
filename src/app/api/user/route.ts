@@ -4,8 +4,11 @@ import { requireAuth } from '@/lib/travelmanager/auth';
 import { rateLimit } from '@/lib/rate-limit';
 import { sanitizeString } from '@/lib/sanitize';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const rateLimited = rateLimit(request, 'read');
+    if (rateLimited) return rateLimited;
+
     const { user: authUser, response } = await requireAuth();
     if (!authUser) return response;
 

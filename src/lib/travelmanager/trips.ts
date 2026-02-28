@@ -298,13 +298,21 @@ export async function getUserData(userId: string) {
     include: {
       ...tripInclude,
       attachments: true,
+      expenses: true,
+      bookings: true,
+      checklists: true,
+      tripNotes: true,
     },
   });
   const vendors = await prisma.vendor.findMany({ where: { userId } });
   const clients = await prisma.client.findMany({ where: { userId } });
+  const expenses = await prisma.expense.findMany({ where: { userId } });
+  const bookings = await prisma.booking.findMany({ where: { userId } });
+  const checklistItems = await prisma.checklistItem.findMany({ where: { userId } });
+  const tripNotes = await prisma.tripNote.findMany({ where: { userId } });
   const auditLogs = await prisma.auditLog.findMany({ where: { userId }, orderBy: { createdAt: 'desc' } });
 
-  return { trips, vendors, clients, auditLogs };
+  return { trips, vendors, clients, expenses, bookings, checklistItems, tripNotes, auditLogs };
 }
 
 export async function deleteAllUserData(userId: string) {
@@ -312,11 +320,18 @@ export async function deleteAllUserData(userId: string) {
   const tripIds = trips.map(t => t.id);
 
   if (tripIds.length > 0) {
+    await prisma.expense.deleteMany({ where: { tripId: { in: tripIds } } });
+    await prisma.booking.deleteMany({ where: { tripId: { in: tripIds } } });
+    await prisma.checklistItem.deleteMany({ where: { tripId: { in: tripIds } } });
+    await prisma.tripNote.deleteMany({ where: { tripId: { in: tripIds } } });
     await prisma.tripAttachment.deleteMany({ where: { tripId: { in: tripIds } } });
     await prisma.itineraryItem.deleteMany({ where: { tripId: { in: tripIds } } });
     await prisma.tripVendor.deleteMany({ where: { tripId: { in: tripIds } } });
     await prisma.tripClient.deleteMany({ where: { tripId: { in: tripIds } } });
   }
+
+  // Delete bookings not tied to a trip (tripId is optional on Booking)
+  await prisma.booking.deleteMany({ where: { userId } });
 
   await prisma.trip.deleteMany({ where: { userId } });
   await prisma.vendor.deleteMany({ where: { userId } });

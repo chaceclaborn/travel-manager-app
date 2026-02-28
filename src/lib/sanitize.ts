@@ -86,6 +86,40 @@ export function validateEnum(value: string, allowed: readonly string[]): boolean
   return allowed.includes(value);
 }
 
+/**
+ * Validate file content against declared MIME type using magic bytes.
+ * Prevents attackers from uploading malicious files with spoofed extensions/MIME types.
+ * Returns true if magic bytes match the declared type, or if the type isn't checkable.
+ */
+export function validateMagicBytes(buffer: Buffer, declaredMimeType: string): boolean {
+  if (buffer.length < 12) return false;
+
+  switch (declaredMimeType) {
+    case 'application/pdf':
+      // PDF: starts with %PDF (hex: 25 50 44 46)
+      return buffer[0] === 0x25 && buffer[1] === 0x50 && buffer[2] === 0x44 && buffer[3] === 0x46;
+
+    case 'image/png':
+      // PNG: starts with \x89PNG (hex: 89 50 4E 47)
+      return buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47;
+
+    case 'image/jpeg':
+      // JPEG: starts with \xFF\xD8\xFF (hex: FF D8 FF)
+      return buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF;
+
+    case 'image/webp':
+      // WEBP: RIFF header, then bytes 8-11 are "WEBP"
+      return (
+        buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46 && // RIFF
+        buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50   // WEBP
+      );
+
+    default:
+      // Can't validate this MIME type — allow through
+      return true;
+  }
+}
+
 // Enum value lists for validation
 export const TRIP_STATUS_VALUES = ['DRAFT', 'PLANNED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'] as const;
 export const VENDOR_CATEGORY_VALUES = ['SUPPLIER', 'HOTEL', 'TRANSPORT', 'RESTAURANT', 'OTHER'] as const;

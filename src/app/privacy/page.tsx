@@ -14,7 +14,7 @@ const sections = [
       'Vendor records (names, contact info, categories, ratings)',
       'Client records (names, contact info, associated trips)',
       'Booking confirmations and travel arrangement details you save',
-      'Sign-in logs including timestamp, IP address, and user agent for security purposes',
+      'Sign-in logs including timestamp, IP address, and browser/device information (user agent) — collected for security monitoring such as detecting unauthorized access attempts and rate limiting',
     ],
   },
   {
@@ -39,6 +39,7 @@ const sections = [
     title: 'Data Retention',
     content: [
       'Your data is retained for as long as your account exists',
+      'Sign-in logs including IP addresses and browser information are retained for 90 days and then automatically purged',
       'When you delete your account, all associated data is permanently removed immediately — this includes trips, vendors, clients, and sign-in history',
       'There is no recovery period after account deletion; the action is irreversible',
     ],
@@ -60,7 +61,7 @@ const sections = [
     content: [
       'We do not sell your data to any third parties',
       'We do not share your data with any third parties for marketing or advertising purposes',
-      'Google — used solely for OAuth authentication (sign-in); no trip data is shared with Google',
+      'Google — used solely for OAuth authentication (sign-in). When you sign in with Google, we receive your name, email address, and profile picture. We do not receive or store your Google password. No trip or personal data is shared back with Google',
       'Supabase — database hosting provider (powered by AWS infrastructure); stores your encrypted data',
       'Vercel — web hosting and deployment platform; serves the application but does not store your personal data',
       'OpenStreetMap / CARTO — provides map tile rendering for trip maps; no personal data is sent to these services',

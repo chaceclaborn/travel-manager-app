@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTripAttachments, createTripAttachment } from '@/lib/travelmanager/trips';
 import { requireAuth } from '@/lib/travelmanager/auth';
+import { rateLimit } from '@/lib/rate-limit';
 import { createSupabaseAdmin } from '@/lib/supabase/admin';
-import { validateUUID, validateEnum, ATTACHMENT_CATEGORY_VALUES } from '@/lib/sanitize';
+import { validateUUID, validateEnum, validateMagicBytes, ATTACHMENT_CATEGORY_VALUES } from '@/lib/sanitize';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_MIME_TYPES = new Set([
@@ -15,8 +16,11 @@ const ALLOWED_MIME_TYPES = new Set([
   'image/webp',
 ]);
 
-export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const rateLimited = rateLimit(request, 'read');
+    if (rateLimited) return rateLimited;
+
     const { user, response } = await requireAuth();
     if (!user) return response;
 
@@ -34,6 +38,9 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const rateLimited = rateLimit(request, 'write');
+    if (rateLimited) return rateLimited;
+
     const { user, response } = await requireAuth();
     if (!user) return response;
 
@@ -63,6 +70,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
+
+    if (!validateMagicBytes(buffer, file.type)) {
+      return NextResponse.json({ error: 'File content does not match declared type' }, { status: 400 });
+    }
 
     // Sanitize filename to prevent path traversal and injection
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');

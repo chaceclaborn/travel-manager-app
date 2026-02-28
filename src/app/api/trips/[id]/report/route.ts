@@ -1,8 +1,9 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import prisma from '@/lib/prisma';
 import { requireAuth } from '@/lib/travelmanager/auth';
+import { rateLimit } from '@/lib/rate-limit';
 
 function formatDate(date: Date) {
   return date.toLocaleDateString('en-US', {
@@ -54,10 +55,13 @@ const tableStyles = {
 };
 
 export async function GET(
-  _request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const rateLimited = rateLimit(request, 'read');
+    if (rateLimited) return rateLimited;
+
     const { user, response } = await requireAuth();
     if (!user) return response;
 

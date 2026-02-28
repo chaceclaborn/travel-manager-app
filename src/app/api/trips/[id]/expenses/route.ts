@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getExpenses, createExpense } from '@/lib/travelmanager/expenses';
 import { requireAuth } from '@/lib/travelmanager/auth';
+import { rateLimit } from '@/lib/rate-limit';
 import { sanitizeObject, validateUUID, validateDateString, validateEnum, EXPENSE_CATEGORY_VALUES } from '@/lib/sanitize';
 
 const EXPENSE_ALLOWED_FIELDS = ['amount', 'currency', 'category', 'description', 'date', 'receiptPath'];
 
-export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const rateLimited = rateLimit(request, 'read');
+    if (rateLimited) return rateLimited;
+
     const { user, response } = await requireAuth();
     if (!user) return response;
 
@@ -24,6 +28,9 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const rateLimited = rateLimit(request, 'write');
+    if (rateLimited) return rateLimited;
+
     const { user, response } = await requireAuth();
     if (!user) return response;
 
