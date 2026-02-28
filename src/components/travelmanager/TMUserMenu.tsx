@@ -26,15 +26,19 @@ export function TMUserMenu({ user, onSignOut }: TMUserMenuProps) {
     .slice(0, 2);
 
   useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
+    function handleClickOutside(e: MouseEvent | TouchEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setOpen(false);
       }
     }
     if (open) {
       document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('touchstart', handleClickOutside);
     }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
   }, [open]);
 
   async function handleExport() {
@@ -58,7 +62,7 @@ export function TMUserMenu({ user, onSignOut }: TMUserMenuProps) {
     <div ref={menuRef} className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="rounded-full focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-slate-900"
+        className="rounded-full min-w-11 min-h-11 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-slate-900"
         aria-label="User menu"
         aria-expanded={open}
       >
@@ -78,7 +82,7 @@ export function TMUserMenu({ user, onSignOut }: TMUserMenuProps) {
       </button>
 
       {open && (
-        <div className="absolute left-0 bottom-full mb-2 sm:left-auto sm:right-0 sm:bottom-auto sm:top-full sm:mb-0 sm:mt-2 w-64 rounded-lg bg-slate-900 border border-white/10 shadow-xl z-50 overflow-hidden">
+        <div className="absolute right-0 top-full mt-2 w-64 rounded-lg bg-slate-900 border border-white/10 shadow-xl z-50 overflow-hidden">
           <div className="px-4 py-3 border-b border-white/10">
             <p className="text-sm font-medium text-white truncate">{fullName}</p>
             <p className="text-xs text-slate-400 truncate">{email}</p>
