@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { Shield, Download, FileText, Trash2, Loader2, Monitor } from 'lucide-react';
+import { Shield, Download, FileText, Trash2, Loader2, Monitor, MapPin, X } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -24,12 +25,23 @@ interface Session {
   userAgent: string;
 }
 
+interface GeoResult {
+  display_name: string;
+  lat: string;
+  lon: string;
+  type: string;
+  address: Record<string, string>;
+}
+
 interface UserInfo {
   id: string;
   name: string;
   email: string;
   avatarUrl: string | null;
   createdAt: string;
+  homeCity: string | null;
+  homeLatitude: number | null;
+  homeLongitude: number | null;
 }
 
 function parseUserAgent(ua: string): string {
@@ -75,11 +87,24 @@ export default function SettingsPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [exportingData, setExportingData] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState<string | null>(null);
+  const [homeQuery, setHomeQuery] = useState('');
+  const [homeResults, setHomeResults] = useState<GeoResult[]>([]);
+  const [homeSearchOpen, setHomeSearchOpen] = useState(false);
+  const [isSearchingHome, setIsSearchingHome] = useState(false);
+  const [isSavingHome, setIsSavingHome] = useState(false);
+  const homeDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const homeLastFetchRef = useRef(0);
+  const homeContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetch('/api/user')
       .then((res) => (res.ok ? res.json() : null))
-      .then((data) => setUserInfo(data))
+      .then((data) => {
+        if (data?.user) {
+          setUserInfo(data.user);
+          if (data.user.homeCity) setHomeQuery(data.user.homeCity);
+        }
+      })
       .catch(() => setUserInfo(null));
 
     fetch('/api/user/sessions')
@@ -87,6 +112,16 @@ export default function SettingsPage() {
       .then((data) => setSessions(Array.isArray(data) ? data.slice(0, 10) : []))
       .catch(() => setSessions([]))
       .finally(() => setLoadingSessions(false));
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (homeContainerRef.current && !homeContainerRef.current.contains(e.target as Node)) {
+        setHomeSearchOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const avatarUrl = userInfo?.avatarUrl || user?.user_metadata?.avatar_url;
@@ -98,6 +133,90 @@ export default function SettingsPage() {
     .join('')
     .toUpperCase()
     .slice(0, 2);
+
+  function formatGeoName(result: GeoResult): string {
+    const addr = result.address;
+    const city = addr.city || addr.town || addr.village || addr.hamlet || '';
+    const state = addr.state || '';
+    const country = addr.country || '';
+    return [city, state, country].filter(Boolean).join(', ') || result.display_name;
+  }
+
+  async function searchHomeLocation(q: string) {
+    if (q.length < 3) {
+      setHomeResults([]);
+      setHomeSearchOpen(false);
+      return;
+    }
+    const now = Date.now();
+    const elapsed = now - homeLastFetchRef.current;
+    if (elapsed < 1000) {
+      await new Promise(resolve => setTimeout(resolve, 1000 - elapsed));
+    }
+    setIsSearchingHome(true);
+    try {
+      homeLastFetchRef.current = Date.now();
+      const res = await fetch(`/api/geocode/search?q=${encodeURIComponent(q)}`);
+      if (res.ok) {
+        const data: GeoResult[] = await res.json();
+        setHomeResults(data);
+        setHomeSearchOpen(data.length > 0);
+      }
+    } catch { /* silent */ } finally {
+      setIsSearchingHome(false);
+    }
+  }
+
+  function handleHomeInputChange(val: string) {
+    setHomeQuery(val);
+    if (homeDebounceRef.current) clearTimeout(homeDebounceRef.current);
+    homeDebounceRef.current = setTimeout(() => searchHomeLocation(val), 400);
+  }
+
+  async function handleSelectHome(result: GeoResult) {
+    const city = formatGeoName(result);
+    const lat = parseFloat(result.lat);
+    const lng = parseFloat(result.lon);
+    setHomeQuery(city);
+    setHomeSearchOpen(false);
+    setHomeResults([]);
+    setIsSavingHome(true);
+    try {
+      const res = await fetch('/api/user', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ homeCity: city, homeLatitude: lat, homeLongitude: lng }),
+      });
+      if (!res.ok) throw new Error('Failed to save');
+      const data = await res.json();
+      setUserInfo(data.user);
+      showToast('Home location saved');
+    } catch {
+      showToast('Failed to save home location', 'error');
+    } finally {
+      setIsSavingHome(false);
+    }
+  }
+
+  async function handleClearHome() {
+    setIsSavingHome(true);
+    try {
+      const res = await fetch('/api/user', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ homeCity: null, homeLatitude: null, homeLongitude: null }),
+      });
+      if (!res.ok) throw new Error('Failed to clear');
+      const data = await res.json();
+      setUserInfo(data.user);
+      setHomeQuery('');
+      showToast('Home location cleared');
+    } catch {
+      showToast('Failed to clear home location', 'error');
+    } finally {
+      setIsSavingHome(false);
+    }
+  }
 
   async function handleExportData() {
     setExportingData(true);
@@ -198,6 +317,66 @@ export default function SettingsPage() {
             )}
           </div>
         </div>
+      </motion.div>
+
+      {/* Home Location */}
+      <motion.div variants={item} className="rounded-xl bg-white p-6 shadow-sm">
+        <div className="flex items-center gap-2 mb-4">
+          <MapPin className="size-5 text-amber-600" />
+          <h2 className="text-lg font-semibold text-slate-800">Home Location</h2>
+        </div>
+        <p className="text-xs text-slate-500 mb-3">
+          Set your home city to calculate round-trip distances on the map.
+        </p>
+        <div className="relative" ref={homeContainerRef}>
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Input
+                value={homeQuery}
+                onChange={(e) => handleHomeInputChange(e.target.value)}
+                onFocus={() => { if (homeResults.length > 0) setHomeSearchOpen(true); }}
+                placeholder="Search for your home city..."
+                className="pr-8"
+                autoComplete="off"
+              />
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400">
+                {isSearchingHome || isSavingHome ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <MapPin className="size-4" />
+                )}
+              </div>
+            </div>
+            {userInfo?.homeCity && (
+              <Button variant="ghost" size="icon" onClick={handleClearHome} disabled={isSavingHome} title="Clear home location">
+                <X className="size-4" />
+              </Button>
+            )}
+          </div>
+          {homeSearchOpen && homeResults.length > 0 && (
+            <div className="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-[200px] overflow-y-auto">
+              {homeResults.map((result, idx) => (
+                <button
+                  key={`${result.lat}-${result.lon}-${idx}`}
+                  type="button"
+                  className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 border-b border-slate-100 last:border-b-0 flex items-start gap-2"
+                  onClick={() => handleSelectHome(result)}
+                >
+                  <MapPin className="size-3.5 text-amber-500 mt-0.5 shrink-0" />
+                  <div className="min-w-0">
+                    <div className="font-medium text-slate-800 truncate">{formatGeoName(result)}</div>
+                    <div className="text-xs text-slate-400 truncate">{result.display_name}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        {userInfo?.homeCity && (
+          <p className="text-xs text-green-600 mt-2">
+            Home set to: {userInfo.homeCity}
+          </p>
+        )}
       </motion.div>
 
       {/* Security */}

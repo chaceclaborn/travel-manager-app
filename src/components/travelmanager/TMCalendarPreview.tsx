@@ -224,6 +224,7 @@ export function TMCalendarPreview({ trips }: TMCalendarPreviewProps) {
             const hasTrips = dayTrips.length > 0;
             const isPopoverOpen = popoverDay === dateStr;
             const isHovered = hoveredDay === dateStr;
+            const isLastRow = Math.floor(i / 7) === weeks.length - 1;
 
             return (
               <div
@@ -299,7 +300,9 @@ export function TMCalendarPreview({ trips }: TMCalendarPreviewProps) {
                 {isPopoverOpen && (
                   <div
                     ref={popoverRef}
-                    className="absolute top-full left-1/2 -translate-x-1/2 mt-1 z-50 bg-white rounded-lg shadow-lg ring-1 ring-slate-200 py-1 min-w-[120px]"
+                    className={`absolute left-1/2 -translate-x-1/2 z-50 bg-white rounded-lg shadow-lg ring-1 ring-slate-200 py-1 min-w-[120px] ${
+                      isLastRow ? 'bottom-full mb-1' : 'top-full mt-1'
+                    }`}
                   >
                     <Link
                       href={`/trips/new?startDate=${dateStr}`}

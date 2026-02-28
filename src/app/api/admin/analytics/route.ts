@@ -33,8 +33,6 @@ export async function GET(request: NextRequest) {
       totalBookings,
       totalVendors,
       totalClients,
-      totalExpensesAgg,
-      users,
       signInLogs,
       tripStatusGroups,
       attachmentStats,
@@ -44,17 +42,6 @@ export async function GET(request: NextRequest) {
       prisma.booking.count(),
       prisma.vendor.count(),
       prisma.client.count(),
-      prisma.expense.aggregate({ _sum: { amount: true } }),
-      prisma.user.findMany({
-        select: {
-          id: true,
-          email: true,
-          name: true,
-          createdAt: true,
-          _count: { select: { trips: true } },
-        },
-        orderBy: { createdAt: 'desc' },
-      }),
       prisma.auditLog.findMany({
         where: {
           action: 'sign_in',
@@ -87,8 +74,6 @@ export async function GET(request: NextRequest) {
       count: g._count._all,
     }));
 
-    const totalExpenses = totalExpensesAgg._sum.amount || 0;
-
     const storageSummary = {
       totalFiles: attachmentStats._count._all,
       totalSizeBytes: attachmentStats._sum.fileSize || 0,
@@ -104,15 +89,7 @@ export async function GET(request: NextRequest) {
         totalBookings,
         totalVendors,
         totalClients,
-        totalExpenses,
       },
-      users: users.map((u) => ({
-        id: u.id,
-        email: u.email,
-        name: u.name,
-        createdAt: u.createdAt,
-        tripCount: u._count.trips,
-      })),
       signInActivity,
       tripStatusBreakdown,
       storageSummary,

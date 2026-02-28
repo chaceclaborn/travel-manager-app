@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { MapPin, Globe as GlobeIcon, Plane, Loader2 } from 'lucide-react';
+import { MapPin, Globe as GlobeIcon, Plane, Route, Loader2 } from 'lucide-react';
 import { TMBreadcrumb } from '@/components/travelmanager/TMBreadcrumb';
 
 const TravelMap = dynamic(
@@ -21,6 +21,14 @@ interface MapTrip {
   longitude: number | null;
 }
 
+interface HomeLocation {
+  latitude: number;
+  longitude: number;
+  city: string | null;
+}
+
+const KM_TO_MILES = 0.621371;
+
 function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371;
   const dLat = (lat2 - lat1) * (Math.PI / 180);
@@ -32,33 +40,81 @@ function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: numbe
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+function calcDistance(
+  filteredTrips: (MapTrip & { latitude: number; longitude: number })[],
+  home: HomeLocation | null
+): number {
+  if (filteredTrips.length === 0) return 0;
+
+  if (home) {
+    let dist = 0;
+    for (const trip of filteredTrips) {
+      dist += haversineDistance(home.latitude, home.longitude, trip.latitude, trip.longitude) * 2;
+    }
+    return dist * KM_TO_MILES;
+  }
+
+  const sorted = [...filteredTrips].sort((a, b) => {
+    if (!a.startDate || !b.startDate) return 0;
+    return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
+  });
+  let dist = 0;
+  for (let i = 0; i < sorted.length - 1; i++) {
+    dist += haversineDistance(
+      sorted[i].latitude, sorted[i].longitude,
+      sorted[i + 1].latitude, sorted[i + 1].longitude
+    );
+  }
+  return dist * KM_TO_MILES;
+}
+
+function formatDistance(miles: number): string {
+  if (miles > 1000) return `${(miles / 1000).toFixed(1)}k`;
+  return Math.round(miles).toString();
+}
+
 export default function MapPage() {
   const [trips, setTrips] = useState<MapTrip[]>([]);
+  const [homeLocation, setHomeLocation] = useState<HomeLocation | null>(null);
   const [loading, setLoading] = useState(true);
-  const [geocoding] = useState(false);
 
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch('/api/trips');
-        if (!res.ok) throw new Error('Failed to fetch trips');
-        const data = await res.json();
+        const [tripsRes, userRes] = await Promise.all([
+          fetch('/api/trips'),
+          fetch('/api/user'),
+        ]);
 
-        const safeData = Array.isArray(data) ? data : [];
-        const mapped: MapTrip[] = safeData.map((t: Record<string, unknown>) => ({
-          id: t.id as string,
-          title: t.title as string,
-          destination: (t.destination as string) || null,
-          startDate: (t.startDate as string) || null,
-          endDate: (t.endDate as string) || null,
-          status: t.status as string,
-          latitude: (t.latitude as number) ?? null,
-          longitude: (t.longitude as number) ?? null,
-        }));
+        if (tripsRes.ok) {
+          const data = await tripsRes.json();
+          const safeData = Array.isArray(data) ? data : [];
+          const mapped: MapTrip[] = safeData.map((t: Record<string, unknown>) => ({
+            id: t.id as string,
+            title: t.title as string,
+            destination: (t.destination as string) || null,
+            startDate: (t.startDate as string) || null,
+            endDate: (t.endDate as string) || null,
+            status: t.status as string,
+            latitude: (t.latitude as number) ?? null,
+            longitude: (t.longitude as number) ?? null,
+          }));
+          setTrips(mapped);
+        }
 
-        setTrips(mapped);
+        if (userRes.ok) {
+          const userData = await userRes.json();
+          const u = userData.user;
+          if (u?.homeLatitude && u?.homeLongitude) {
+            setHomeLocation({
+              latitude: u.homeLatitude,
+              longitude: u.homeLongitude,
+              city: u.homeCity || null,
+            });
+          }
+        }
       } catch (error) {
-        console.error('Failed to load trips:', error);
+        console.error('Failed to load:', error);
       } finally {
         setLoading(false);
       }
@@ -66,26 +122,20 @@ export default function MapPage() {
     load();
   }, []);
 
-  const geoTrips = trips.filter(t => t.latitude !== null && t.longitude !== null);
+  const geoTrips = trips.filter(
+    (t): t is MapTrip & { latitude: number; longitude: number } =>
+      t.latitude !== null && t.longitude !== null
+  );
 
   const uniqueDestinations = new Set(
     geoTrips.map(t => t.destination).filter(Boolean)
   ).size;
 
-  const totalDistance = (() => {
-    const sorted = [...geoTrips].sort((a, b) => {
-      if (!a.startDate || !b.startDate) return 0;
-      return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
-    });
-    let dist = 0;
-    for (let i = 0; i < sorted.length - 1; i++) {
-      dist += haversineDistance(
-        sorted[i].latitude!, sorted[i].longitude!,
-        sorted[i + 1].latitude!, sorted[i + 1].longitude!
-      );
-    }
-    return dist;
-  })();
+  const completedGeoTrips = geoTrips.filter(
+    t => t.status === 'COMPLETED' || t.status === 'IN_PROGRESS'
+  );
+  const travelledDistance = calcDistance(completedGeoTrips, homeLocation);
+  const plannedDistance = calcDistance(geoTrips, homeLocation);
 
   const completedTrips = geoTrips.filter(t => t.status === 'COMPLETED').length;
 
@@ -111,14 +161,8 @@ export default function MapPage() {
             </div>
           ) : (
             <>
-              <TravelMap trips={trips} />
-              {geocoding && (
-                <div className="absolute top-3 left-3 z-[1000] bg-slate-900/90 text-white text-xs px-3 py-1.5 rounded-full flex items-center gap-2">
-                  <Loader2 className="size-3 animate-spin" />
-                  Geocoding destinations...
-                </div>
-              )}
-              {geoTrips.length === 0 && !geocoding && (
+              <TravelMap trips={trips} homeLocation={homeLocation} />
+              {geoTrips.length === 0 && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[1000]">
                   <div className="text-center text-slate-500">
                     <GlobeIcon className="size-10 mx-auto mb-2 opacity-40" />
@@ -153,14 +197,23 @@ export default function MapPage() {
           <div className="flex-1 bg-white border border-slate-200 rounded-xl p-4">
             <div className="flex items-center gap-2 text-slate-500 mb-1">
               <Plane className="size-4" />
-              <span className="text-xs font-medium uppercase tracking-wide">Distance</span>
+              <span className="text-xs font-medium uppercase tracking-wide">Travelled</span>
             </div>
             <div className="text-3xl font-bold text-slate-900">
-              {totalDistance > 1000
-                ? `${(totalDistance / 1000).toFixed(0)}k`
-                : Math.round(totalDistance)}
+              {formatDistance(travelledDistance)}
             </div>
-            <p className="text-xs text-slate-400 mt-1">Kilometers traveled</p>
+            <p className="text-xs text-slate-400 mt-1">Miles completed</p>
+          </div>
+
+          <div className="flex-1 bg-white border border-slate-200 rounded-xl p-4">
+            <div className="flex items-center gap-2 text-slate-500 mb-1">
+              <Route className="size-4" />
+              <span className="text-xs font-medium uppercase tracking-wide">Planned</span>
+            </div>
+            <div className="text-3xl font-bold text-slate-900">
+              {formatDistance(plannedDistance)}
+            </div>
+            <p className="text-xs text-slate-400 mt-1">Total miles planned</p>
           </div>
 
           <div className="flex-1 bg-white border border-slate-200 rounded-xl p-4">

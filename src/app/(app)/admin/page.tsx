@@ -9,7 +9,6 @@ import {
   Plane,
   Building2,
   UserCheck,
-  DollarSign,
   HardDrive,
   FileText,
   Lock,
@@ -42,15 +41,7 @@ interface AdminData {
     totalBookings: number;
     totalVendors: number;
     totalClients: number;
-    totalExpenses: number;
   };
-  users: {
-    id: string;
-    email: string;
-    name: string | null;
-    createdAt: string;
-    tripCount: number;
-  }[];
   signInActivity: { date: string; count: number }[];
   tripStatusBreakdown: { status: string; count: number }[];
   storageSummary: {
@@ -58,23 +49,6 @@ interface AdminData {
     totalSizeBytes: number;
     totalSizeMB: number;
   };
-}
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
-
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
 }
 
 function formatStatus(status: string) {
@@ -141,7 +115,7 @@ export default function AdminPage() {
       <div className="space-y-6">
         <div className="h-8 w-48 rounded-lg bg-slate-100 animate-pulse" />
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
+          {[1, 2, 3, 4, 5].map((i) => (
             <div
               key={i}
               className="rounded-xl bg-white border border-slate-100 p-5 space-y-3"
@@ -211,12 +185,6 @@ export default function AdminPage() {
       value: data.overview.totalClients.toString(),
       icon: UserCheck,
       gradient: 'from-pink-400 to-pink-500',
-    },
-    {
-      label: 'Total Expenses',
-      value: formatCurrency(data.overview.totalExpenses),
-      icon: DollarSign,
-      gradient: 'from-orange-400 to-orange-500',
     },
   ];
 
@@ -473,68 +441,6 @@ export default function AdminPage() {
         </div>
       </motion.div>
 
-      {/* User List Table */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.45, delay: 0.4 }}
-        className="rounded-xl bg-white border border-slate-100 p-5 shadow-sm"
-      >
-        <h2 className="text-sm font-semibold text-slate-700 mb-4">
-          All Users
-        </h2>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-100">
-                <th className="text-left py-2.5 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  Email
-                </th>
-                <th className="text-left py-2.5 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  Name
-                </th>
-                <th className="text-left py-2.5 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  Joined
-                </th>
-                <th className="text-right py-2.5 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  Trips
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.users.map((u) => (
-                <tr
-                  key={u.id}
-                  className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors"
-                >
-                  <td className="py-2.5 px-3 text-slate-700 font-medium">
-                    {u.email}
-                  </td>
-                  <td className="py-2.5 px-3 text-slate-600">
-                    {u.name || '--'}
-                  </td>
-                  <td className="py-2.5 px-3 text-slate-500">
-                    {formatDate(u.createdAt)}
-                  </td>
-                  <td className="py-2.5 px-3 text-right text-slate-700 font-semibold">
-                    {u.tripCount}
-                  </td>
-                </tr>
-              ))}
-              {data.users.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={4}
-                    className="py-8 text-center text-slate-400"
-                  >
-                    No users found
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </motion.div>
     </div>
   );
 }

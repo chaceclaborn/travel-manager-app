@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { MapPin, Loader2 } from 'lucide-react';
+import { DateRangePicker } from '@/components/travelmanager/DateRangePicker';
 
 interface TripFormProps {
   initialData?: any;
@@ -271,34 +272,19 @@ export function TripForm({ initialData, onSubmit, isLoading }: TripFormProps) {
           {errors.destination && <p id="destination-error" className="text-xs text-red-500">{errors.destination}</p>}
         </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="startDate">Start Date{req}</Label>
-          <Input
-            id="startDate"
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            max="9999-12-31"
-            aria-invalid={!!errors.startDate}
-            aria-describedby={errors.startDate ? 'startDate-error' : undefined}
-            className={errors.startDate ? 'border-red-500' : ''}
+        <div className="space-y-1.5 sm:col-span-2">
+          <Label>Travel Dates{req}</Label>
+          <DateRangePicker
+            startDate={startDate}
+            endDate={endDate}
+            onStartDateChange={setStartDate}
+            onEndDateChange={setEndDate}
+            error={errors.startDate || errors.endDate}
+            required={!isDraft}
           />
-          {errors.startDate && <p id="startDate-error" className="text-xs text-red-500">{errors.startDate}</p>}
-        </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="endDate">End Date{req}</Label>
-          <Input
-            id="endDate"
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            max="9999-12-31"
-            aria-invalid={!!errors.endDate}
-            aria-describedby={errors.endDate ? 'endDate-error' : undefined}
-            className={errors.endDate ? 'border-red-500' : ''}
-          />
-          {errors.endDate && <p id="endDate-error" className="text-xs text-red-500">{errors.endDate}</p>}
+          {(errors.startDate || errors.endDate) && (
+            <p className="text-xs text-red-500">{errors.startDate || errors.endDate}</p>
+          )}
         </div>
 
         <div className="space-y-1.5">

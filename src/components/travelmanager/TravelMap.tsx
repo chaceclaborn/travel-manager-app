@@ -16,8 +16,15 @@ interface MapTrip {
   longitude: number | null;
 }
 
+interface HomeLocation {
+  latitude: number;
+  longitude: number;
+  city: string | null;
+}
+
 interface TravelMapProps {
   trips: MapTrip[];
+  homeLocation?: HomeLocation | null;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -56,7 +63,21 @@ function formatDate(dateStr: string | null): string {
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-export function TravelMap({ trips }: TravelMapProps) {
+function createHomeIcon() {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 36" width="28" height="40">
+    <path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 24 12 24s12-15 12-24C24 5.4 18.6 0 12 0z" fill="#7c3aed" stroke="#fff" stroke-width="1.5"/>
+    <path d="M12 7l-5 4v6h3v-4h4v4h3v-6l-5-4z" fill="#fff"/>
+  </svg>`;
+  return L.divIcon({
+    html: svg,
+    className: '',
+    iconSize: [28, 40],
+    iconAnchor: [14, 40],
+    popupAnchor: [0, -40],
+  });
+}
+
+export function TravelMap({ trips, homeLocation }: TravelMapProps) {
   const geoTrips = useMemo(
     () => trips.filter((t): t is MapTrip & { latitude: number; longitude: number } =>
       t.latitude !== null && t.longitude !== null
@@ -65,11 +86,13 @@ export function TravelMap({ trips }: TravelMapProps) {
   );
 
   const center = useMemo<[number, number]>(() => {
-    if (geoTrips.length === 0) return [20, 0];
-    const avgLat = geoTrips.reduce((sum, t) => sum + t.latitude, 0) / geoTrips.length;
-    const avgLng = geoTrips.reduce((sum, t) => sum + t.longitude, 0) / geoTrips.length;
+    const points: { lat: number; lng: number }[] = geoTrips.map(t => ({ lat: t.latitude, lng: t.longitude }));
+    if (homeLocation) points.push({ lat: homeLocation.latitude, lng: homeLocation.longitude });
+    if (points.length === 0) return [20, 0];
+    const avgLat = points.reduce((sum, p) => sum + p.lat, 0) / points.length;
+    const avgLng = points.reduce((sum, p) => sum + p.lng, 0) / points.length;
     return [avgLat, avgLng];
-  }, [geoTrips]);
+  }, [geoTrips, homeLocation]);
 
   const routeLines = useMemo(() => {
     const sorted = [...geoTrips].sort((a, b) => {
@@ -131,6 +154,22 @@ export function TravelMap({ trips }: TravelMapProps) {
           </Marker>
         );
       })}
+
+      {homeLocation && (
+        <Marker
+          position={[homeLocation.latitude, homeLocation.longitude]}
+          icon={createHomeIcon()}
+        >
+          <Popup>
+            <div className="min-w-[120px]">
+              <div className="font-semibold text-sm text-slate-900">Home</div>
+              {homeLocation.city && (
+                <div className="text-xs text-slate-500 mt-0.5">{homeLocation.city}</div>
+              )}
+            </div>
+          </Popup>
+        </Marker>
+      )}
 
       {routeLines.map((line, i) => (
         <Polyline
