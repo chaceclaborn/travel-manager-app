@@ -32,6 +32,7 @@ model User {
   bookings        Booking[]
   checklists      ChecklistItem[]
   tripNotes       TripNote[]
+  clickEvents     ClickEvent[]
 }
 
 model AuditLog {
@@ -284,5 +285,20 @@ model TripNote {
   updatedAt DateTime @updatedAt
   @@index([tripId])
   @@index([userId])
+}
+
+// ─── Click Analytics ───
+
+model ClickEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  label     String
+  page      String
+  createdAt DateTime @default(now())
+
+  @@index([userId, type])
+  @@index([userId, createdAt])
 }
 

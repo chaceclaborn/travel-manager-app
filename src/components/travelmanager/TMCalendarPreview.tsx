@@ -225,6 +225,8 @@ export function TMCalendarPreview({ trips }: TMCalendarPreviewProps) {
             const isPopoverOpen = popoverDay === dateStr;
             const isHovered = hoveredDay === dateStr;
             const isLastRow = Math.floor(i / 7) === weeks.length - 1;
+            const colIndex = i % 7;
+            const popoverAlign = colIndex <= 1 ? 'left-0' : colIndex >= 5 ? 'right-0' : 'left-1/2 -translate-x-1/2';
 
             return (
               <div
@@ -232,15 +234,13 @@ export function TMCalendarPreview({ trips }: TMCalendarPreviewProps) {
                 className={`min-h-[4.5rem] flex flex-col text-xs relative transition-all duration-150 group bg-white ${
                   isToday
                     ? 'ring-2 ring-amber-400/70 ring-inset bg-gradient-to-b from-amber-50/80 to-amber-50/30 z-10'
-                    : 'hover:bg-slate-50/80'
+                    : isPopoverOpen
+                    ? 'bg-amber-50 ring-1 ring-amber-200 ring-inset'
+                    : 'hover:bg-amber-50/60 active:bg-amber-50'
                 } ${!hasTrips ? 'cursor-pointer' : ''}`}
-                onClick={
-                  !hasTrips
-                    ? () => setPopoverDay(isPopoverOpen ? null : dateStr)
-                    : undefined
-                }
-                onMouseEnter={() => setHoveredDay(dateStr)}
-                onMouseLeave={() => setHoveredDay(null)}
+                onClick={!hasTrips ? () => setPopoverDay(isPopoverOpen ? null : dateStr) : undefined}
+                onMouseEnter={() => { setHoveredDay(dateStr); if (!hasTrips) setPopoverDay(dateStr); }}
+                onMouseLeave={() => { setHoveredDay(null); setPopoverDay(null); }}
               >
                 {/* Day number row */}
                 <div className="flex items-center justify-between px-1.5 pt-1.5">
@@ -300,7 +300,7 @@ export function TMCalendarPreview({ trips }: TMCalendarPreviewProps) {
                 {isPopoverOpen && (
                   <div
                     ref={popoverRef}
-                    className={`absolute left-1/2 -translate-x-1/2 z-50 bg-white rounded-lg shadow-lg ring-1 ring-slate-200 py-1 min-w-[120px] ${
+                    className={`absolute ${popoverAlign} z-50 bg-white rounded-lg shadow-lg ring-1 ring-slate-200 py-1 min-w-[120px] ${
                       isLastRow ? 'bottom-full mb-1' : 'top-full mt-1'
                     }`}
                   >

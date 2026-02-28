@@ -16,13 +16,13 @@ import {
 } from 'lucide-react';
 
 const navItems = [
-  { href: '/', label: 'Dashboard', icon: LayoutDashboard, shortcut: 'G D' },
-  { href: '/trips', label: 'Trips', icon: MapPin, shortcut: 'G T' },
-  { href: '/bookings', label: 'Bookings', icon: Plane, shortcut: 'G B' },
-  { href: '/vendors', label: 'Vendors', icon: Building2, shortcut: 'G V' },
-  { href: '/clients', label: 'Clients', icon: Users, shortcut: 'G C' },
-  { href: '/analytics', label: 'Analytics', icon: BarChart3, shortcut: 'G A' },
-  { href: '/map', label: 'Map', icon: Globe, shortcut: 'G M' },
+  { href: '/', label: 'Dashboard', icon: LayoutDashboard, shortcut: 'G D', track: 'nav:dashboard' },
+  { href: '/trips', label: 'Trips', icon: MapPin, shortcut: 'G T', track: 'nav:trips' },
+  { href: '/bookings', label: 'Bookings', icon: Plane, shortcut: 'G B', track: 'nav:bookings' },
+  { href: '/vendors', label: 'Vendors', icon: Building2, shortcut: 'G V', track: 'nav:vendors' },
+  { href: '/clients', label: 'Clients', icon: Users, shortcut: 'G C', track: 'nav:clients' },
+  { href: '/analytics', label: 'Analytics', icon: BarChart3, shortcut: 'G A', track: 'nav:analytics' },
+  { href: '/map', label: 'Map', icon: Globe, shortcut: 'G M', track: 'nav:map' },
 ];
 
 function NavItem({
@@ -31,17 +31,20 @@ function NavItem({
   icon: Icon,
   shortcut,
   isActive,
+  track,
 }: {
   href: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   shortcut: string;
   isActive: boolean;
+  track?: string;
 }) {
   return (
     <Link
       href={href}
       aria-current={isActive ? 'page' : undefined}
+      data-track={track}
       className="group relative flex items-center rounded-md outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50"
     >
       {/* Active left accent bar */}
@@ -96,8 +99,8 @@ export function TMSidebar() {
   const pathname = usePathname();
 
   const bottomNavItems = [
-    { href: '/settings', label: 'Settings', icon: Settings, shortcut: 'G S' },
-    { href: '/admin', label: 'Admin', icon: ShieldCheck, shortcut: 'G X' },
+    { href: '/settings', label: 'Settings', icon: Settings, shortcut: 'G S', track: 'nav:settings' },
+    { href: '/admin', label: 'Admin', icon: ShieldCheck, shortcut: 'G X', track: 'nav:admin' },
   ];
 
   return (
@@ -109,7 +112,7 @@ export function TMSidebar() {
 
       {/* Main nav items */}
       <div className="flex flex-col gap-0.5">
-        {navItems.map(({ href, label, icon, shortcut }) => {
+        {navItems.map(({ href, label, icon, shortcut, track }) => {
           const isActive =
             href === '/'
               ? pathname === '/'
@@ -123,6 +126,7 @@ export function TMSidebar() {
               icon={icon}
               shortcut={shortcut}
               isActive={isActive}
+              track={track}
             />
           );
         })}
@@ -138,7 +142,7 @@ export function TMSidebar() {
 
       {/* Bottom nav items */}
       <div className="flex flex-col gap-0.5">
-        {bottomNavItems.map(({ href, label, icon, shortcut }) => {
+        {bottomNavItems.map(({ href, label, icon, shortcut, track }) => {
           const isActive = pathname.startsWith(href);
 
           return (
@@ -149,6 +153,7 @@ export function TMSidebar() {
               icon={icon}
               shortcut={shortcut}
               isActive={isActive}
+              track={track}
             />
           );
         })}

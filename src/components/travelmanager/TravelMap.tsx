@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
+import { useMemo, useEffect } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -77,6 +77,20 @@ function createHomeIcon() {
   });
 }
 
+function FitBounds({ points }: { points: [number, number][] }) {
+  const map = useMap();
+  useEffect(() => {
+    if (points.length === 0) return;
+    if (points.length === 1) {
+      map.setView(points[0], 4);
+      return;
+    }
+    const bounds = L.latLngBounds(points.map(([lat, lng]) => L.latLng(lat, lng)));
+    map.fitBounds(bounds, { padding: [40, 40], maxZoom: 5 });
+  }, [map, points]);
+  return null;
+}
+
 export function TravelMap({ trips, homeLocation }: TravelMapProps) {
   const geoTrips = useMemo(
     () => trips.filter((t): t is MapTrip & { latitude: number; longitude: number } =>
@@ -92,6 +106,12 @@ export function TravelMap({ trips, homeLocation }: TravelMapProps) {
     const avgLat = points.reduce((sum, p) => sum + p.lat, 0) / points.length;
     const avgLng = points.reduce((sum, p) => sum + p.lng, 0) / points.length;
     return [avgLat, avgLng];
+  }, [geoTrips, homeLocation]);
+
+  const fitBoundsPoints = useMemo<[number, number][]>(() => {
+    const pts: [number, number][] = geoTrips.map(t => [t.latitude, t.longitude]);
+    if (homeLocation) pts.push([homeLocation.latitude, homeLocation.longitude]);
+    return pts;
   }, [geoTrips, homeLocation]);
 
   const routeLines = useMemo(() => {
@@ -121,6 +141,8 @@ export function TravelMap({ trips, homeLocation }: TravelMapProps) {
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>'
         url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
       />
+
+      {fitBoundsPoints.length > 0 && <FitBounds points={fitBoundsPoints} />}
 
       {geoTrips.map((trip) => {
         const color = STATUS_COLORS[trip.status] || '#64748b';

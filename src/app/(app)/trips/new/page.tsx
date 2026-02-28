@@ -52,7 +52,7 @@ function NewTripPageContent() {
 
       <h1 className="text-2xl font-bold text-slate-800">New Trip</h1>
 
-      <div className="rounded-xl bg-white p-6 shadow-sm">
+      <div className="rounded-xl bg-white p-4 sm:p-6 shadow-sm">
         <TripForm onSubmit={handleSubmit} isLoading={isLoading} initialData={prefillStartDate ? { startDate: prefillStartDate } : undefined} />
       </div>
     </div>

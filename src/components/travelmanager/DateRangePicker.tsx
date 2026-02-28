@@ -45,12 +45,21 @@ export function DateRangePicker({
   required,
 }: DateRangePickerProps) {
   const [open, setOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const [range, setRange] = useState<DateRange | undefined>(() => {
     const from = parseLocalDate(startDate);
     const to = parseLocalDate(endDate);
     if (from || to) return { from, to };
     return undefined;
   });
+
+  useEffect(() => {
+    const mql = window.matchMedia('(max-width: 640px)');
+    setIsMobile(mql.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
+  }, []);
 
   useEffect(() => {
     const from = parseLocalDate(startDate);
@@ -95,12 +104,12 @@ export function DateRangePicker({
           {label}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
+      <PopoverContent className="w-auto max-w-[calc(100vw-2rem)] p-0" align="start">
         <Calendar
           mode="range"
           selected={range}
           onSelect={handleSelect}
-          numberOfMonths={2}
+          numberOfMonths={isMobile ? 1 : 2}
           defaultMonth={range?.from || new Date()}
         />
       </PopoverContent>

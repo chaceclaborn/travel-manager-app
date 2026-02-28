@@ -140,8 +140,8 @@ export default function MapPage() {
   const completedTrips = geoTrips.filter(t => t.status === 'COMPLETED').length;
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="px-6 pt-6 pb-2">
+    <div className="flex flex-col h-full overflow-x-hidden">
+      <div className="px-4 pt-4 pb-2 md:px-6 md:pt-6">
         <TMBreadcrumb items={[
           { label: 'Travel Manager', href: '/' },
           { label: 'Map' },
@@ -151,7 +151,7 @@ export default function MapPage() {
       </div>
 
       <div className="flex-1 flex flex-col lg:flex-row gap-4 p-4 min-h-0">
-        <div className="flex-1 rounded-xl overflow-hidden border border-slate-200 relative min-h-[400px]">
+        <div className="flex-1 rounded-xl overflow-hidden border border-slate-200 relative h-[50vmax] min-h-[240px] md:h-[calc(100vh-12rem)] z-0 isolate">
           {loading ? (
             <div className="absolute inset-0 flex items-center justify-center bg-slate-100">
               <div className="text-center">
@@ -175,7 +175,7 @@ export default function MapPage() {
           )}
         </div>
 
-        <div className="lg:w-72 flex flex-row lg:flex-col gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-1 lg:w-72 lg:flex lg:flex-col gap-3">
           <div className="flex-1 bg-white border border-slate-200 rounded-xl p-4">
             <div className="flex items-center gap-2 text-slate-500 mb-1">
               <MapPin className="size-4" />
@@ -216,7 +216,7 @@ export default function MapPage() {
             <p className="text-xs text-slate-400 mt-1">Total miles planned</p>
           </div>
 
-          <div className="flex-1 bg-white border border-slate-200 rounded-xl p-4">
+          <div className="col-span-2 sm:col-span-4 lg:col-span-1 bg-white border border-slate-200 rounded-xl p-4">
             <p className="text-xs font-medium uppercase tracking-wide text-slate-500 mb-2">Legend</p>
             <div className="space-y-1.5">
               {[

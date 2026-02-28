@@ -9,6 +9,8 @@ import { TMToastProvider } from '@/components/travelmanager/TMToast';
 import { TMCommandPalette } from '@/components/travelmanager/TMCommandPalette';
 import { TMUserMenu } from '@/components/travelmanager/TMUserMenu';
 import { CookieBanner } from '@/components/travelmanager/CookieBanner';
+import { FeedbackWidget } from '@/components/travelmanager/FeedbackWidget';
+import { ClickTracker } from '@/components/travelmanager/ClickTracker';
 import { useAuth } from '@/lib/travelmanager/useAuth';
 
 export default function TravelManagerLayout({
@@ -205,7 +207,7 @@ export default function TravelManagerLayout({
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.2 }}
-                  className="md:hidden fixed inset-0 bg-black/50 z-40"
+                  className="md:hidden fixed inset-0 bg-black/50 z-[60]"
                   onClick={() => setMobileMenuOpen(false)}
                 />
                 <motion.aside
@@ -213,7 +215,7 @@ export default function TravelManagerLayout({
                   animate={{ x: 0 }}
                   exit={{ x: '-100%' }}
                   transition={{ duration: 0.3, ease: 'easeInOut' }}
-                  className="md:hidden fixed inset-y-0 left-0 w-64 bg-slate-900 z-50 flex flex-col"
+                  className="md:hidden fixed inset-y-0 left-0 w-64 bg-slate-900 z-[60] flex flex-col"
                   role="navigation"
                   aria-label="Main navigation"
                 >
@@ -246,6 +248,8 @@ export default function TravelManagerLayout({
       </TMToastProvider>
 
       <TMCommandPalette open={searchOpen} onClose={() => setSearchOpen(false)} />
+      <ClickTracker />
+      <FeedbackWidget />
       <CookieBanner />
     </>
   );
