@@ -95,12 +95,12 @@ function NavItem({
   );
 }
 
-export function TMSidebar() {
+export function TMSidebar({ isAdmin }: { isAdmin?: boolean }) {
   const pathname = usePathname();
 
   const bottomNavItems = [
     { href: '/settings', label: 'Settings', icon: Settings, shortcut: 'G S', track: 'nav:settings' },
-    { href: '/admin', label: 'Admin', icon: ShieldCheck, shortcut: 'G X', track: 'nav:admin' },
+    ...(isAdmin ? [{ href: '/admin', label: 'Admin', icon: ShieldCheck, shortcut: 'G X', track: 'nav:admin' }] : []),
   ];
 
   return (

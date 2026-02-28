@@ -22,6 +22,7 @@ export default function TravelManagerLayout({
   const [demoDismissed, setDemoDismissed] = useState(true);
   const [searchOpen, setSearchOpen] = useState(false);
   const [modKey, setModKey] = useState('⌘');
+  const [isAdmin, setIsAdmin] = useState(false);
   const pathname = usePathname();
   const { user, loading, signOut } = useAuth();
 
@@ -45,6 +46,14 @@ export default function TravelManagerLayout({
       setModKey('Ctrl');
     }
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    fetch('/api/auth/is-admin')
+      .then((r) => r.json())
+      .then((data) => setIsAdmin(data.isAdmin === true))
+      .catch(() => setIsAdmin(false));
+  }, [user]);
 
   useEffect(() => {
     setMobileMenuOpen(false);
@@ -153,7 +162,7 @@ export default function TravelManagerLayout({
               </div>
               <TMUserMenu user={user} onSignOut={signOut} />
             </div>
-            <TMSidebar />
+            <TMSidebar isAdmin={isAdmin} />
             <div className="mt-auto px-4 py-4 border-t border-white/10">
               <button
                 onClick={() => setSearchOpen(true)}
@@ -233,7 +242,7 @@ export default function TravelManagerLayout({
                     </button>
                   </div>
                   <div onClick={() => setMobileMenuOpen(false)}>
-                    <TMSidebar />
+                    <TMSidebar isAdmin={isAdmin} />
                   </div>
                 </motion.aside>
               </>
