@@ -12,6 +12,10 @@ import {
   HardDrive,
   FileText,
   Lock,
+  BarChart2,
+  MousePointerClick,
+  AlertTriangle,
+  Activity,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -24,6 +28,8 @@ import {
   PieChart,
   Pie,
   Cell,
+  AreaChart,
+  Area,
 } from 'recharts';
 
 const STATUS_COLORS: Record<string, string> = {
@@ -49,6 +55,17 @@ interface AdminData {
     totalSizeBytes: number;
     totalSizeMB: number;
   };
+}
+
+interface UsageInsightsData {
+  topFeatures: { label: string; count: number }[];
+  frustrationHotspots: { page: string; count: number }[];
+  summary: {
+    totalFeatureClicks: number;
+    totalFrustrationClicks: number;
+    activeUsers: number;
+  };
+  dailyActivity: { date: string; count: number }[];
 }
 
 function formatStatus(status: string) {
@@ -89,22 +106,29 @@ function CustomTooltip({
 
 export default function AdminPage() {
   const [data, setData] = useState<AdminData | null>(null);
+  const [usageData, setUsageData] = useState<UsageInsightsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [forbidden, setForbidden] = useState(false);
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    fetch('/api/admin/analytics')
-      .then(async (res) => {
+    Promise.all([
+      fetch('/api/admin/analytics').then(async (res) => {
         if (res.status === 403) {
           setForbidden(true);
           return null;
         }
         if (!res.ok) throw new Error('Failed');
         return res.json();
-      })
-      .then((d) => {
-        if (d) setData(d);
+      }),
+      fetch('/api/admin/usage-insights').then(async (res) => {
+        if (!res.ok) return null;
+        return res.json();
+      }),
+    ])
+      .then(([adminData, usage]) => {
+        if (adminData) setData(adminData);
+        if (usage) setUsageData(usage);
       })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
@@ -440,6 +464,228 @@ export default function AdminPage() {
           </div>
         </div>
       </motion.div>
+
+      {/* Usage Insights Section */}
+      {usageData && (
+        <>
+          {/* Usage Insights Header */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45, delay: 0.4 }}
+            className="flex items-center gap-2 pt-2"
+          >
+            <BarChart2 className="size-5 text-amber-500" />
+            <h2 className="text-lg font-semibold text-slate-800">
+              Usage Insights
+            </h2>
+            <span className="text-xs text-slate-400 ml-1">Last 30 days</span>
+          </motion.div>
+
+          {/* Usage Summary Cards */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45, delay: 0.45 }}
+            className="grid gap-4 sm:grid-cols-3"
+          >
+            <div className="rounded-xl bg-white border border-slate-100 p-5 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center size-9 rounded-lg bg-gradient-to-br from-amber-400 to-amber-500 shadow-sm">
+                  <MousePointerClick className="size-4 text-white" strokeWidth={2.5} />
+                </div>
+                <span className="text-sm text-slate-500 font-medium">
+                  Feature Interactions
+                </span>
+              </div>
+              <p className="mt-3 text-2xl font-bold text-slate-800 tracking-tight">
+                {usageData.summary.totalFeatureClicks.toLocaleString()}
+              </p>
+            </div>
+            <div className="rounded-xl bg-white border border-slate-100 p-5 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center size-9 rounded-lg bg-gradient-to-br from-orange-400 to-orange-500 shadow-sm">
+                  <AlertTriangle className="size-4 text-white" strokeWidth={2.5} />
+                </div>
+                <span className="text-sm text-slate-500 font-medium">
+                  Frustration Clicks
+                </span>
+              </div>
+              <p className="mt-3 text-2xl font-bold text-slate-800 tracking-tight">
+                {usageData.summary.totalFrustrationClicks.toLocaleString()}
+              </p>
+            </div>
+            <div className="rounded-xl bg-white border border-slate-100 p-5 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center size-9 rounded-lg bg-gradient-to-br from-teal-400 to-teal-500 shadow-sm">
+                  <Activity className="size-4 text-white" strokeWidth={2.5} />
+                </div>
+                <span className="text-sm text-slate-500 font-medium">
+                  Active Users
+                </span>
+              </div>
+              <p className="mt-3 text-2xl font-bold text-slate-800 tracking-tight">
+                {usageData.summary.activeUsers}
+              </p>
+            </div>
+          </motion.div>
+
+          {/* Usage Charts Row */}
+          <div className="grid gap-6 lg:grid-cols-2">
+            {/* Daily Engagement Trend */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.45, delay: 0.5 }}
+              className="rounded-xl bg-white border border-slate-100 p-5 shadow-sm"
+            >
+              <h2 className="text-sm font-semibold text-slate-700 mb-4">
+                Daily Feature Engagement
+              </h2>
+              {usageData.dailyActivity.length > 0 ? (
+                <ResponsiveContainer width="100%" height={280}>
+                  <AreaChart data={usageData.dailyActivity}>
+                    <defs>
+                      <linearGradient
+                        id="engagementGradient"
+                        x1="0"
+                        y1="0"
+                        x2="0"
+                        y2="1"
+                      >
+                        <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.3} />
+                        <stop offset="100%" stopColor="#f59e0b" stopOpacity={0.02} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="#f1f5f9"
+                      vertical={false}
+                    />
+                    <XAxis
+                      dataKey="date"
+                      tick={{ fontSize: 10, fill: '#94a3b8' }}
+                      axisLine={{ stroke: '#e2e8f0' }}
+                      tickLine={false}
+                      tickFormatter={(d: string) => d.slice(5)}
+                    />
+                    <YAxis
+                      allowDecimals={false}
+                      tick={{ fontSize: 11, fill: '#94a3b8' }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <RechartsTooltip
+                      content={
+                        <CustomTooltip
+                          formatter={(v) =>
+                            `${v} interaction${v !== 1 ? 's' : ''}`
+                          }
+                        />
+                      }
+                      cursor={{ stroke: '#f59e0b', strokeWidth: 1, strokeDasharray: '4 4' }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="count"
+                      stroke="#f59e0b"
+                      strokeWidth={2}
+                      fill="url(#engagementGradient)"
+                      animationDuration={800}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex h-[280px] items-center justify-center text-sm text-slate-400">
+                  No engagement data in the last 30 days
+                </div>
+              )}
+            </motion.div>
+
+            {/* Top Features */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.45, delay: 0.55 }}
+              className="rounded-xl bg-white border border-slate-100 p-5 shadow-sm"
+            >
+              <h2 className="text-sm font-semibold text-slate-700 mb-4">
+                Most Used Features
+              </h2>
+              {usageData.topFeatures.length > 0 ? (
+                <div className="space-y-3">
+                  {usageData.topFeatures.map((feature, i) => {
+                    const maxCount = usageData.topFeatures[0].count;
+                    return (
+                      <div key={feature.label} className="flex items-center gap-3">
+                        <span className="text-xs font-medium text-slate-400 w-5 text-right shrink-0">
+                          {i + 1}
+                        </span>
+                        <span className="text-sm text-slate-700 w-36 truncate shrink-0" title={feature.label}>
+                          {feature.label}
+                        </span>
+                        <div className="flex-1 h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                          <motion.div
+                            className="h-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-full"
+                            initial={{ width: 0 }}
+                            animate={{ width: `${(feature.count / maxCount) * 100}%` }}
+                            transition={{ duration: 0.6, delay: 0.55 + i * 0.05 }}
+                          />
+                        </div>
+                        <span className="text-xs font-semibold text-slate-600 w-10 text-right tabular-nums">
+                          {feature.count.toLocaleString()}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="flex h-[280px] items-center justify-center text-sm text-slate-400">
+                  No feature usage data yet
+                </div>
+              )}
+            </motion.div>
+          </div>
+
+          {/* Frustration Hotspots */}
+          {usageData.frustrationHotspots.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.45, delay: 0.6 }}
+              className="rounded-xl bg-white border border-slate-100 p-5 shadow-sm"
+            >
+              <div className="flex items-center gap-2 mb-4">
+                <AlertTriangle className="size-4 text-orange-500" />
+                <h2 className="text-sm font-semibold text-slate-700">
+                  Frustration Hotspots
+                </h2>
+                <span className="text-xs text-slate-400">
+                  Pages with the most whitespace clicks
+                </span>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {usageData.frustrationHotspots.map((hotspot) => (
+                  <div
+                    key={hotspot.page}
+                    className="flex items-center justify-between rounded-lg border border-orange-100 bg-orange-50/50 px-4 py-3"
+                  >
+                    <span className="text-sm text-slate-700 truncate mr-3" title={hotspot.page}>
+                      {hotspot.page || '/'}
+                    </span>
+                    <span className="text-sm font-semibold text-orange-600 shrink-0">
+                      {hotspot.count.toLocaleString()}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-slate-400 mt-3">
+                High frustration click counts may indicate confusing navigation or missing interactive elements on those pages.
+              </p>
+            </motion.div>
+          )}
+        </>
+      )}
 
     </div>
   );
