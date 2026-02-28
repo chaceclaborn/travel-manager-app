@@ -29,8 +29,8 @@ export async function createBooking(data: CreateBookingInput, userId: string) {
       type: data.type,
       provider: data.provider,
       confirmationNum: data.confirmationNum,
-      startDateTime: data.startDateTime ? new Date(data.startDateTime) : null,
-      endDateTime: data.endDateTime ? new Date(data.endDateTime) : null,
+      startDateTime: data.startDateTime || null,
+      endDateTime: data.endDateTime || null,
       location: data.location,
       endLocation: data.endLocation,
       seat: data.seat,
@@ -47,8 +47,8 @@ export async function updateBooking(id: string, data: UpdateBookingInput, userId
   await verifyTripOwnership(booking.tripId, userId);
 
   const updateData: Record<string, unknown> = { ...data };
-  if (data.startDateTime) updateData.startDateTime = new Date(data.startDateTime);
-  if (data.endDateTime) updateData.endDateTime = new Date(data.endDateTime);
+  if (data.startDateTime !== undefined) updateData.startDateTime = data.startDateTime || null;
+  if (data.endDateTime !== undefined) updateData.endDateTime = data.endDateTime || null;
 
   return prisma.booking.update({
     where: { id },

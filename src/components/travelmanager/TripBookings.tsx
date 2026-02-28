@@ -77,18 +77,27 @@ const typeConfig: Record<BookingType, { icon: React.ReactNode; label: string; ba
 
 function formatDateTime(date: string | null) {
   if (!date) return null;
-  return new Date(date).toLocaleString('en-US', {
+  const [datePart, timePart] = date.split('T');
+  if (!datePart) return date;
+  const [year, month, day] = datePart.split('-').map(Number);
+  const dateStr = new Date(year, month - 1, day).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
   });
+  if (!timePart) return dateStr;
+  const [hours, minutes] = timePart.split(':').map(Number);
+  const period = hours >= 12 ? 'PM' : 'AM';
+  const displayHours = hours % 12 || 12;
+  return `${dateStr}, ${displayHours}:${String(minutes).padStart(2, '0')} ${period}`;
 }
 
 function formatDate(date: string | null) {
   if (!date) return null;
-  return new Date(date).toLocaleDateString('en-US', {
+  const datePart = date.split('T')[0];
+  if (!datePart) return date;
+  const [year, month, day] = datePart.split('-').map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -435,10 +444,10 @@ export function TripBookings({ tripId }: TripBookingsProps) {
                 <div>
                   <Label htmlFor="booking-type">Type</Label>
                   <Select value={form.type} onValueChange={(v) => updateForm('type', v)}>
-                    <SelectTrigger id="booking-type">
+                    <SelectTrigger id="booking-type" className="w-full">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent position="popper" sideOffset={4}>
                       <SelectItem value="FLIGHT">Flight</SelectItem>
                       <SelectItem value="HOTEL">Hotel</SelectItem>
                       <SelectItem value="CAR_RENTAL">Car Rental</SelectItem>

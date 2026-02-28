@@ -253,8 +253,8 @@ model Booking {
   type            BookingType
   provider        String
   confirmationNum String?
-  startDateTime   DateTime?
-  endDateTime     DateTime?
+  startDateTime   String?
+  endDateTime     String?
   location        String?
   endLocation     String?
   seat            String?

@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState, useMemo, useEffect, Suspense } from 'react';
-import { Canvas, useFrame, useLoader } from '@react-three/fiber';
+import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Html } from '@react-three/drei';
 import * as THREE from 'three';
 
@@ -61,10 +61,14 @@ function formatDate(dateStr: string | null): string {
 function Earth() {
   const earthRef = useRef<THREE.Mesh>(null);
   const cloudsRef = useRef<THREE.Mesh>(null);
-  const textures = useLoader(THREE.TextureLoader, [
-    '/textures/earth_daymap.jpg',
-    '/textures/earth_clouds.png',
-  ]);
+  const [earthMap, setEarthMap] = useState<THREE.Texture | null>(null);
+  const [cloudsMap, setCloudsMap] = useState<THREE.Texture | null>(null);
+
+  useEffect(() => {
+    const loader = new THREE.TextureLoader();
+    loader.load('/textures/earth_daymap.jpg', setEarthMap, undefined, () => {});
+    loader.load('/textures/earth_clouds.png', setCloudsMap, undefined, () => {});
+  }, []);
 
   useFrame(() => {
     if (cloudsRef.current) {
@@ -76,12 +80,18 @@ function Earth() {
     <group>
       <mesh ref={earthRef}>
         <sphereGeometry args={[EARTH_RADIUS, 64, 64]} />
-        <meshStandardMaterial map={textures[0]} roughness={0.8} />
+        {earthMap ? (
+          <meshStandardMaterial map={earthMap} roughness={0.8} />
+        ) : (
+          <meshStandardMaterial color="#1a3a5c" roughness={0.8} />
+        )}
       </mesh>
-      <mesh ref={cloudsRef}>
-        <sphereGeometry args={[EARTH_RADIUS * 1.005, 48, 48]} />
-        <meshStandardMaterial map={textures[1]} transparent opacity={0.25} depthWrite={false} />
-      </mesh>
+      {cloudsMap && (
+        <mesh ref={cloudsRef}>
+          <sphereGeometry args={[EARTH_RADIUS * 1.005, 48, 48]} />
+          <meshStandardMaterial map={cloudsMap} transparent opacity={0.25} depthWrite={false} />
+        </mesh>
+      )}
       <mesh>
         <sphereGeometry args={[EARTH_RADIUS * 1.04, 32, 32]} />
         <meshBasicMaterial color="#4da6ff" transparent opacity={0.04} side={THREE.BackSide} />
