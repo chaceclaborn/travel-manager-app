@@ -252,7 +252,10 @@ export function TripForm({ initialData, onSubmit, isLoading }: TripFormProps) {
           <Input
             id="title"
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={(e) => {
+              setTitle(e.target.value);
+              if (e.target.value.trim()) setErrors((prev) => ({ ...prev, title: '' }));
+            }}
             placeholder="e.g. Summer Europe Trip"
             aria-invalid={!!errors.title}
             aria-describedby={errors.title ? 'title-error' : undefined}
@@ -265,7 +268,10 @@ export function TripForm({ initialData, onSubmit, isLoading }: TripFormProps) {
           <Label htmlFor="destination">Destination{req}</Label>
           <DestinationInput
             value={destination}
-            onChange={setDestination}
+            onChange={(val) => {
+              setDestination(val);
+              if (val.trim()) setErrors((prev) => ({ ...prev, destination: '' }));
+            }}
             error={errors.destination}
             required={!isDraft}
           />
@@ -277,8 +283,14 @@ export function TripForm({ initialData, onSubmit, isLoading }: TripFormProps) {
           <DateRangePicker
             startDate={startDate}
             endDate={endDate}
-            onStartDateChange={setStartDate}
-            onEndDateChange={setEndDate}
+            onStartDateChange={(date) => {
+              setStartDate(date);
+              if (date) setErrors((prev) => ({ ...prev, startDate: '' }));
+            }}
+            onEndDateChange={(date) => {
+              setEndDate(date);
+              if (date) setErrors((prev) => ({ ...prev, endDate: '' }));
+            }}
             error={errors.startDate || errors.endDate}
             required={!isDraft}
           />

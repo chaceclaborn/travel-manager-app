@@ -78,7 +78,7 @@ export function TMUserMenu({ user, onSignOut }: TMUserMenuProps) {
       </button>
 
       {open && (
-        <div className="absolute left-0 bottom-full mb-2 sm:left-auto sm:right-0 sm:bottom-auto sm:top-full sm:mb-0 sm:mt-2 w-64 rounded-lg bg-slate-900 border border-white/10 shadow-xl z-50 overflow-hidden">
+        <div className="absolute right-0 top-full mt-2 sm:right-auto sm:left-0 w-64 rounded-lg bg-slate-900 border border-white/10 shadow-xl z-50 overflow-hidden">
           <div className="px-4 py-3 border-b border-white/10">
             <p className="text-sm font-medium text-white truncate">{fullName}</p>
             <p className="text-xs text-slate-400 truncate">{email}</p>

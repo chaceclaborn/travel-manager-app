@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/travelmanager/auth';
 import { rateLimit } from '@/lib/rate-limit';
+import { escapeForDisplay } from '@/lib/sanitize';
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,7 +15,7 @@ export async function POST(request: NextRequest) {
     if (!message || typeof message !== 'string' || message.trim().length === 0) {
       return NextResponse.json({ error: 'Message required' }, { status: 400 });
     }
-    const safeMessage = message.trim().slice(0, 1000);
+    const safeMessage = escapeForDisplay(message.trim().slice(0, 1000));
 
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
