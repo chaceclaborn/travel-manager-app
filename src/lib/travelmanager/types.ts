@@ -13,15 +13,13 @@ import type {
   AttachmentCategory,
   ExpenseCategory,
   BookingType,
-  DocumentType,
   Expense,
   Booking,
   ChecklistItem,
   TripNote,
-  TravelDocument,
 } from '@/lib/generated/prisma';
 
-export type { Trip, Vendor, Client, TripVendor, TripClient, ItineraryItem, TripStatus, VendorCategory, TripAttachment, AuditLog, User, AttachmentCategory, ExpenseCategory, BookingType, DocumentType, Expense, Booking, ChecklistItem, TripNote, TravelDocument };
+export type { Trip, Vendor, Client, TripVendor, TripClient, ItineraryItem, TripStatus, VendorCategory, TripAttachment, AuditLog, User, AttachmentCategory, ExpenseCategory, BookingType, Expense, Booking, ChecklistItem, TripNote };
 
 export type TripWithRelations = Trip & {
   vendors: (TripVendor & { vendor: Vendor })[];
@@ -154,15 +152,3 @@ export interface UpdateTripNoteInput {
   content?: string;
 }
 
-export interface CreateTravelDocumentInput {
-  type: DocumentType;
-  label: string;
-  number?: string;
-  issueDate?: string;
-  expiryDate?: string;
-  country?: string;
-  filePath?: string;
-  notes?: string;
-}
-
-export interface UpdateTravelDocumentInput extends Partial<CreateTravelDocumentInput> {}

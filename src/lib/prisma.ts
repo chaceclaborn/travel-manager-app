@@ -17,7 +17,7 @@ function createPrismaClient(): PrismaClient {
       host: 'aws-1-us-east-2.pooler.supabase.com',
       port: 5432,
       database: 'postgres',
-      user: 'postgres.biaxoishtoysdjfiqddl',
+      user: 'postgres.bsnzgcmizbonttgnxvqi',
       password: process.env.DB_PASSWORD,
       ssl: { rejectUnauthorized: false },
       max: 5,

@@ -31,9 +31,9 @@ export default function TravelManagerLayout({
     : pathname.includes('/vendors') ? 'Vendors'
     : pathname.includes('/clients') ? 'Clients'
     : pathname.includes('/analytics') ? 'Analytics'
-    : pathname.includes('/documents') ? 'Documents'
     : pathname.includes('/map') ? 'Map'
     : pathname.includes('/settings') ? 'Settings'
+    : pathname.includes('/admin') ? 'Admin'
     : '';
 
   useEffect(() => {

@@ -3,6 +3,7 @@ import { deleteTripAttachment } from '@/lib/travelmanager/trips';
 import { requireAuth } from '@/lib/travelmanager/auth';
 import { createSupabaseAdmin } from '@/lib/supabase/admin';
 import prisma from '@/lib/prisma';
+import { validateUUID } from '@/lib/sanitize';
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -10,6 +11,10 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     if (!user) return response;
 
     const { id } = await params;
+    if (!validateUUID(id)) {
+      return NextResponse.json({ error: 'Invalid attachment ID' }, { status: 400 });
+    }
+
     const attachment = await prisma.tripAttachment.findUnique({ where: { id } });
 
     if (!attachment) {
@@ -44,6 +49,10 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
     if (!user) return response;
 
     const { id } = await params;
+    if (!validateUUID(id)) {
+      return NextResponse.json({ error: 'Invalid attachment ID' }, { status: 400 });
+    }
+
     const attachment = await prisma.tripAttachment.findUnique({ where: { id } });
 
     if (!attachment) {

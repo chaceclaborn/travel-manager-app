@@ -1,10 +1,14 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { deleteAllUserData, createAuditLog } from '@/lib/travelmanager/trips';
 import { requireAuth } from '@/lib/travelmanager/auth';
 import { createSupabaseAdmin } from '@/lib/supabase/admin';
+import { rateLimit } from '@/lib/rate-limit';
 
-export async function DELETE() {
+export async function DELETE(request: NextRequest) {
   try {
+    const rateLimitResult = rateLimit(request, 'sensitive');
+    if (rateLimitResult) return rateLimitResult;
+
     const { user, response } = await requireAuth();
     if (!user) return response;
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getTripAttachments, createTripAttachment } from '@/lib/travelmanager/trips';
 import { requireAuth } from '@/lib/travelmanager/auth';
 import { createSupabaseAdmin } from '@/lib/supabase/admin';
+import { validateUUID, validateEnum, ATTACHMENT_CATEGORY_VALUES } from '@/lib/sanitize';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_MIME_TYPES = new Set([
@@ -20,6 +21,9 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     if (!user) return response;
 
     const { id } = await params;
+    if (!validateUUID(id)) {
+      return NextResponse.json({ error: 'Invalid trip ID' }, { status: 400 });
+    }
     const attachments = await getTripAttachments(id, user.id);
     return NextResponse.json(attachments);
   } catch (error) {
@@ -34,9 +38,17 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (!user) return response;
 
     const { id: tripId } = await params;
+    if (!validateUUID(tripId)) {
+      return NextResponse.json({ error: 'Invalid trip ID' }, { status: 400 });
+    }
+
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
     const category = (formData.get('category') as string) || 'OTHER';
+
+    if (!validateEnum(category, ATTACHMENT_CATEGORY_VALUES)) {
+      return NextResponse.json({ error: 'Invalid attachment category' }, { status: 400 });
+    }
 
     if (!file) {
       return NextResponse.json({ error: 'File is required' }, { status: 400 });

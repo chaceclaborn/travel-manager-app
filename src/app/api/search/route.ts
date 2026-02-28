@@ -1,14 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { searchAll } from '@/lib/travelmanager/trips';
 import { requireAuth } from '@/lib/travelmanager/auth';
+import { sanitizeString } from '@/lib/sanitize';
 
 export async function GET(request: NextRequest) {
   try {
     const { user, response } = await requireAuth();
     if (!user) return response;
 
-    const q = request.nextUrl.searchParams.get('q')?.trim();
-    if (!q || q.length < 2) {
+    const rawQuery = request.nextUrl.searchParams.get('q')?.trim();
+    if (!rawQuery || rawQuery.length < 2) {
+      return NextResponse.json({ trips: [], vendors: [], clients: [] });
+    }
+    const q = sanitizeString(rawQuery);
+    if (q.length < 2) {
       return NextResponse.json({ trips: [], vendors: [], clients: [] });
     }
     const results = await searchAll(q, user.id);

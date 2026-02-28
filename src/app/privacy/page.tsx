@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { TMBreadcrumb } from '@/components/travelmanager/TMBreadcrumb';
-import { Shield, Database, Lock, Clock, UserCheck, Users, Mail } from 'lucide-react';
+import { Shield, Database, Lock, Clock, UserCheck, Users, Mail, Cookie, Globe } from 'lucide-react';
 
 const sections = [
   {
@@ -13,7 +13,7 @@ const sections = [
       'Trip data you create (destinations, dates, budgets, itineraries, notes)',
       'Vendor records (names, contact info, categories, ratings)',
       'Client records (names, contact info, associated trips)',
-      'Documents and files you upload as trip attachments',
+      'Booking confirmations and travel arrangement details you save',
       'Sign-in logs including timestamp, IP address, and user agent for security purposes',
     ],
   },
@@ -23,7 +23,6 @@ const sections = [
     content: [
       'All data is stored in a PostgreSQL database hosted on Supabase (powered by AWS infrastructure)',
       'Data is encrypted at rest using AES-256 encryption and in transit using TLS 1.2+',
-      'Uploaded files are stored in Supabase Storage with per-user isolation, meaning your files are stored in a private bucket accessible only to your account',
       'Database backups are performed automatically by Supabase on a regular schedule',
     ],
   },
@@ -31,9 +30,8 @@ const sections = [
     icon: Shield,
     title: 'Data Isolation',
     content: [
-      'Each user can only access their own data — you cannot view, edit, or delete another user\'s trips, vendors, clients, or files',
-      'Data isolation is enforced at the application level through authenticated API routes that filter all queries by your user ID',
-      'Database row-level security (RLS) provides an additional layer of protection at the database level',
+      'Each user can only access their own data — you cannot view, edit, or delete another user\'s trips, vendors, or clients',
+      'Data isolation is enforced through application-level access controls — all API routes are authenticated and filter queries by your user ID',
     ],
   },
   {
@@ -41,7 +39,7 @@ const sections = [
     title: 'Data Retention',
     content: [
       'Your data is retained for as long as your account exists',
-      'When you delete your account, all associated data is permanently removed immediately — this includes trips, vendors, clients, uploaded files, and sign-in history',
+      'When you delete your account, all associated data is permanently removed immediately — this includes trips, vendors, clients, and sign-in history',
       'There is no recovery period after account deletion; the action is irreversible',
     ],
   },
@@ -62,15 +60,39 @@ const sections = [
     content: [
       'We do not sell your data to any third parties',
       'We do not share your data with any third parties for marketing or advertising purposes',
-      'We do not provide your data to any third parties except as required to operate the service (e.g., Supabase for database hosting, Google for authentication)',
+      'Google — used solely for OAuth authentication (sign-in); no trip data is shared with Google',
+      'Supabase — database hosting provider (powered by AWS infrastructure); stores your encrypted data',
+      'Vercel — web hosting and deployment platform; serves the application but does not store your personal data',
+      'OpenStreetMap / CARTO — provides map tile rendering for trip maps; no personal data is sent to these services',
       'No analytics or tracking services have access to your personal data within Travel Manager',
+    ],
+  },
+  {
+    icon: Cookie,
+    title: 'Cookies',
+    content: [
+      'Supabase authentication cookies are used for session management — these are httpOnly and secure cookies required to keep you signed in',
+      'No tracking cookies or analytics cookies are used',
+      'No third-party advertising cookies are used',
+      'The only cookies stored are strictly necessary for authentication and session functionality',
+    ],
+  },
+  {
+    icon: Globe,
+    title: 'GDPR & CCPA',
+    content: [
+      'Right to access — you can view all data associated with your account and export it from the Settings page',
+      'Right to deletion — you can permanently delete your account and all associated data from the Settings page',
+      'Right to portability — you can export all of your data as a JSON file at any time',
+      'No profiling or automated decision-making is performed on your data',
+      'Data is processed and stored in the United States',
     ],
   },
   {
     icon: Mail,
     title: 'Contact',
     content: [
-      'For privacy-related questions or concerns, please reach out through the contact form on the main website at chaceclaborn.com',
+      'For privacy-related questions or concerns, email us at privacy@travels-manager.com or use the contact form at chaceclaborn.com',
     ],
   },
 ];

@@ -4,6 +4,23 @@ import { NextResponse, type NextRequest } from 'next/server';
 const OLD_PROJECT_REF = 'biaxoishtoysdjfiqddl';
 
 export async function middleware(request: NextRequest) {
+  // CSRF protection: verify Origin header on state-changing API requests
+  const method = request.method;
+  const pathname = request.nextUrl.pathname;
+  if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method) && pathname.startsWith('/api/')) {
+    const origin = request.headers.get('origin');
+    const host = request.headers.get('host');
+    if (origin && host) {
+      const originHost = new URL(origin).host;
+      if (originHost !== host) {
+        return NextResponse.json(
+          { error: 'Forbidden' },
+          { status: 403 }
+        );
+      }
+    }
+  }
+
   let supabaseResponse = NextResponse.next({ request });
 
   const staleCookies = request.cookies

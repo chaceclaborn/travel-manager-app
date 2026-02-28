@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { MapPin, Globe as GlobeIcon, Plane, Loader2 } from 'lucide-react';
 import { TMBreadcrumb } from '@/components/travelmanager/TMBreadcrumb';
@@ -35,35 +35,7 @@ function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: numbe
 export default function MapPage() {
   const [trips, setTrips] = useState<MapTrip[]>([]);
   const [loading, setLoading] = useState(true);
-  const [geocoding, setGeocoding] = useState(false);
-
-  const geocodeMissing = useCallback(async (tripsToGeocode: MapTrip[]) => {
-    const missing = tripsToGeocode.filter(
-      t => t.destination && t.latitude === null && t.longitude === null
-    );
-    if (missing.length === 0) return tripsToGeocode;
-
-    setGeocoding(true);
-    const updated = [...tripsToGeocode];
-
-    for (const trip of missing) {
-      try {
-        const res = await fetch(`/api/trips/${trip.id}/geocode`, { method: 'POST' });
-        if (res.ok) {
-          const data = await res.json();
-          const idx = updated.findIndex(t => t.id === trip.id);
-          if (idx !== -1) {
-            updated[idx] = { ...updated[idx], latitude: data.latitude, longitude: data.longitude };
-          }
-        }
-      } catch {
-        // Skip failed geocodes silently
-      }
-    }
-
-    setGeocoding(false);
-    return updated;
-  }, []);
+  const [geocoding] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -84,8 +56,7 @@ export default function MapPage() {
           longitude: (t.longitude as number) ?? null,
         }));
 
-        const geocoded = await geocodeMissing(mapped);
-        setTrips(geocoded);
+        setTrips(mapped);
       } catch (error) {
         console.error('Failed to load trips:', error);
       } finally {
@@ -93,7 +64,7 @@ export default function MapPage() {
       }
     }
     load();
-  }, [geocodeMissing]);
+  }, []);
 
   const geoTrips = trips.filter(t => t.latitude !== null && t.longitude !== null);
 

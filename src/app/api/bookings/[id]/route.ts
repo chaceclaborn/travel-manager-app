@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getBookingById, updateBooking, deleteBooking, linkBookingToTrip } from '@/lib/travelmanager/bookings';
 import { requireAuth } from '@/lib/travelmanager/auth';
+import { sanitizeObject, validateUUID, validateEnum, validateDateString, BOOKING_TYPE_VALUES } from '@/lib/sanitize';
+
+const BOOKING_ALLOWED_FIELDS = ['tripId', 'type', 'provider', 'confirmationNum', 'startDateTime', 'endDateTime', 'location', 'endLocation', 'seat', 'notes'];
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -8,6 +11,9 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     if (!user) return response;
 
     const { id } = await params;
+    if (!validateUUID(id)) {
+      return NextResponse.json({ error: 'Invalid booking ID' }, { status: 400 });
+    }
     const booking = await getBookingById(id, user.id);
     return NextResponse.json(booking);
   } catch (error) {
@@ -22,8 +28,26 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if (!user) return response;
 
     const { id } = await params;
+    if (!validateUUID(id)) {
+      return NextResponse.json({ error: 'Invalid booking ID' }, { status: 400 });
+    }
+
     const body = await request.json();
-    const booking = await updateBooking(id, body, user.id);
+    const sanitized = sanitizeObject(body, BOOKING_ALLOWED_FIELDS);
+
+    if (sanitized.type && !validateEnum(sanitized.type as string, BOOKING_TYPE_VALUES)) {
+      return NextResponse.json({ error: 'Invalid booking type' }, { status: 400 });
+    }
+
+    if (sanitized.startDateTime && !validateDateString(sanitized.startDateTime as string)) {
+      return NextResponse.json({ error: 'Invalid start date format' }, { status: 400 });
+    }
+
+    if (sanitized.endDateTime && !validateDateString(sanitized.endDateTime as string)) {
+      return NextResponse.json({ error: 'Invalid end date format' }, { status: 400 });
+    }
+
+    const booking = await updateBooking(id, sanitized as Parameters<typeof updateBooking>[1], user.id);
     return NextResponse.json(booking);
   } catch (error) {
     console.error('Error updating booking:', error instanceof Error ? error.message : error);
@@ -37,14 +61,22 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     if (!user) return response;
 
     const { id } = await params;
-    const body = await request.json();
+    if (!validateUUID(id)) {
+      return NextResponse.json({ error: 'Invalid booking ID' }, { status: 400 });
+    }
 
-    if (body.tripId) {
-      const booking = await linkBookingToTrip(id, body.tripId, user.id);
+    const body = await request.json();
+    const sanitized = sanitizeObject(body, BOOKING_ALLOWED_FIELDS);
+
+    if (sanitized.tripId) {
+      if (!validateUUID(sanitized.tripId as string)) {
+        return NextResponse.json({ error: 'Invalid trip ID' }, { status: 400 });
+      }
+      const booking = await linkBookingToTrip(id, sanitized.tripId as string, user.id);
       return NextResponse.json(booking);
     }
 
-    const booking = await updateBooking(id, body, user.id);
+    const booking = await updateBooking(id, sanitized as Parameters<typeof updateBooking>[1], user.id);
     return NextResponse.json(booking);
   } catch (error) {
     console.error('Error updating booking:', error instanceof Error ? error.message : error);
@@ -58,6 +90,9 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
     if (!user) return response;
 
     const { id } = await params;
+    if (!validateUUID(id)) {
+      return NextResponse.json({ error: 'Invalid booking ID' }, { status: 400 });
+    }
     await deleteBooking(id, user.id);
     return NextResponse.json({ success: true });
   } catch (error) {

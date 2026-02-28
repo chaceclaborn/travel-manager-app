@@ -29,7 +29,6 @@ model User {
   bookings        Booking[]
   checklists      ChecklistItem[]
   tripNotes       TripNote[]
-  travelDocuments TravelDocument[]
 }
 
 model AuditLog {
@@ -88,15 +87,6 @@ enum BookingType {
   CAR_RENTAL
   TRAIN
   BUS
-  OTHER
-}
-
-enum DocumentType {
-  PASSPORT
-  VISA
-  INSURANCE
-  DRIVERS_LICENSE
-  VACCINATION
   OTHER
 }
 
@@ -293,19 +283,3 @@ model TripNote {
   @@index([userId])
 }
 
-model TravelDocument {
-  id         String       @id @default(cuid())
-  userId     String
-  user       User         @relation(fields: [userId], references: [id])
-  type       DocumentType
-  label      String
-  number     String?
-  issueDate  DateTime?
-  expiryDate DateTime?
-  country    String?
-  filePath   String?
-  notes      String?
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
-  @@index([userId])
-}

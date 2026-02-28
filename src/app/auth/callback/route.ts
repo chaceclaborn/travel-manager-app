@@ -1,8 +1,12 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import prisma from '@/lib/prisma';
+import { rateLimit } from '@/lib/rate-limit';
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+  const rateLimitResult = rateLimit(request, 'auth');
+  if (rateLimitResult) return rateLimitResult;
+
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get('code');
 
@@ -32,22 +36,17 @@ export async function GET(request: Request) {
     const existing = await prisma.user.findUnique({ where: { email } });
 
     if (existing && existing.id !== user.id) {
-      const tables = [
-        'Trip', 'AuditLog', 'Vendor', 'Client', 'Expense',
-        'Booking', 'ChecklistItem', 'TripNote', 'TravelDocument', 'TripAttachment',
-      ] as const;
-
       await prisma.$transaction(async (tx) => {
-        await tx.$executeRawUnsafe(
-          `UPDATE "User" SET id = $1, name = $2, "avatarUrl" = $3, "updatedAt" = NOW() WHERE email = $4`,
-          user.id, meta.full_name ?? '', meta.avatar_url ?? null, email
-        );
-        for (const table of tables) {
-          await tx.$executeRawUnsafe(
-            `UPDATE "${table}" SET "userId" = $1 WHERE "userId" = $2`,
-            user.id, existing.id
-          );
-        }
+        await tx.$executeRaw`UPDATE "User" SET id = ${user.id}, name = ${meta.full_name ?? ''}, "avatarUrl" = ${meta.avatar_url ?? null}, "updatedAt" = NOW() WHERE email = ${email}`;
+        await tx.$executeRaw`UPDATE "Trip" SET "userId" = ${user.id} WHERE "userId" = ${existing.id}`;
+        await tx.$executeRaw`UPDATE "AuditLog" SET "userId" = ${user.id} WHERE "userId" = ${existing.id}`;
+        await tx.$executeRaw`UPDATE "Vendor" SET "userId" = ${user.id} WHERE "userId" = ${existing.id}`;
+        await tx.$executeRaw`UPDATE "Client" SET "userId" = ${user.id} WHERE "userId" = ${existing.id}`;
+        await tx.$executeRaw`UPDATE "Expense" SET "userId" = ${user.id} WHERE "userId" = ${existing.id}`;
+        await tx.$executeRaw`UPDATE "Booking" SET "userId" = ${user.id} WHERE "userId" = ${existing.id}`;
+        await tx.$executeRaw`UPDATE "ChecklistItem" SET "userId" = ${user.id} WHERE "userId" = ${existing.id}`;
+        await tx.$executeRaw`UPDATE "TripNote" SET "userId" = ${user.id} WHERE "userId" = ${existing.id}`;
+        await tx.$executeRaw`UPDATE "TripAttachment" SET "userId" = ${user.id} WHERE "userId" = ${existing.id}`;
       });
     } else {
       await prisma.user.upsert({

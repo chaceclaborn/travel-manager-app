@@ -54,26 +54,28 @@ export function VendorCard({ vendor }: VendorCardProps) {
           {vendor.email && (
             <div className="flex items-center gap-1.5 text-sm text-slate-500 mb-1">
               <Mail className="size-3.5" />
-              <a
-                href={`mailto:${vendor.email}`}
-                onClick={(e) => e.stopPropagation()}
-                className="truncate hover:text-amber-600 hover:underline"
+              <span
+                role="link"
+                tabIndex={-1}
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.location.href = `mailto:${vendor.email}`; }}
+                className="truncate hover:text-amber-600 hover:underline cursor-pointer"
               >
                 {vendor.email}
-              </a>
+              </span>
             </div>
           )}
 
           {vendor.phone && (
             <div className="flex items-center gap-1.5 text-sm text-slate-500 mb-1">
               <Phone className="size-3.5" />
-              <a
-                href={`tel:${vendor.phone}`}
-                onClick={(e) => e.stopPropagation()}
-                className="hover:text-amber-600 hover:underline"
+              <span
+                role="link"
+                tabIndex={-1}
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.location.href = `tel:${vendor.phone}`; }}
+                className="hover:text-amber-600 hover:underline cursor-pointer"
               >
                 {vendor.phone}
-              </a>
+              </span>
             </div>
           )}
 

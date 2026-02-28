@@ -3,16 +3,17 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
+import { useAuth } from '@/lib/travelmanager/useAuth';
 import {
   LayoutDashboard,
   MapPin,
   Building2,
   Users,
   BarChart3,
-  FileText,
   Globe,
   Settings,
   Plane,
+  ShieldCheck,
 } from 'lucide-react';
 
 const navItems = [
@@ -22,13 +23,10 @@ const navItems = [
   { href: '/vendors', label: 'Vendors', icon: Building2, shortcut: 'G V' },
   { href: '/clients', label: 'Clients', icon: Users, shortcut: 'G C' },
   { href: '/analytics', label: 'Analytics', icon: BarChart3, shortcut: 'G A' },
-  { href: '/documents', label: 'Documents', icon: FileText, shortcut: 'G E' },
   { href: '/map', label: 'Map', icon: Globe, shortcut: 'G M' },
 ];
 
-const bottomNavItems = [
-  { href: '/settings', label: 'Settings', icon: Settings, shortcut: 'G S' },
-];
+const ADMIN_EMAIL = 'chaceclaborn@gmail.com';
 
 function NavItem({
   href,
@@ -99,6 +97,14 @@ function NavItem({
 
 export function TMSidebar() {
   const pathname = usePathname();
+  const { user } = useAuth();
+
+  const bottomNavItems = [
+    { href: '/settings', label: 'Settings', icon: Settings, shortcut: 'G S' },
+    ...(user?.email === ADMIN_EMAIL
+      ? [{ href: '/admin', label: 'Admin', icon: ShieldCheck, shortcut: 'G X' }]
+      : []),
+  ];
 
   return (
     <nav className="flex flex-1 flex-col px-3 py-3">

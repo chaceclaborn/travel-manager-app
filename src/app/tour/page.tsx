@@ -175,6 +175,10 @@ function TourPageContent() {
             <Link href="/privacy" className="text-amber-600 hover:underline">
               Privacy Policy
             </Link>
+            {' '}and{' '}
+            <Link href="/terms" className="text-amber-600 hover:underline">
+              Terms of Service
+            </Link>
           </p>
         </motion.div>
 

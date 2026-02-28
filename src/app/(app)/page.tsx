@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
-import { MapPin, Calendar, Building2, Users, Plus, ArrowRight, Clock, Plane, DollarSign, AlertTriangle, AlertCircle, RefreshCw, X, Sparkles } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { MapPin, Calendar, Building2, Users, Plus, ArrowRight, Clock, Plane, DollarSign, AlertCircle, RefreshCw, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TMStatsCard } from '@/components/travelmanager/TMStatsCard';
 import { TMStatusBadge } from '@/components/travelmanager/TMStatusBadge';
@@ -159,8 +159,6 @@ export default function TravelManagerDashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [expiringDocs, setExpiringDocs] = useState<any[]>([]);
-  const [alertDismissed, setAlertDismissed] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
   const fetchDashboard = useCallback(async () => {
@@ -190,12 +188,6 @@ export default function TravelManagerDashboard() {
     return () => abortRef.current?.abort();
   }, [fetchDashboard]);
 
-  useEffect(() => {
-    fetch('/api/documents?expiring=true')
-      .then(res => res.ok ? res.json() : [])
-      .then(docs => setExpiringDocs(Array.isArray(docs) ? docs : []))
-      .catch(() => {});
-  }, []);
 
   if (loading) {
     return <DashboardSkeleton />;
@@ -252,55 +244,6 @@ export default function TravelManagerDashboard() {
 
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-8">
-      {/* Document Expiry Alert */}
-      <AnimatePresence>
-        {expiringDocs.length > 0 && !alertDismissed && (
-          <motion.div
-            variants={item}
-            exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-            transition={{ duration: 0.3 }}
-            className="rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border-l-4 border-amber-400 p-4 shadow-sm"
-          >
-            <div className="flex items-start gap-3">
-              <div className="size-9 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <AlertTriangle className="size-4.5 text-amber-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="text-sm font-semibold text-amber-900">Document Expiry Alert</h3>
-                <ul className="mt-1.5 space-y-1">
-                  {expiringDocs.map((doc: any) => {
-                    const daysLeft = Math.ceil((new Date(doc.expiryDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-                    return (
-                      <li key={doc.id} className="text-sm text-amber-800 flex items-center gap-1.5">
-                        <span className={`inline-block size-1.5 rounded-full flex-shrink-0 ${daysLeft <= 0 ? 'bg-red-500' : daysLeft <= 7 ? 'bg-amber-500' : 'bg-amber-400'}`} />
-                        <span className="font-medium">{doc.label}</span>
-                        <span className="text-amber-600">
-                          {daysLeft <= 0 ? '-- Expired!' : `-- ${daysLeft} day${daysLeft !== 1 ? 's' : ''} remaining`}
-                        </span>
-                      </li>
-                    );
-                  })}
-                </ul>
-                <Link
-                  href="/documents"
-                  className="text-xs text-amber-700 hover:text-amber-900 font-semibold mt-2.5 inline-flex items-center gap-1 transition-colors"
-                >
-                  Review Documents
-                  <ArrowRight className="size-3" />
-                </Link>
-              </div>
-              <button
-                onClick={() => setAlertDismissed(true)}
-                className="p-1 rounded-md text-amber-400 hover:text-amber-600 hover:bg-amber-100 transition-colors flex-shrink-0"
-                aria-label="Dismiss alert"
-              >
-                <X className="size-4" />
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Welcome Header */}
       <motion.div variants={item}>
         <div className="flex items-center gap-2">

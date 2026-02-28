@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTripNotes, createTripNote } from '@/lib/travelmanager/notes';
 import { requireAuth } from '@/lib/travelmanager/auth';
+import { sanitizeObject, validateUUID, validateDateString } from '@/lib/sanitize';
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -8,6 +9,9 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     if (!user) return response;
 
     const { id } = await params;
+    if (!validateUUID(id)) {
+      return NextResponse.json({ error: 'Invalid trip ID' }, { status: 400 });
+    }
     const notes = await getTripNotes(id, user.id);
     return NextResponse.json(notes);
   } catch (error) {
@@ -22,17 +26,26 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (!user) return response;
 
     const { id: tripId } = await params;
-    const body = await request.json();
+    if (!validateUUID(tripId)) {
+      return NextResponse.json({ error: 'Invalid trip ID' }, { status: 400 });
+    }
 
-    if (!body.content?.trim()) {
+    const body = await request.json();
+    const sanitized = sanitizeObject(body, ['content', 'date']);
+
+    if (!(sanitized.content as string | undefined)?.toString().trim()) {
       return NextResponse.json({ error: 'Content is required' }, { status: 400 });
     }
 
-    if (!body.date) {
+    if (!sanitized.date) {
       return NextResponse.json({ error: 'Date is required' }, { status: 400 });
     }
 
-    const note = await createTripNote({ ...body, tripId }, user.id);
+    if (!validateDateString(sanitized.date as string)) {
+      return NextResponse.json({ error: 'Invalid date format' }, { status: 400 });
+    }
+
+    const note = await createTripNote({ ...sanitized, tripId } as Parameters<typeof createTripNote>[0], user.id);
     return NextResponse.json(note, { status: 201 });
   } catch (error) {
     console.error('Error creating note:', error instanceof Error ? error.message : error);

@@ -3,6 +3,7 @@ import { updateExpense } from '@/lib/travelmanager/expenses';
 import { requireAuth } from '@/lib/travelmanager/auth';
 import { createSupabaseAdmin } from '@/lib/supabase/admin';
 import prisma from '@/lib/prisma';
+import { validateUUID } from '@/lib/sanitize';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_MIME_TYPES = new Set([
@@ -17,6 +18,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (!user) return response;
 
     const { id: expenseId } = await params;
+    if (!validateUUID(expenseId)) {
+      return NextResponse.json({ error: 'Invalid expense ID' }, { status: 400 });
+    }
 
     const expense = await prisma.expense.findUnique({ where: { id: expenseId } });
     if (!expense) {

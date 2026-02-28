@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getClients, createClient } from '@/lib/travelmanager/clients';
 import { requireAuth } from '@/lib/travelmanager/auth';
+import { rateLimit } from '@/lib/rate-limit';
+import { sanitizeObject, validateEmail } from '@/lib/sanitize';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const rateLimitResult = rateLimit(request, 'read');
+    if (rateLimitResult) return rateLimitResult;
+
     const { user, response } = await requireAuth();
     if (!user) return response;
 
@@ -17,17 +22,25 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const rateLimitResult = rateLimit(request, 'write');
+    if (rateLimitResult) return rateLimitResult;
+
     const { user, response } = await requireAuth();
     if (!user) return response;
 
     const body = await request.json();
-    const { name, company, email, phone, notes } = body;
+    const sanitized = sanitizeObject(body, ['name', 'company', 'email', 'phone', 'notes']);
+    const { name, company, email, phone, notes } = sanitized;
 
-    if (!name) {
+    if (!name || typeof name !== 'string') {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 });
     }
 
-    const client = await createClient({ name, company, email, phone, notes }, user.id);
+    if (email && !validateEmail(email as string)) {
+      return NextResponse.json({ error: 'Invalid email format' }, { status: 400 });
+    }
+
+    const client = await createClient({ name, company, email, phone, notes } as Parameters<typeof createClient>[0], user.id);
     return NextResponse.json(client, { status: 201 });
   } catch (error) {
     console.error('Error creating client:', error instanceof Error ? error.message : error);

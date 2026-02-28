@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { updateExpense, deleteExpense } from '@/lib/travelmanager/expenses';
 import { requireAuth } from '@/lib/travelmanager/auth';
 import prisma from '@/lib/prisma';
+import { sanitizeObject, validateUUID, validateDateString, validateEnum, EXPENSE_CATEGORY_VALUES } from '@/lib/sanitize';
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -9,6 +10,9 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     if (!user) return response;
 
     const { id } = await params;
+    if (!validateUUID(id)) {
+      return NextResponse.json({ error: 'Invalid expense ID' }, { status: 400 });
+    }
     const expense = await prisma.expense.findUnique({ where: { id } });
 
     if (!expense) {
@@ -33,8 +37,26 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if (!user) return response;
 
     const { id } = await params;
+    if (!validateUUID(id)) {
+      return NextResponse.json({ error: 'Invalid expense ID' }, { status: 400 });
+    }
+
     const body = await request.json();
-    const expense = await updateExpense(id, body, user.id);
+    const sanitized = sanitizeObject(body, ['amount', 'currency', 'category', 'description', 'date', 'receiptPath']);
+
+    if (sanitized.date && !validateDateString(sanitized.date as string)) {
+      return NextResponse.json({ error: 'Invalid date format' }, { status: 400 });
+    }
+
+    if (sanitized.category && !validateEnum(sanitized.category as string, EXPENSE_CATEGORY_VALUES)) {
+      return NextResponse.json({ error: 'Invalid expense category' }, { status: 400 });
+    }
+
+    if (sanitized.amount !== undefined && (typeof sanitized.amount !== 'number' || (sanitized.amount as number) <= 0)) {
+      return NextResponse.json({ error: 'Amount must be a positive number' }, { status: 400 });
+    }
+
+    const expense = await updateExpense(id, sanitized as Parameters<typeof updateExpense>[1], user.id);
     return NextResponse.json(expense);
   } catch (error) {
     console.error('Error updating expense:', error instanceof Error ? error.message : error);
@@ -48,6 +70,9 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
     if (!user) return response;
 
     const { id } = await params;
+    if (!validateUUID(id)) {
+      return NextResponse.json({ error: 'Invalid expense ID' }, { status: 400 });
+    }
     await deleteExpense(id, user.id);
     return NextResponse.json({ success: true });
   } catch (error) {
