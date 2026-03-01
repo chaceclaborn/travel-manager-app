@@ -65,7 +65,9 @@ export function DateRangePicker({
     }
     if (selected?.to) {
       onEndDateChange(toLocalDateString(selected.to));
-      setOpen(false);
+      if (selected.from && selected.to.getTime() !== selected.from.getTime()) {
+        setOpen(false);
+      }
     } else {
       onEndDateChange('');
     }
@@ -89,7 +91,7 @@ export function DateRangePicker({
 
   return (
     <Popover open={open} onOpenChange={(next) => {
-      if (!next && range?.from && !range?.to) return;
+      if (!next && range?.from && (!range?.to || range.to.getTime() === range.from.getTime())) return;
       setOpen(next);
     }}>
       <PopoverTrigger asChild>
