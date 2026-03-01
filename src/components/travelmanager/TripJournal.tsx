@@ -4,11 +4,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { Calendar, Pencil, Trash2, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { useTMToast } from '@/components/travelmanager/TMToast';
 import { TMDeleteDialog } from '@/components/travelmanager/TMDeleteDialog';
+import { DatePicker } from '@/components/travelmanager/DatePicker';
 
 interface Note {
   id: string;
@@ -206,12 +206,11 @@ export function TripJournal({ tripId }: TripJournalProps) {
             className="space-y-3 overflow-hidden rounded-lg border border-amber-200 bg-amber-50/50 p-4"
           >
             <div className="space-y-1">
-              <Label htmlFor="note-date">Date *</Label>
-              <Input
-                id="note-date"
-                type="date"
-                value={form.date}
-                onChange={(e) => setForm({ ...form, date: e.target.value })}
+              <Label>Date *</Label>
+              <DatePicker
+                date={form.date}
+                onDateChange={(d) => setForm({ ...form, date: d })}
+                required
               />
             </div>
             <div className="space-y-1">
@@ -297,10 +296,10 @@ export function TripJournal({ tripId }: TripJournalProps) {
                           >
                             <div className="space-y-1">
                               <Label>Date *</Label>
-                              <Input
-                                type="date"
-                                value={editForm.date}
-                                onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
+                              <DatePicker
+                                date={editForm.date}
+                                onDateChange={(d) => setEditForm({ ...editForm, date: d })}
+                                required
                               />
                             </div>
                             <div className="space-y-1">

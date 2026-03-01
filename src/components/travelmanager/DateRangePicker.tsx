@@ -5,6 +5,7 @@ import { CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
+import { toLocalDateString, parseLocalDate, formatDateDisplay } from '@/lib/date-utils';
 import type { DateRange } from 'react-day-picker';
 
 interface DateRangePickerProps {
@@ -14,26 +15,8 @@ interface DateRangePickerProps {
   onEndDateChange: (date: string) => void;
   error?: string;
   required?: boolean;
-}
-
-function toLocalDateString(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-function parseLocalDate(dateStr: string): Date | undefined {
-  if (!dateStr) return undefined;
-  const [y, m, d] = dateStr.split('-').map(Number);
-  return new Date(y, m - 1, d);
-}
-
-function formatDisplay(dateStr: string): string {
-  if (!dateStr) return '';
-  const d = parseLocalDate(dateStr);
-  if (!d) return '';
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  minDate?: string;
+  maxDate?: string;
 }
 
 export function DateRangePicker({
@@ -43,6 +26,8 @@ export function DateRangePicker({
   onEndDateChange,
   error,
   required,
+  minDate,
+  maxDate,
 }: DateRangePickerProps) {
   const [open, setOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -86,10 +71,20 @@ export function DateRangePicker({
     }
   };
 
+  const disabled: ({ before: Date } | { after: Date })[] = [];
+  if (minDate) {
+    const min = parseLocalDate(minDate);
+    if (min) disabled.push({ before: min });
+  }
+  if (maxDate) {
+    const max = parseLocalDate(maxDate);
+    if (max) disabled.push({ after: max });
+  }
+
   const label = startDate && endDate
-    ? `${formatDisplay(startDate)} – ${formatDisplay(endDate)}`
+    ? `${formatDateDisplay(startDate)} – ${formatDateDisplay(endDate)}`
     : startDate
-      ? `${formatDisplay(startDate)} – ...`
+      ? `${formatDateDisplay(startDate)} – ...`
       : 'Select dates';
 
   return (
@@ -111,6 +106,7 @@ export function DateRangePicker({
           onSelect={handleSelect}
           numberOfMonths={isMobile ? 1 : 2}
           defaultMonth={range?.from || new Date()}
+          disabled={disabled.length > 0 ? disabled : undefined}
         />
       </PopoverContent>
     </Popover>

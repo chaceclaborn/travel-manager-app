@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { useTMToast } from '@/components/travelmanager/TMToast';
 import { TMDeleteDialog } from '@/components/travelmanager/TMDeleteDialog';
+import { DateRangePicker } from '@/components/travelmanager/DateRangePicker';
 
 interface ItineraryVendor {
   id: string;
@@ -259,22 +260,13 @@ export function ItineraryTimeline({ items, tripId, onRefresh, tripStartDate, tri
             />
           </div>
           <div className="space-y-1">
-            <Label htmlFor={`${prefix}-date`}>Start Date *</Label>
-            <Input
-              id={`${prefix}-date`}
-              type="date"
-              value={formData.date}
-              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-            />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor={`${prefix}-enddate`}>End Date <span className="text-xs text-slate-400">(for overnight/multi-day)</span></Label>
-            <Input
-              id={`${prefix}-enddate`}
-              type="date"
-              value={formData.endDate}
-              min={formData.date}
-              onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+            <Label>Event Dates * <span className="text-xs text-slate-400">(click twice for multi-day)</span></Label>
+            <DateRangePicker
+              startDate={formData.date}
+              endDate={formData.endDate}
+              onStartDateChange={(d) => setFormData({ ...formData, date: d })}
+              onEndDateChange={(d) => setFormData({ ...formData, endDate: d })}
+              required
             />
           </div>
           <div className="space-y-1">

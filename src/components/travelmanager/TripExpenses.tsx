@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useTMToast } from '@/components/travelmanager/TMToast';
 import { TMDeleteDialog } from '@/components/travelmanager/TMDeleteDialog';
+import { DatePicker } from '@/components/travelmanager/DatePicker';
 
 interface Expense {
   id: string;
@@ -309,11 +310,9 @@ export function TripExpenses({ tripId }: TripExpensesProps) {
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-slate-600">Date *</label>
-                <input
-                  type="date"
-                  value={formDate}
-                  onChange={(e) => setFormDate(e.target.value)}
-                  className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                <DatePicker
+                  date={formDate}
+                  onDateChange={setFormDate}
                   required
                 />
               </div>
