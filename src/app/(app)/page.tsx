@@ -115,12 +115,12 @@ function DashboardSkeleton() {
             <SkeletonPulse className="size-6 !rounded-md" />
           </div>
         </div>
-        <div className="grid grid-cols-7 gap-px">
+        <div className="grid grid-cols-7 gap-px min-w-0">
           {Array.from({ length: 7 }).map((_, i) => (
-            <SkeletonPulse key={`header-${i}`} className="h-4 mx-2 mb-2" />
+            <SkeletonPulse key={`header-${i}`} className="h-4 mx-2 mb-2 min-w-0" />
           ))}
           {Array.from({ length: 35 }).map((_, i) => (
-            <SkeletonPulse key={`cell-${i}`} className="min-h-[4rem] !rounded-lg mx-0.5 mb-0.5" />
+            <SkeletonPulse key={`cell-${i}`} className="min-h-[4rem] !rounded-lg mx-0.5 mb-0.5 min-w-0" />
           ))}
         </div>
       </div>
@@ -244,7 +244,7 @@ export default function TravelManagerDashboard() {
   }, []);
 
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="space-y-8">
+    <motion.div variants={container} initial="hidden" animate="show" className="space-y-8 overflow-x-hidden">
       {/* Welcome Header */}
       <motion.div variants={item}>
         <div className="flex items-center gap-2">

@@ -14,6 +14,14 @@ interface CalendarTrip {
   status: string;
 }
 
+interface TripDayInfo {
+  trip: CalendarTrip;
+  lane: number;
+  isStart: boolean;
+  isEnd: boolean;
+  isSingle: boolean;
+}
+
 interface TMCalendarPreviewProps {
   trips: CalendarTrip[];
 }
@@ -43,6 +51,11 @@ const STATUS_TEXT_COLORS: Record<string, string> = {
 };
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+function parseUTCDate(dateStr: string): Date {
+  const d = new Date(dateStr);
+  return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+}
 
 function isSameDay(a: Date, b: Date) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
@@ -103,21 +116,71 @@ export function TMCalendarPreview({ trips }: TMCalendarPreviewProps) {
   }, [year, month]);
 
   const tripsByDay = useMemo(() => {
-    const map = new Map<string, CalendarTrip[]>();
-    for (const trip of trips) {
-      const start = new Date(trip.startDate);
-      const end = new Date(trip.endDate);
+    const map = new Map<string, TripDayInfo[]>();
+
+    // 1. Parse all trips and compute their day ranges for this month
+    const tripRanges = trips.map(trip => {
+      const start = parseUTCDate(trip.startDate);
+      const end = parseUTCDate(trip.endDate);
+      return { trip, start, end };
+    }).sort((a, b) => {
+      const startDiff = a.start.getTime() - b.start.getTime();
+      if (startDiff !== 0) return startDiff;
+      return (b.end.getTime() - b.start.getTime()) - (a.end.getTime() - a.start.getTime());
+    });
+
+    // 2. Assign lanes (greedy: find lowest free lane for each trip)
+    const laneAssignments = new Map<string, number>();
+
+    for (const { trip, start, end } of tripRanges) {
+      let assignedLane = 0;
+      while (assignedLane < 3) {
+        const busy = tripRanges.some(other => {
+          if (other.trip.id === trip.id) return false;
+          const otherLane = laneAssignments.get(other.trip.id);
+          if (otherLane !== assignedLane) return false;
+          return start <= other.end && end >= other.start;
+        });
+        if (!busy) break;
+        assignedLane++;
+      }
+      if (assignedLane >= 3) assignedLane = 2;
+      laneAssignments.set(trip.id, assignedLane);
+    }
+
+    // 3. For each trip, iterate through its days and populate the map
+    const lastOfMonth = new Date(year, month + 1, 0).getDate();
+
+    for (const { trip, start, end } of tripRanges) {
+      const lane = laneAssignments.get(trip.id) ?? 0;
       const cursor = new Date(start);
+      const isSingleDay = start.getTime() === end.getTime();
+
       while (cursor <= end) {
         if (cursor.getMonth() === month && cursor.getFullYear() === year) {
           const key = cursor.getDate().toString();
+          const dayOfWeek = cursor.getDay();
+
+          const isFirstDay = cursor.getTime() === start.getTime();
+          const isLastDay = cursor.getTime() === end.getTime();
+
+          const isStartVisual = isFirstDay || dayOfWeek === 0;
+          const isEndVisual = isLastDay || dayOfWeek === 6 || cursor.getDate() === lastOfMonth;
+
           const existing = map.get(key) ?? [];
-          existing.push(trip);
+          existing.push({
+            trip,
+            lane,
+            isStart: isStartVisual,
+            isEnd: isEndVisual,
+            isSingle: isSingleDay,
+          });
           map.set(key, existing);
         }
         cursor.setDate(cursor.getDate() + 1);
       }
     }
+
     return map;
   }, [trips, month, year]);
 
@@ -263,25 +326,39 @@ export function TMCalendarPreview({ trips }: TMCalendarPreviewProps) {
                   )}
                 </div>
 
-                {/* Trip badges */}
-                <div className="flex flex-col gap-[3px] px-1 mt-1 flex-1 overflow-hidden">
-                  {dayTrips.slice(0, 2).map((t) => (
-                    <Link
-                      key={t.id}
-                      href={`/trips/${t.id}`}
-                      className={`flex items-center gap-1 rounded-md px-1.5 py-[2px] text-[10px] leading-tight transition-all duration-150 hover:shadow-sm hover:scale-[1.02] ${
-                        STATUS_COLORS[t.status] ?? 'bg-slate-200/80'
-                      } ${STATUS_TEXT_COLORS[t.status] ?? 'text-slate-600'}`}
-                      title={t.title}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <span className={`shrink-0 size-1.5 rounded-full ${STATUS_DOT_COLORS[t.status] ?? 'bg-slate-400'}`} />
-                      <span className="truncate font-medium">{t.title}</span>
-                    </Link>
-                  ))}
-                  {dayTrips.length > 2 && (
-                    <span className="text-[9px] text-slate-400 font-medium px-1.5 leading-tight hover:text-slate-600 transition-colors cursor-pointer">
-                      +{dayTrips.length - 2} more
+                {/* Trip range bars */}
+                <div className="relative mt-0.5 flex-1" style={{ minHeight: dayTrips.length > 0 ? `${Math.min(dayTrips.length, 3) * 20 + 2}px` : undefined }}>
+                  {dayTrips.slice(0, 3).map((info) => {
+                    const bg = STATUS_COLORS[info.trip.status] ?? 'bg-slate-200/80';
+                    const text = STATUS_TEXT_COLORS[info.trip.status] ?? 'text-slate-600';
+                    const dot = STATUS_DOT_COLORS[info.trip.status] ?? 'bg-slate-400';
+
+                    return (
+                      <Link
+                        key={info.trip.id}
+                        href={`/trips/${info.trip.id}`}
+                        className={`absolute left-0 right-0 h-[18px] flex items-center overflow-hidden transition-all duration-150 hover:brightness-95 ${bg} ${
+                          info.isSingle ? 'mx-0.5 rounded-md' :
+                          info.isStart && info.isEnd ? 'rounded-md mx-0.5' :
+                          info.isStart ? 'rounded-l-md ml-0.5' :
+                          info.isEnd ? 'rounded-r-md mr-0.5' : ''
+                        }`}
+                        style={{ top: `${info.lane * 20}px` }}
+                        title={info.trip.title}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {(info.isStart || info.isSingle) && (
+                          <span className={`flex items-center gap-1 px-1 min-w-0 ${text}`}>
+                            <span className={`shrink-0 size-1.5 rounded-full ${dot}`} />
+                            <span className="truncate text-[10px] font-medium leading-none">{info.trip.title}</span>
+                          </span>
+                        )}
+                      </Link>
+                    );
+                  })}
+                  {dayTrips.length > 3 && (
+                    <span className="absolute left-0 right-0 text-[9px] text-slate-400 font-medium px-1.5 leading-tight" style={{ top: `${3 * 20}px` }}>
+                      +{dayTrips.length - 3} more
                     </span>
                   )}
                 </div>

@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 const OLD_PROJECT_REF = 'biaxoishtoysdjfiqddl';
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   // CSRF protection: verify Origin header on state-changing API requests.
   // Defense-in-depth — the primary CSRF defense is the auth cookie's SameSite attribute.
   // If Origin is present and mismatches Host, reject (browser-based attacks always send Origin).
