@@ -676,13 +676,13 @@ export default function TripDetailPage() {
 
               <TabsContent value="expenses" className="mt-5">
                 <div className="rounded-xl bg-white p-6 shadow-sm transition-shadow duration-300 hover:shadow-md">
-                  <TripExpenses tripId={id} />
+                  <TripExpenses tripId={id} tripStartDate={trip.startDate} tripEndDate={trip.endDate} />
                 </div>
               </TabsContent>
 
               <TabsContent value="bookings" className="mt-5">
                 <div className="rounded-xl bg-white p-6 shadow-sm transition-shadow duration-300 hover:shadow-md">
-                  <TripBookings tripId={id} />
+                  <TripBookings tripId={id} tripStartDate={trip.startDate} tripEndDate={trip.endDate} />
                 </div>
               </TabsContent>
 

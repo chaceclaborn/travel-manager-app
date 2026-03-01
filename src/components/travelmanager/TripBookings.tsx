@@ -28,6 +28,8 @@ interface Booking {
 
 interface TripBookingsProps {
   tripId: string;
+  tripStartDate?: string | null;
+  tripEndDate?: string | null;
 }
 
 const typeConfig: Record<BookingType, { icon: React.ReactNode; label: string; badgeColor: string; iconBg: string; borderAccent: string }> = {
@@ -300,7 +302,7 @@ const emptyForm = {
   notes: '',
 };
 
-export function TripBookings({ tripId }: TripBookingsProps) {
+export function TripBookings({ tripId, tripStartDate, tripEndDate }: TripBookingsProps) {
   const { showToast } = useTMToast();
 
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -508,6 +510,8 @@ export function TripBookings({ tripId }: TripBookingsProps) {
                 type={dateOnly ? 'date' : 'datetime-local'}
                 value={form.startDateTime}
                 onChange={(e) => updateForm('startDateTime', e.target.value)}
+                min={tripStartDate ? (dateOnly ? tripStartDate.split('T')[0] : tripStartDate) : undefined}
+                max={tripEndDate ? (dateOnly ? tripEndDate.split('T')[0] : tripEndDate) : undefined}
               />
             </div>
             <div>
@@ -517,6 +521,8 @@ export function TripBookings({ tripId }: TripBookingsProps) {
                 type={dateOnly ? 'date' : 'datetime-local'}
                 value={form.endDateTime}
                 onChange={(e) => updateForm('endDateTime', e.target.value)}
+                min={tripStartDate ? (dateOnly ? tripStartDate.split('T')[0] : tripStartDate) : undefined}
+                max={tripEndDate ? (dateOnly ? tripEndDate.split('T')[0] : tripEndDate) : undefined}
               />
             </div>
 

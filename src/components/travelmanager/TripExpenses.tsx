@@ -36,6 +36,8 @@ interface Expense {
 
 interface TripExpensesProps {
   tripId: string;
+  tripStartDate?: string | null;
+  tripEndDate?: string | null;
 }
 
 const categoryIcons: Record<string, React.ReactNode> = {
@@ -92,7 +94,7 @@ const listItemVariants = {
   }),
 };
 
-export function TripExpenses({ tripId }: TripExpensesProps) {
+export function TripExpenses({ tripId, tripStartDate, tripEndDate }: TripExpensesProps) {
   const { showToast } = useTMToast();
   const receiptInputRef = useRef<HTMLInputElement>(null);
 
@@ -108,7 +110,14 @@ export function TripExpenses({ tripId }: TripExpensesProps) {
 
   const [formAmount, setFormAmount] = useState('');
   const [formCategory, setFormCategory] = useState('OTHER');
-  const [formDate, setFormDate] = useState(new Date().toISOString().split('T')[0]);
+  const [formDate, setFormDate] = useState(() => {
+    const today = new Date().toISOString().split('T')[0];
+    if (!tripStartDate) return today;
+    const start = new Date(tripStartDate).toISOString().split('T')[0];
+    const end = tripEndDate ? new Date(tripEndDate).toISOString().split('T')[0] : start;
+    if (today >= start && today <= end) return today;
+    return start;
+  });
   const [formDescription, setFormDescription] = useState('');
 
   const fetchExpenses = useCallback(async () => {
@@ -313,6 +322,8 @@ export function TripExpenses({ tripId }: TripExpensesProps) {
                 <DatePicker
                   date={formDate}
                   onDateChange={setFormDate}
+                  minDate={tripStartDate || undefined}
+                  maxDate={tripEndDate || undefined}
                   required
                 />
               </div>

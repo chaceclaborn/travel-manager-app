@@ -266,6 +266,8 @@ export function ItineraryTimeline({ items, tripId, onRefresh, tripStartDate, tri
               endDate={formData.endDate}
               onStartDateChange={(d) => setFormData({ ...formData, date: d })}
               onEndDateChange={(d) => setFormData({ ...formData, endDate: d })}
+              minDate={tripStartDate || undefined}
+              maxDate={tripEndDate || undefined}
               required
             />
           </div>
