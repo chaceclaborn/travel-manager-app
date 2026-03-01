@@ -119,15 +119,57 @@ export function TravelMap({ trips, homeLocation }: TravelMapProps) {
       if (!a.startDate || !b.startDate) return 0;
       return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
     });
-    const lines: [number, number][][] = [];
-    for (let i = 0; i < sorted.length - 1; i++) {
-      lines.push([
-        [sorted[i].latitude, sorted[i].longitude],
-        [sorted[i + 1].latitude, sorted[i + 1].longitude],
-      ]);
+
+    if (sorted.length === 0) return [];
+
+    // Fallback: no home location → simple consecutive lines (old behavior)
+    if (!homeLocation) {
+      return sorted.slice(0, -1).map((trip, i) => ({
+        positions: [
+          [trip.latitude, trip.longitude] as [number, number],
+          [sorted[i + 1].latitude, sorted[i + 1].longitude] as [number, number],
+        ],
+        type: 'fallback' as const,
+      }));
     }
+
+    const home: [number, number] = [homeLocation.latitude, homeLocation.longitude];
+    const lines: { positions: [number, number][]; type: 'outbound' | 'connecting' | 'return' }[] = [];
+
+    for (let i = 0; i < sorted.length; i++) {
+      const dest: [number, number] = [sorted[i].latitude, sorted[i].longitude];
+
+      if (i === 0) {
+        // First trip: home → destination
+        lines.push({ positions: [home, dest], type: 'outbound' });
+      } else {
+        const prev = sorted[i - 1];
+        const prevDest: [number, number] = [prev.latitude, prev.longitude];
+        const prevEnd = prev.endDate;
+        const currStart = sorted[i].startDate;
+        const overlaps = prevEnd != null && currStart != null
+          && new Date(prevEnd) >= new Date(currStart);
+
+        if (overlaps) {
+          // Overlapping trips: connect directly
+          lines.push({ positions: [prevDest, dest], type: 'connecting' });
+        } else {
+          // Gap between trips: return home, then go out again
+          lines.push({ positions: [prevDest, home], type: 'return' });
+          lines.push({ positions: [home, dest], type: 'outbound' });
+        }
+      }
+    }
+
+    // After the last trip: return home
+    const last = sorted[sorted.length - 1];
+    lines.push({
+      positions: [[last.latitude, last.longitude], home],
+      type: 'return',
+    });
+
     return lines;
-  }, [geoTrips]);
+  }, [geoTrips, homeLocation]);
 
   return (
     <MapContainer
@@ -193,13 +235,18 @@ export function TravelMap({ trips, homeLocation }: TravelMapProps) {
         </Marker>
       )}
 
-      {routeLines.map((line, i) => (
-        <Polyline
-          key={i}
-          positions={line}
-          pathOptions={{ color: '#f59e0b', weight: 2, opacity: 0.5, dashArray: '6 4' }}
-        />
-      ))}
+      {routeLines.map((line, i) => {
+        const style = line.type === 'outbound'
+          ? { color: '#f59e0b', weight: 2.5, opacity: 0.6 }
+          : line.type === 'connecting'
+            ? { color: '#3b82f6', weight: 2, opacity: 0.6 }
+            : line.type === 'return'
+              ? { color: '#94a3b8', weight: 1.5, opacity: 0.5, dashArray: '8 6' }
+              : { color: '#f59e0b', weight: 2, opacity: 0.5, dashArray: '6 4' }; // fallback
+        return (
+          <Polyline key={i} positions={line.positions} pathOptions={style} />
+        );
+      })}
     </MapContainer>
   );
 }
