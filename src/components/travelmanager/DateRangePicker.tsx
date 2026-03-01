@@ -88,7 +88,10 @@ export function DateRangePicker({
       : 'Select dates';
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={(next) => {
+      if (!next && range?.from && !range?.to) return;
+      setOpen(next);
+    }}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
