@@ -358,7 +358,7 @@ export default function TravelManagerDashboard() {
                 >
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-slate-800 truncate group-hover:text-amber-600 transition-colors">
-                      {trip.destination}
+                      {trip.destination || trip.title}
                     </p>
                     <p className="text-xs text-slate-500 mt-0.5">
                       {trip.startDate && trip.endDate
@@ -419,7 +419,7 @@ export default function TravelManagerDashboard() {
                       {trip.title}
                     </p>
                     <p className="text-xs text-slate-500 mt-0.5">
-                      {trip.destination} &middot; Updated {formatDate(trip.updatedAt as unknown as string)}
+                      {trip.destination ? `${trip.destination} \u00B7 ` : ''}Updated {formatDate(trip.updatedAt as unknown as string)}
                     </p>
                   </div>
                   <TMStatusBadge status={trip.status} />

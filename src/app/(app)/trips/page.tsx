@@ -116,7 +116,7 @@ function TripsPageContent() {
       const matchesSearch =
         !search ||
         trip.title.toLowerCase().includes(search.toLowerCase()) ||
-        trip.destination.toLowerCase().includes(search.toLowerCase());
+        trip.destination?.toLowerCase().includes(search.toLowerCase());
       const matchesStatus =
         statusFilter === 'ALL' ||
         (statusFilter === 'UPCOMING'

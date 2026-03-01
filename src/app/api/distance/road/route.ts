@@ -3,6 +3,29 @@ import { requireAuth } from '@/lib/travelmanager/auth';
 import { rateLimit } from '@/lib/rate-limit';
 import { haversineDistance } from '@/lib/distance';
 
+function decodePolyline(encoded: string): [number, number][] {
+  const decoded: [number, number][] = [];
+  let index = 0, lat = 0, lng = 0;
+  while (index < encoded.length) {
+    let result = 0, shift = 0, byte = 0;
+    do {
+      byte = encoded.charCodeAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20);
+    lat += result & 1 ? ~(result >> 1) : result >> 1;
+    result = 0; shift = 0;
+    do {
+      byte = encoded.charCodeAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20);
+    lng += result & 1 ? ~(result >> 1) : result >> 1;
+    decoded.push([lat / 1e5, lng / 1e5]);
+  }
+  return decoded;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const rateLimitResult = rateLimit(request, 'read');
@@ -26,7 +49,7 @@ export async function GET(request: NextRequest) {
       const timeout = setTimeout(() => controller.abort(), 3000);
 
       const res = await fetch(
-        `https://router.project-osrm.org/route/v1/driving/${fromLng},${fromLat};${toLng},${toLat}?overview=false`,
+        `https://router.project-osrm.org/route/v1/driving/${fromLng},${fromLat};${toLng},${toLat}?overview=simplified`,
         { signal: controller.signal }
       );
       clearTimeout(timeout);
@@ -34,13 +57,17 @@ export async function GET(request: NextRequest) {
       if (!res.ok) throw new Error(`OSRM responded with ${res.status}`);
 
       const data = await res.json();
-      if (!data.routes?.[0]?.distance) throw new Error('No route found');
+      const route = data.routes?.[0];
+      if (!route?.distance) throw new Error('No route found');
 
-      return NextResponse.json({ distanceKm: data.routes[0].distance / 1000, source: 'osrm' });
+      const geometry = route.geometry ? decodePolyline(route.geometry) : null;
+
+      return NextResponse.json({ distanceKm: route.distance / 1000, source: 'osrm', geometry });
     } catch {
       return NextResponse.json({
         distanceKm: haversineDistance(fromLat, fromLng, toLat, toLng),
         source: 'haversine',
+        geometry: null,
       });
     }
   } catch (error) {

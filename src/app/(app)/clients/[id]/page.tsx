@@ -218,9 +218,10 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
                     <div>
                       <p className="font-medium text-slate-800">{trip.title}</p>
                       <p className="text-sm text-slate-500">
-                        {trip.destination} &middot;{' '}
-                        {new Date(trip.startDate).toLocaleDateString('en-US', { timeZone: 'UTC' })} &ndash;{' '}
-                        {new Date(trip.endDate).toLocaleDateString('en-US', { timeZone: 'UTC' })}
+                        {trip.destination ? `${trip.destination} \u00B7 ` : ''}
+                        {trip.startDate && trip.endDate
+                          ? `${new Date(trip.startDate).toLocaleDateString('en-US', { timeZone: 'UTC' })} \u2013 ${new Date(trip.endDate).toLocaleDateString('en-US', { timeZone: 'UTC' })}`
+                          : 'Dates not set'}
                       </p>
                     </div>
                     <TMStatusBadge status={trip.status} />

@@ -230,10 +230,13 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
                       <div className="flex items-center justify-between">
                         <div>
                           <h3 className="font-medium text-slate-800">{trip.title}</h3>
-                          <p className="text-sm text-slate-500">{trip.destination}</p>
+                          {trip.destination && (
+                            <p className="text-sm text-slate-500">{trip.destination}</p>
+                          )}
                           <p className="text-xs text-slate-400 mt-1">
-                            {new Date(trip.startDate).toLocaleDateString('en-US', { timeZone: 'UTC' })} &mdash;{' '}
-                            {new Date(trip.endDate).toLocaleDateString('en-US', { timeZone: 'UTC' })}
+                            {trip.startDate && trip.endDate
+                              ? `${new Date(trip.startDate).toLocaleDateString('en-US', { timeZone: 'UTC' })} — ${new Date(trip.endDate).toLocaleDateString('en-US', { timeZone: 'UTC' })}`
+                              : 'Dates not set'}
                           </p>
                         </div>
                         <TMStatusBadge status={trip.status} />

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useEffect } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -189,6 +189,52 @@ export function TravelMap({ trips, homeLocation }: TravelMapProps) {
     return lines;
   }, [geoTrips, homeLocation]);
 
+  const [roadGeometries, setRoadGeometries] = useState<Record<string, [number, number][]>>({});
+
+  useEffect(() => {
+    const carRoutes = routeLines
+      .map((line, i) => ({ line, i }))
+      .filter(({ line }) =>
+        line.transportMode === 'CAR' && (line.type === 'outbound' || line.type === 'fallback')
+      );
+
+    if (carRoutes.length === 0) {
+      setRoadGeometries({});
+      return;
+    }
+
+    let cancelled = false;
+
+    const fetchAll = async () => {
+      const results = await Promise.allSettled(
+        carRoutes.map(async ({ line, i }) => {
+          const [fromLat, fromLng] = line.positions[0];
+          const [toLat, toLng] = line.positions[line.positions.length - 1];
+          const res = await fetch(
+            `/api/distance/road?fromLat=${fromLat}&fromLng=${fromLng}&toLat=${toLat}&toLng=${toLng}`
+          );
+          if (!res.ok) return { index: i, geometry: null };
+          const data = await res.json();
+          return { index: i, geometry: data.geometry as [number, number][] | null };
+        })
+      );
+
+      if (cancelled) return;
+
+      const geomMap: Record<string, [number, number][]> = {};
+      for (const result of results) {
+        if (result.status === 'fulfilled' && result.value.geometry) {
+          geomMap[`${result.value.index}`] = result.value.geometry;
+        }
+      }
+      setRoadGeometries(geomMap);
+    };
+
+    fetchAll();
+
+    return () => { cancelled = true; };
+  }, [routeLines]);
+
   return (
     <MapContainer
       center={center}
@@ -272,8 +318,11 @@ export function TravelMap({ trips, homeLocation }: TravelMapProps) {
             : line.type === 'return'
               ? { color: '#94a3b8', weight: 1.5, opacity: 0.5, dashArray: '8 6' }
               : { color: '#f59e0b', weight: 2, opacity: 0.5, dashArray: '6 4' };
+        const positions = (isCar && roadGeometries[`${i}`])
+          ? roadGeometries[`${i}`]
+          : line.positions;
         return (
-          <Polyline key={i} positions={line.positions} pathOptions={style} />
+          <Polyline key={i} positions={positions} pathOptions={style} />
         );
       })}
     </MapContainer>
