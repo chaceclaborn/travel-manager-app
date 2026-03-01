@@ -73,6 +73,17 @@ export async function updateTrip(id: string, data: UpdateTripInput, userId: stri
   if (data.startDate) updateData.startDate = new Date(data.startDate);
   if (data.endDate) updateData.endDate = new Date(data.endDate);
 
+  // Explicitly pass transport fields so null values clear the field in Prisma
+  if ('transportMode' in data) updateData.transportMode = data.transportMode ?? null;
+  if ('departureAirportCode' in data) updateData.departureAirportCode = data.departureAirportCode ?? null;
+  if ('departureAirportName' in data) updateData.departureAirportName = data.departureAirportName ?? null;
+  if ('departureAirportLat' in data) updateData.departureAirportLat = data.departureAirportLat ?? null;
+  if ('departureAirportLng' in data) updateData.departureAirportLng = data.departureAirportLng ?? null;
+  if ('arrivalAirportCode' in data) updateData.arrivalAirportCode = data.arrivalAirportCode ?? null;
+  if ('arrivalAirportName' in data) updateData.arrivalAirportName = data.arrivalAirportName ?? null;
+  if ('arrivalAirportLat' in data) updateData.arrivalAirportLat = data.arrivalAirportLat ?? null;
+  if ('arrivalAirportLng' in data) updateData.arrivalAirportLng = data.arrivalAirportLng ?? null;
+
   if (data.destination) {
     const coords = await geocodeDestination(data.destination);
     if (coords) {

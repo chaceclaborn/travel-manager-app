@@ -136,7 +136,7 @@ export function TravelMap({ trips, homeLocation }: TravelMapProps) {
           [sorted[i + 1].latitude, sorted[i + 1].longitude] as [number, number],
         ],
         type: 'fallback' as const,
-        transportMode: null,
+        transportMode: trip.transportMode,
       }));
     }
 
@@ -262,9 +262,10 @@ export function TravelMap({ trips, homeLocation }: TravelMapProps) {
       )}
 
       {routeLines.map((line, i) => {
-        const style = line.type === 'outbound'
-          ? line.transportMode === 'CAR'
-            ? { color: '#10b981', weight: 2.5, opacity: 0.6 }
+        const isCar = line.transportMode === 'CAR';
+        const style = line.type === 'outbound' || line.type === 'fallback'
+          ? isCar
+            ? { color: '#10b981', weight: 3, opacity: 0.7, dashArray: '10 5' }
             : { color: '#f59e0b', weight: 2.5, opacity: 0.6 }
           : line.type === 'connecting'
             ? { color: '#3b82f6', weight: 2, opacity: 0.6 }
