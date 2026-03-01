@@ -94,6 +94,11 @@ enum BookingType {
   OTHER
 }
 
+enum TransportMode {
+  FLIGHT
+  CAR
+}
+
 model Trip {
   id          String          @id @default(cuid())
   userId      String
@@ -111,6 +116,15 @@ model Trip {
   attachments TripAttachment[]
   latitude     Float?
   longitude    Float?
+  transportMode          TransportMode?
+  departureAirportCode   String?
+  departureAirportName   String?
+  departureAirportLat    Float?
+  departureAirportLng    Float?
+  arrivalAirportCode     String?
+  arrivalAirportName     String?
+  arrivalAirportLat      Float?
+  arrivalAirportLng      Float?
   expenses     Expense[]
   bookings     Booking[]
   checklists   ChecklistItem[]

@@ -15,6 +15,7 @@ import {
   Copy,
   FileDown,
   Plane,
+  Car,
   Briefcase,
   Users,
   Paperclip,
@@ -457,6 +458,28 @@ export default function TripDetailPage() {
                       <span className="flex items-center gap-1.5">
                         <DollarSign className="size-4 text-emerald-500" />
                         <span className="font-medium text-slate-700">${trip.budget.toLocaleString()}</span>
+                      </span>
+                    </>
+                  )}
+                  {trip.transportMode && (
+                    <>
+                      <span className="hidden text-slate-300 sm:inline" aria-hidden="true">|</span>
+                      <span className="flex items-center gap-1.5">
+                        {trip.transportMode === 'FLIGHT' ? (
+                          <>
+                            <Plane className="size-4 text-amber-500" />
+                            <span className="font-medium text-slate-700">
+                              {trip.departureAirportCode && trip.arrivalAirportCode
+                                ? `${trip.departureAirportCode} → ${trip.arrivalAirportCode}`
+                                : 'Flight'}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <Car className="size-4 text-emerald-500" />
+                            <span className="font-medium text-slate-700">Driving</span>
+                          </>
+                        )}
                       </span>
                     </>
                   )}

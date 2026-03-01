@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { MapPin, Globe as GlobeIcon, Plane, Route, Loader2, Home, Search } from 'lucide-react';
 import { TMBreadcrumb } from '@/components/travelmanager/TMBreadcrumb';
+import { haversineDistance, KM_TO_MILES } from '@/lib/distance';
 
 const TravelMap = dynamic(
   () => import('@/components/travelmanager/TravelMap').then(m => ({ default: m.TravelMap })),
@@ -19,6 +20,13 @@ interface MapTrip {
   status: string;
   latitude: number | null;
   longitude: number | null;
+  transportMode: string | null;
+  departureAirportCode: string | null;
+  departureAirportLat: number | null;
+  departureAirportLng: number | null;
+  arrivalAirportCode: string | null;
+  arrivalAirportLat: number | null;
+  arrivalAirportLng: number | null;
 }
 
 interface HomeLocation {
@@ -43,19 +51,6 @@ function formatGeoName(result: GeoResult): string {
   return [city, state, country].filter(Boolean).join(', ') || result.display_name;
 }
 
-const KM_TO_MILES = 0.621371;
-
-function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 6371;
-  const dLat = (lat2 - lat1) * (Math.PI / 180);
-  const dLng = (lng2 - lng1) * (Math.PI / 180);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
-    Math.sin(dLng / 2) * Math.sin(dLng / 2);
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
 function calcDistance(
   filteredTrips: (MapTrip & { latitude: number; longitude: number })[],
   home: HomeLocation | null
@@ -67,8 +62,27 @@ function calcDistance(
     return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
   });
 
+  function tripLegDistance(
+    fromLat: number, fromLng: number,
+    toLat: number, toLng: number,
+    trip: MapTrip
+  ): number {
+    if (
+      trip.transportMode === 'FLIGHT' &&
+      trip.departureAirportLat != null && trip.departureAirportLng != null &&
+      trip.arrivalAirportLat != null && trip.arrivalAirportLng != null
+    ) {
+      return (
+        haversineDistance(fromLat, fromLng, trip.departureAirportLat, trip.departureAirportLng) +
+        haversineDistance(trip.departureAirportLat, trip.departureAirportLng, trip.arrivalAirportLat, trip.arrivalAirportLng) +
+        haversineDistance(trip.arrivalAirportLat, trip.arrivalAirportLng, toLat, toLng)
+      );
+    }
+    return haversineDistance(fromLat, fromLng, toLat, toLng);
+  }
+
   if (home) {
-    let dist = haversineDistance(home.latitude, home.longitude, sorted[0].latitude, sorted[0].longitude);
+    let dist = tripLegDistance(home.latitude, home.longitude, sorted[0].latitude, sorted[0].longitude, sorted[0]);
     for (let i = 1; i < sorted.length; i++) {
       const prev = sorted[i - 1];
       const curr = sorted[i];
@@ -78,7 +92,7 @@ function calcDistance(
         dist += haversineDistance(prev.latitude, prev.longitude, curr.latitude, curr.longitude);
       } else {
         dist += haversineDistance(prev.latitude, prev.longitude, home.latitude, home.longitude);
-        dist += haversineDistance(home.latitude, home.longitude, curr.latitude, curr.longitude);
+        dist += tripLegDistance(home.latitude, home.longitude, curr.latitude, curr.longitude, curr);
       }
     }
     const last = sorted[sorted.length - 1];
@@ -134,6 +148,13 @@ export default function MapPage() {
             status: t.status as string,
             latitude: (t.latitude as number) ?? null,
             longitude: (t.longitude as number) ?? null,
+            transportMode: (t.transportMode as string) || null,
+            departureAirportCode: (t.departureAirportCode as string) || null,
+            departureAirportLat: (t.departureAirportLat as number) ?? null,
+            departureAirportLng: (t.departureAirportLng as number) ?? null,
+            arrivalAirportCode: (t.arrivalAirportCode as string) || null,
+            arrivalAirportLat: (t.arrivalAirportLat as number) ?? null,
+            arrivalAirportLng: (t.arrivalAirportLng as number) ?? null,
           }));
           setTrips(mapped);
         }
@@ -385,7 +406,11 @@ export default function MapPage() {
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-2">
                     <span className="w-5 h-0 border-t-2 border-amber-500" />
-                    <span className="text-xs text-slate-600">Outbound</span>
+                    <span className="text-xs text-slate-600">Flight</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-5 h-0 border-t-2 border-emerald-500" />
+                    <span className="text-xs text-slate-600">Drive</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="w-5 h-0 border-t-2 border-blue-500" />

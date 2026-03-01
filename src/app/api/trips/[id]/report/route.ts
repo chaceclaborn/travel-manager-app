@@ -98,6 +98,15 @@ export async function GET(
     }
     details.push(`Status: ${trip.status.replace('_', ' ')}`);
     if (trip.budget != null) details.push(`Budget: ${formatCurrency(trip.budget)}`);
+    if (trip.transportMode) {
+      if (trip.transportMode === 'FLIGHT' && trip.departureAirportCode && trip.arrivalAirportCode) {
+        details.push(`Transport: Flight (${trip.departureAirportCode} → ${trip.arrivalAirportCode})`);
+      } else if (trip.transportMode === 'CAR') {
+        details.push('Transport: Driving');
+      } else {
+        details.push(`Transport: ${trip.transportMode}`);
+      }
+    }
 
     doc.text(details.join('  |  '), 14, 30);
 

@@ -12,8 +12,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { MapPin, Loader2 } from 'lucide-react';
+import { MapPin, Loader2, Plane, Car } from 'lucide-react';
 import { DateRangePicker } from '@/components/travelmanager/DateRangePicker';
+import { AirportPicker } from '@/components/travelmanager/AirportPicker';
 
 interface TripFormProps {
   initialData?: any;
@@ -192,6 +193,23 @@ export function TripForm({ initialData, onSubmit, isLoading }: TripFormProps) {
   const [status, setStatus] = useState(initialData?.status || 'DRAFT');
   const [budget, setBudget] = useState(initialData?.budget?.toString() || '');
   const [notes, setNotes] = useState(initialData?.notes || '');
+  const [transportMode, setTransportMode] = useState(initialData?.transportMode || '');
+  const [departureAirport, setDepartureAirport] = useState<{ code: string; name: string; lat: number; lng: number } | null>(
+    initialData?.departureAirportCode ? {
+      code: initialData.departureAirportCode,
+      name: initialData.departureAirportName || '',
+      lat: initialData.departureAirportLat || 0,
+      lng: initialData.departureAirportLng || 0,
+    } : null
+  );
+  const [arrivalAirport, setArrivalAirport] = useState<{ code: string; name: string; lat: number; lng: number } | null>(
+    initialData?.arrivalAirportCode ? {
+      code: initialData.arrivalAirportCode,
+      name: initialData.arrivalAirportName || '',
+      lat: initialData.arrivalAirportLat || 0,
+      lng: initialData.arrivalAirportLng || 0,
+    } : null
+  );
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -203,6 +221,19 @@ export function TripForm({ initialData, onSubmit, isLoading }: TripFormProps) {
       setStatus(initialData.status || 'PLANNED');
       setBudget(initialData.budget?.toString() || '');
       setNotes(initialData.notes || '');
+      setTransportMode(initialData.transportMode || '');
+      setDepartureAirport(initialData.departureAirportCode ? {
+        code: initialData.departureAirportCode,
+        name: initialData.departureAirportName || '',
+        lat: initialData.departureAirportLat || 0,
+        lng: initialData.departureAirportLng || 0,
+      } : null);
+      setArrivalAirport(initialData.arrivalAirportCode ? {
+        code: initialData.arrivalAirportCode,
+        name: initialData.arrivalAirportName || '',
+        lat: initialData.arrivalAirportLat || 0,
+        lng: initialData.arrivalAirportLng || 0,
+      } : null);
     }
   }, [initialData]);
 
@@ -219,6 +250,11 @@ export function TripForm({ initialData, onSubmit, isLoading }: TripFormProps) {
       newErrors.endDate = 'End date must be after start date';
     }
 
+    if (!isDraft && transportMode === 'FLIGHT') {
+      if (!departureAirport) newErrors.departureAirport = 'Departure airport is required for flight trips';
+      if (!arrivalAirport) newErrors.arrivalAirport = 'Arrival airport is required for flight trips';
+    }
+
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
@@ -233,6 +269,15 @@ export function TripForm({ initialData, onSubmit, isLoading }: TripFormProps) {
       status,
       budget: budget ? parseFloat(budget) : null,
       notes: notes.trim() || null,
+      transportMode: transportMode || null,
+      departureAirportCode: departureAirport?.code || null,
+      departureAirportName: departureAirport?.name || null,
+      departureAirportLat: departureAirport?.lat || null,
+      departureAirportLng: departureAirport?.lng || null,
+      arrivalAirportCode: arrivalAirport?.code || null,
+      arrivalAirportName: arrivalAirport?.name || null,
+      arrivalAirportLat: arrivalAirport?.lat || null,
+      arrivalAirportLng: arrivalAirport?.lng || null,
     });
   };
 
@@ -316,6 +361,23 @@ export function TripForm({ initialData, onSubmit, isLoading }: TripFormProps) {
         </div>
 
         <div className="space-y-1.5">
+          <Label htmlFor="transportMode">Transport Mode</Label>
+          <Select value={transportMode} onValueChange={setTransportMode}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select transport mode..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="FLIGHT">
+                <span className="flex items-center gap-2"><Plane className="size-3.5" /> Flight</span>
+              </SelectItem>
+              <SelectItem value="CAR">
+                <span className="flex items-center gap-2"><Car className="size-3.5" /> Car / Drive</span>
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-1.5">
           <Label htmlFor="budget">Budget</Label>
           <Input
             id="budget"
@@ -328,6 +390,33 @@ export function TripForm({ initialData, onSubmit, isLoading }: TripFormProps) {
           />
         </div>
       </div>
+
+      {transportMode === 'FLIGHT' && (
+        <div className="grid gap-5 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <AirportPicker
+              value={departureAirport?.code || ''}
+              displayValue={departureAirport ? `${departureAirport.code} — ${departureAirport.name}` : ''}
+              onChange={setDepartureAirport}
+              label={`Departure Airport${req}`}
+              error={errors.departureAirport}
+              required={!isDraft}
+            />
+            {errors.departureAirport && <p className="text-xs text-red-500">{errors.departureAirport}</p>}
+          </div>
+          <div className="space-y-1.5">
+            <AirportPicker
+              value={arrivalAirport?.code || ''}
+              displayValue={arrivalAirport ? `${arrivalAirport.code} — ${arrivalAirport.name}` : ''}
+              onChange={setArrivalAirport}
+              label={`Arrival Airport${req}`}
+              error={errors.arrivalAirport}
+              required={!isDraft}
+            />
+            {errors.arrivalAirport && <p className="text-xs text-red-500">{errors.arrivalAirport}</p>}
+          </div>
+        </div>
+      )}
 
       <div className="space-y-1.5">
         <Label htmlFor="notes">Notes</Label>

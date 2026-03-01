@@ -14,6 +14,13 @@ interface MapTrip {
   status: string;
   latitude: number | null;
   longitude: number | null;
+  transportMode: string | null;
+  departureAirportCode: string | null;
+  departureAirportLat: number | null;
+  departureAirportLng: number | null;
+  arrivalAirportCode: string | null;
+  arrivalAirportLat: number | null;
+  arrivalAirportLng: number | null;
 }
 
 interface HomeLocation {
@@ -122,7 +129,6 @@ export function TravelMap({ trips, homeLocation }: TravelMapProps) {
 
     if (sorted.length === 0) return [];
 
-    // Fallback: no home location → simple consecutive lines (old behavior)
     if (!homeLocation) {
       return sorted.slice(0, -1).map((trip, i) => ({
         positions: [
@@ -130,18 +136,25 @@ export function TravelMap({ trips, homeLocation }: TravelMapProps) {
           [sorted[i + 1].latitude, sorted[i + 1].longitude] as [number, number],
         ],
         type: 'fallback' as const,
+        transportMode: null,
       }));
     }
 
     const home: [number, number] = [homeLocation.latitude, homeLocation.longitude];
-    const lines: { positions: [number, number][]; type: 'outbound' | 'connecting' | 'return' }[] = [];
+    const lines: { positions: [number, number][]; type: 'outbound' | 'connecting' | 'return'; transportMode: string | null }[] = [];
 
     for (let i = 0; i < sorted.length; i++) {
       const dest: [number, number] = [sorted[i].latitude, sorted[i].longitude];
 
       if (i === 0) {
-        // First trip: home → destination
-        lines.push({ positions: [home, dest], type: 'outbound' });
+        const trip = sorted[0];
+        if (trip.transportMode === 'FLIGHT' && trip.departureAirportLat != null && trip.departureAirportLng != null && trip.arrivalAirportLat != null && trip.arrivalAirportLng != null) {
+          lines.push({ positions: [home, [trip.departureAirportLat, trip.departureAirportLng]], type: 'outbound', transportMode: 'FLIGHT' });
+          lines.push({ positions: [[trip.departureAirportLat, trip.departureAirportLng], [trip.arrivalAirportLat, trip.arrivalAirportLng]], type: 'outbound', transportMode: 'FLIGHT' });
+          lines.push({ positions: [[trip.arrivalAirportLat, trip.arrivalAirportLng], dest], type: 'outbound', transportMode: 'FLIGHT' });
+        } else {
+          lines.push({ positions: [home, dest], type: 'outbound', transportMode: trip.transportMode });
+        }
       } else {
         const prev = sorted[i - 1];
         const prevDest: [number, number] = [prev.latitude, prev.longitude];
@@ -151,21 +164,26 @@ export function TravelMap({ trips, homeLocation }: TravelMapProps) {
           && new Date(prevEnd) >= new Date(currStart);
 
         if (overlaps) {
-          // Overlapping trips: connect directly
-          lines.push({ positions: [prevDest, dest], type: 'connecting' });
+          lines.push({ positions: [prevDest, dest], type: 'connecting', transportMode: null });
         } else {
-          // Gap between trips: return home, then go out again
-          lines.push({ positions: [prevDest, home], type: 'return' });
-          lines.push({ positions: [home, dest], type: 'outbound' });
+          lines.push({ positions: [prevDest, home], type: 'return', transportMode: null });
+          const trip = sorted[i];
+          if (trip.transportMode === 'FLIGHT' && trip.departureAirportLat != null && trip.departureAirportLng != null && trip.arrivalAirportLat != null && trip.arrivalAirportLng != null) {
+            lines.push({ positions: [home, [trip.departureAirportLat, trip.departureAirportLng]], type: 'outbound', transportMode: 'FLIGHT' });
+            lines.push({ positions: [[trip.departureAirportLat, trip.departureAirportLng], [trip.arrivalAirportLat, trip.arrivalAirportLng]], type: 'outbound', transportMode: 'FLIGHT' });
+            lines.push({ positions: [[trip.arrivalAirportLat, trip.arrivalAirportLng], dest], type: 'outbound', transportMode: 'FLIGHT' });
+          } else {
+            lines.push({ positions: [home, dest], type: 'outbound', transportMode: trip.transportMode });
+          }
         }
       }
     }
 
-    // After the last trip: return home
     const last = sorted[sorted.length - 1];
     lines.push({
       positions: [[last.latitude, last.longitude], home],
       type: 'return',
+      transportMode: null,
     });
 
     return lines;
@@ -207,6 +225,14 @@ export function TravelMap({ trips, homeLocation }: TravelMapProps) {
                   />
                   <span className="text-xs text-slate-600">{STATUS_LABELS[trip.status] || trip.status}</span>
                 </div>
+                {trip.transportMode && (
+                  <div className="text-xs text-slate-500 mt-1">
+                    {trip.transportMode === 'FLIGHT' ? '\u2708\uFE0F' : '\uD83D\uDE97'}{' '}
+                    {trip.transportMode === 'FLIGHT' && trip.departureAirportCode && trip.arrivalAirportCode
+                      ? `${trip.departureAirportCode} \u2192 ${trip.arrivalAirportCode}`
+                      : trip.transportMode === 'FLIGHT' ? 'Flight' : 'Driving'}
+                  </div>
+                )}
                 {(trip.startDate || trip.endDate) && (
                   <div className="text-xs text-slate-400 mt-1">
                     {formatDate(trip.startDate)}
@@ -237,12 +263,14 @@ export function TravelMap({ trips, homeLocation }: TravelMapProps) {
 
       {routeLines.map((line, i) => {
         const style = line.type === 'outbound'
-          ? { color: '#f59e0b', weight: 2.5, opacity: 0.6 }
+          ? line.transportMode === 'CAR'
+            ? { color: '#10b981', weight: 2.5, opacity: 0.6 }
+            : { color: '#f59e0b', weight: 2.5, opacity: 0.6 }
           : line.type === 'connecting'
             ? { color: '#3b82f6', weight: 2, opacity: 0.6 }
             : line.type === 'return'
               ? { color: '#94a3b8', weight: 1.5, opacity: 0.5, dashArray: '8 6' }
-              : { color: '#f59e0b', weight: 2, opacity: 0.5, dashArray: '6 4' }; // fallback
+              : { color: '#f59e0b', weight: 2, opacity: 0.5, dashArray: '6 4' };
         return (
           <Polyline key={i} positions={line.positions} pathOptions={style} />
         );

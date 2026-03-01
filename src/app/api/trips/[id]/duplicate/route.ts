@@ -38,6 +38,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         budget: trip.budget,
         latitude: trip.latitude,
         longitude: trip.longitude,
+        transportMode: trip.transportMode,
+        departureAirportCode: trip.departureAirportCode,
+        departureAirportName: trip.departureAirportName,
+        departureAirportLat: trip.departureAirportLat,
+        departureAirportLng: trip.departureAirportLng,
+        arrivalAirportCode: trip.arrivalAirportCode,
+        arrivalAirportName: trip.arrivalAirportName,
+        arrivalAirportLat: trip.arrivalAirportLat,
+        arrivalAirportLng: trip.arrivalAirportLng,
       },
     });
 

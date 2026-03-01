@@ -17,9 +17,10 @@ import type {
   Booking,
   ChecklistItem,
   TripNote,
+  TransportMode,
 } from '@/lib/generated/prisma';
 
-export type { Trip, Vendor, Client, TripVendor, TripClient, ItineraryItem, TripStatus, VendorCategory, TripAttachment, AuditLog, User, AttachmentCategory, ExpenseCategory, BookingType, Expense, Booking, ChecklistItem, TripNote };
+export type { Trip, Vendor, Client, TripVendor, TripClient, ItineraryItem, TripStatus, VendorCategory, TripAttachment, AuditLog, User, AttachmentCategory, ExpenseCategory, BookingType, Expense, Booking, ChecklistItem, TripNote, TransportMode };
 
 export type TripWithRelations = Trip & {
   vendors: (TripVendor & { vendor: Vendor })[];
@@ -47,6 +48,15 @@ export interface CreateTripInput {
   status?: TripStatus;
   notes?: string;
   budget?: number;
+  transportMode?: TransportMode | null;
+  departureAirportCode?: string | null;
+  departureAirportName?: string | null;
+  departureAirportLat?: number | null;
+  departureAirportLng?: number | null;
+  arrivalAirportCode?: string | null;
+  arrivalAirportName?: string | null;
+  arrivalAirportLat?: number | null;
+  arrivalAirportLng?: number | null;
 }
 
 export interface UpdateTripInput extends Partial<CreateTripInput> {}

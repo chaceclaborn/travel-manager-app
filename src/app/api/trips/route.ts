@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getTrips, createTrip } from '@/lib/travelmanager/trips';
 import { requireAuth } from '@/lib/travelmanager/auth';
 import { rateLimit } from '@/lib/rate-limit';
-import { sanitizeObject, validateDateString, validateEnum, TRIP_STATUS_VALUES } from '@/lib/sanitize';
+import { sanitizeObject, validateDateString, validateEnum, TRIP_STATUS_VALUES, TRANSPORT_MODE_VALUES } from '@/lib/sanitize';
 
 export async function GET(request: NextRequest) {
   try {
@@ -29,8 +29,8 @@ export async function POST(request: NextRequest) {
     if (!user) return response;
 
     const body = await request.json();
-    const sanitized = sanitizeObject(body, ['title', 'destination', 'startDate', 'endDate', 'status', 'notes', 'budget']);
-    const { title, destination, startDate, endDate, status, notes, budget } = sanitized;
+    const sanitized = sanitizeObject(body, ['title', 'destination', 'startDate', 'endDate', 'status', 'notes', 'budget', 'transportMode', 'departureAirportCode', 'departureAirportName', 'departureAirportLat', 'departureAirportLng', 'arrivalAirportCode', 'arrivalAirportName', 'arrivalAirportLat', 'arrivalAirportLng']);
+    const { title, destination, startDate, endDate, status, notes, budget, transportMode, departureAirportCode, departureAirportLat, departureAirportLng, arrivalAirportCode, arrivalAirportLat, arrivalAirportLng } = sanitized;
 
     if (!title || typeof title !== 'string') {
       return NextResponse.json({ error: 'Title is required' }, { status: 400 });
@@ -38,6 +38,10 @@ export async function POST(request: NextRequest) {
 
     if (status && !validateEnum(status as string, TRIP_STATUS_VALUES)) {
       return NextResponse.json({ error: 'Invalid trip status' }, { status: 400 });
+    }
+
+    if (transportMode && !validateEnum(transportMode as string, TRANSPORT_MODE_VALUES)) {
+      return NextResponse.json({ error: 'Invalid transport mode' }, { status: 400 });
     }
 
     if (startDate && !validateDateString(startDate as string)) {
@@ -56,7 +60,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Destination, start date, and end date are required for non-draft trips' }, { status: 400 });
     }
 
-    const trip = await createTrip({ title, destination, startDate, endDate, status, notes, budget } as Parameters<typeof createTrip>[0], user.id);
+    if (status !== 'DRAFT' && transportMode === 'FLIGHT' && (!departureAirportCode || !arrivalAirportCode)) {
+      return NextResponse.json({ error: 'Departure and arrival airports are required for flight trips' }, { status: 400 });
+    }
+
+    if ((departureAirportLat !== undefined && departureAirportLat !== null && typeof departureAirportLat !== 'number') ||
+        (departureAirportLng !== undefined && departureAirportLng !== null && typeof departureAirportLng !== 'number') ||
+        (arrivalAirportLat !== undefined && arrivalAirportLat !== null && typeof arrivalAirportLat !== 'number') ||
+        (arrivalAirportLng !== undefined && arrivalAirportLng !== null && typeof arrivalAirportLng !== 'number')) {
+      return NextResponse.json({ error: 'Airport coordinates must be valid numbers' }, { status: 400 });
+    }
+
+    const trip = await createTrip(sanitized as unknown as Parameters<typeof createTrip>[0], user.id);
     return NextResponse.json(trip, { status: 201 });
   } catch (error) {
     console.error('Error creating trip:', error instanceof Error ? error.message : error);

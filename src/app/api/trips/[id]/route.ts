@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getTripById, updateTrip, deleteTrip } from '@/lib/travelmanager/trips';
 import { requireAuth } from '@/lib/travelmanager/auth';
 import { rateLimit } from '@/lib/rate-limit';
-import { sanitizeObject, validateUUID, validateDateString, validateEnum, TRIP_STATUS_VALUES } from '@/lib/sanitize';
+import { sanitizeObject, validateUUID, validateDateString, validateEnum, TRIP_STATUS_VALUES, TRANSPORT_MODE_VALUES } from '@/lib/sanitize';
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -39,10 +39,21 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     const body = await request.json();
-    const sanitized = sanitizeObject(body, ['title', 'destination', 'startDate', 'endDate', 'status', 'notes', 'budget']);
+    const sanitized = sanitizeObject(body, ['title', 'destination', 'startDate', 'endDate', 'status', 'notes', 'budget', 'transportMode', 'departureAirportCode', 'departureAirportName', 'departureAirportLat', 'departureAirportLng', 'arrivalAirportCode', 'arrivalAirportName', 'arrivalAirportLat', 'arrivalAirportLng']);
 
     if (sanitized.status && !validateEnum(sanitized.status as string, TRIP_STATUS_VALUES)) {
       return NextResponse.json({ error: 'Invalid trip status' }, { status: 400 });
+    }
+
+    if (sanitized.transportMode && !validateEnum(sanitized.transportMode as string, TRANSPORT_MODE_VALUES)) {
+      return NextResponse.json({ error: 'Invalid transport mode' }, { status: 400 });
+    }
+
+    if ((sanitized.departureAirportLat !== undefined && sanitized.departureAirportLat !== null && typeof sanitized.departureAirportLat !== 'number') ||
+        (sanitized.departureAirportLng !== undefined && sanitized.departureAirportLng !== null && typeof sanitized.departureAirportLng !== 'number') ||
+        (sanitized.arrivalAirportLat !== undefined && sanitized.arrivalAirportLat !== null && typeof sanitized.arrivalAirportLat !== 'number') ||
+        (sanitized.arrivalAirportLng !== undefined && sanitized.arrivalAirportLng !== null && typeof sanitized.arrivalAirportLng !== 'number')) {
+      return NextResponse.json({ error: 'Airport coordinates must be valid numbers' }, { status: 400 });
     }
 
     if (sanitized.startDate && !validateDateString(sanitized.startDate as string)) {
