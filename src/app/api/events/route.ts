@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/travelmanager/auth';
 import { rateLimit } from '@/lib/rate-limit';
+import { sanitizeString } from '@/lib/sanitize';
 import prisma from '@/lib/prisma';
 
 const MAX_EVENTS_PER_REQUEST = 20;
@@ -25,9 +26,9 @@ export async function POST(request: NextRequest) {
     await prisma.clickEvent.createMany({
       data: capped.map((e) => ({
         userId: user.id,
-        type: String(e.type || '').slice(0, 50),
-        label: String(e.label || '').slice(0, 100),
-        page: String(e.page || '').slice(0, 200),
+        type: sanitizeString(String(e.type || '')).slice(0, 50),
+        label: sanitizeString(String(e.label || '')).slice(0, 100),
+        page: sanitizeString(String(e.page || '')).slice(0, 200),
       })),
     });
 

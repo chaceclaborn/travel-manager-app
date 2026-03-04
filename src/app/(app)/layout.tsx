@@ -63,6 +63,11 @@ export default function TravelManagerLayout({
         setIsAdmin(false);
         setIsAdminChecked(true);
       });
+
+    if (!sessionStorage.getItem('tm-daily-visit')) {
+      sessionStorage.setItem('tm-daily-visit', '1');
+      fetch('/api/auth/visit', { method: 'POST' }).catch(() => {});
+    }
   }, [user]);
 
   useEffect(() => {

@@ -44,10 +44,10 @@ export async function GET(request: NextRequest) {
       prisma.client.count(),
       prisma.auditLog.findMany({
         where: {
-          action: 'sign_in',
+          action: { in: ['daily_visit', 'sign_in'] },
           createdAt: { gte: thirtyDaysAgo },
         },
-        select: { createdAt: true },
+        select: { createdAt: true, userId: true },
         orderBy: { createdAt: 'asc' },
       }),
       prisma.trip.groupBy({
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
     ]);
 
     const tz = request.nextUrl.searchParams.get('tz') || 'UTC';
-    const signInByDay = new Map<string, number>();
+    const uniqueUsersByDay = new Map<string, Set<string>>();
 
     // Pre-fill all 30 days (including today) so the chart has no gaps
     const today = new Date();
@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
       } catch {
         key = d.toISOString().slice(0, 10);
       }
-      signInByDay.set(key, 0);
+      uniqueUsersByDay.set(key, new Set());
     }
 
     for (const log of signInLogs) {
@@ -84,11 +84,13 @@ export async function GET(request: NextRequest) {
       } catch {
         day = log.createdAt.toISOString().slice(0, 10);
       }
-      signInByDay.set(day, (signInByDay.get(day) || 0) + 1);
+      const users = uniqueUsersByDay.get(day) || new Set<string>();
+      users.add(log.userId);
+      uniqueUsersByDay.set(day, users);
     }
-    const signInActivity = Array.from(signInByDay.entries())
+    const signInActivity = Array.from(uniqueUsersByDay.entries())
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, count]) => ({ date, count }));
+      .map(([date, users]) => ({ date, count: users.size }));
 
     const tripStatusBreakdown = tripStatusGroups.map((g) => ({
       status: g.status,

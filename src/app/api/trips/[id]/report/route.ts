@@ -4,6 +4,7 @@ import autoTable from 'jspdf-autotable';
 import prisma from '@/lib/prisma';
 import { requireAuth } from '@/lib/travelmanager/auth';
 import { rateLimit } from '@/lib/rate-limit';
+import { validateUUID } from '@/lib/sanitize';
 
 function formatDate(date: Date) {
   return date.toLocaleDateString('en-US', {
@@ -66,6 +67,9 @@ export async function GET(
     if (!user) return response;
 
     const { id } = await params;
+    if (!validateUUID(id)) {
+      return NextResponse.json({ error: 'Invalid trip ID' }, { status: 400 });
+    }
 
     const trip = await prisma.trip.findFirst({
       where: { id, userId: user.id },

@@ -1,0 +1,20 @@
+-- Enable Row Level Security on all tables.
+-- Since all data access goes through Prisma (which connects as the postgres
+-- role and bypasses RLS), no permissive policies are needed. This locks down
+-- the Supabase auto-generated PostgREST API so the anon/authenticated roles
+-- cannot read or write any data directly.
+
+ALTER TABLE "User" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "AuditLog" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "Trip" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "TripAttachment" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "Vendor" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "Client" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "TripVendor" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "TripClient" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "ItineraryItem" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "Expense" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "Booking" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "ChecklistItem" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "TripNote" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "ClickEvent" ENABLE ROW LEVEL SECURITY;

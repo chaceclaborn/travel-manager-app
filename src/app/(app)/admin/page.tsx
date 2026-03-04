@@ -263,7 +263,7 @@ export default function AdminPage() {
           className="rounded-xl bg-white border border-slate-100 p-5 shadow-sm"
         >
           <h2 className="text-sm font-semibold text-slate-700 mb-4">
-            Sign-in Activity (Last 30 Days)
+            Daily Visits (Last 30 Days)
           </h2>
           {data.signInActivity.length > 0 ? (
             <ResponsiveContainer width="100%" height={280}>
@@ -302,7 +302,7 @@ export default function AdminPage() {
                   content={
                     <CustomTooltip
                       formatter={(v) =>
-                        `${v} sign-in${v !== 1 ? 's' : ''}`
+                        `${v} visit${v !== 1 ? 's' : ''}`
                       }
                     />
                   }
@@ -318,7 +318,7 @@ export default function AdminPage() {
             </ResponsiveContainer>
           ) : (
             <div className="flex h-[280px] items-center justify-center text-sm text-slate-400">
-              No sign-in data in the last 30 days
+              No visit data in the last 30 days
             </div>
           )}
         </motion.div>

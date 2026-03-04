@@ -114,9 +114,26 @@ export function validateMagicBytes(buffer: Buffer, declaredMimeType: string): bo
         buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50   // WEBP
       );
 
+    case 'image/gif':
+      // GIF: starts with "GIF87a" or "GIF89a" (hex: 47 49 46 38 [37|39] 61)
+      return (
+        buffer[0] === 0x47 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x38 &&
+        (buffer[4] === 0x37 || buffer[4] === 0x39) && buffer[5] === 0x61
+      );
+
+    case 'application/msword':
+      // DOC: OLE compound file starts with D0 CF 11 E0 A1 B1 1A E1
+      return (
+        buffer[0] === 0xD0 && buffer[1] === 0xCF && buffer[2] === 0x11 && buffer[3] === 0xE0 &&
+        buffer[4] === 0xA1 && buffer[5] === 0xB1 && buffer[6] === 0x1A && buffer[7] === 0xE1
+      );
+
+    case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+      // DOCX: ZIP archive starts with PK (hex: 50 4B 03 04)
+      return buffer[0] === 0x50 && buffer[1] === 0x4B && buffer[2] === 0x03 && buffer[3] === 0x04;
+
     default:
-      // Can't validate this MIME type — allow through
-      return true;
+      return false;
   }
 }
 

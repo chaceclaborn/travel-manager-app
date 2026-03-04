@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { requireAuth } from '@/lib/travelmanager/auth';
 import { rateLimit } from '@/lib/rate-limit';
+import { validateUUID } from '@/lib/sanitize';
 
 function formatDateOnly(date: Date): string {
   const y = date.getUTCFullYear();
@@ -29,6 +30,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     if (!user) return response;
 
     const { id } = await params;
+    if (!validateUUID(id)) {
+      return NextResponse.json({ error: 'Invalid trip ID' }, { status: 400 });
+    }
 
     const trip = await prisma.trip.findFirst({
       where: { id, userId: user.id },
