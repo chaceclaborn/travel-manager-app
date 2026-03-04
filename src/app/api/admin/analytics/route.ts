@@ -62,6 +62,21 @@ export async function GET(request: NextRequest) {
 
     const tz = request.nextUrl.searchParams.get('tz') || 'UTC';
     const signInByDay = new Map<string, number>();
+
+    // Pre-fill all 30 days (including today) so the chart has no gaps
+    const today = new Date();
+    for (let i = 30; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      let key: string;
+      try {
+        key = d.toLocaleDateString('en-CA', { timeZone: tz });
+      } catch {
+        key = d.toISOString().slice(0, 10);
+      }
+      signInByDay.set(key, 0);
+    }
+
     for (const log of signInLogs) {
       let day: string;
       try {
