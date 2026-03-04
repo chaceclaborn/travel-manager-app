@@ -111,7 +111,7 @@ export function TripExpenses({ tripId, tripStartDate, tripEndDate }: TripExpense
   const [formAmount, setFormAmount] = useState('');
   const [formCategory, setFormCategory] = useState('OTHER');
   const [formDate, setFormDate] = useState(() => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toLocaleDateString('en-CA');
     if (!tripStartDate) return today;
     const start = new Date(tripStartDate).toISOString().split('T')[0];
     const end = tripEndDate ? new Date(tripEndDate).toISOString().split('T')[0] : start;
@@ -182,7 +182,7 @@ export function TripExpenses({ tripId, tripStartDate, tripEndDate }: TripExpense
       showToast('Expense added');
       setFormAmount('');
       setFormCategory('OTHER');
-      setFormDate(new Date().toISOString().split('T')[0]);
+      setFormDate(new Date().toLocaleDateString('en-CA'));
       setFormDescription('');
       setShowForm(false);
       fetchExpenses();

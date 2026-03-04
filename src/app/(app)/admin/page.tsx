@@ -95,7 +95,8 @@ export default function AdminPage() {
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    fetch('/api/admin/analytics')
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    fetch(`/api/admin/analytics?tz=${encodeURIComponent(tz)}`)
       .then(async (res) => {
         if (res.status === 403) {
           setForbidden(true);

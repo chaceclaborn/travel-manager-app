@@ -60,9 +60,15 @@ export async function GET(request: NextRequest) {
       }),
     ]);
 
+    const tz = request.nextUrl.searchParams.get('tz') || 'UTC';
     const signInByDay = new Map<string, number>();
     for (const log of signInLogs) {
-      const day = log.createdAt.toISOString().slice(0, 10);
+      let day: string;
+      try {
+        day = log.createdAt.toLocaleDateString('en-CA', { timeZone: tz });
+      } catch {
+        day = log.createdAt.toISOString().slice(0, 10);
+      }
       signInByDay.set(day, (signInByDay.get(day) || 0) + 1);
     }
     const signInActivity = Array.from(signInByDay.entries())

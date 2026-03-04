@@ -77,7 +77,7 @@ function groupByDate(items: ItineraryItem[]) {
 }
 
 function getTodayStr() {
-  return new Date().toISOString().split('T')[0];
+  return new Date().toLocaleDateString('en-CA');
 }
 
 function getDefaultDate(tripStartDate?: string | null, tripEndDate?: string | null): string {
