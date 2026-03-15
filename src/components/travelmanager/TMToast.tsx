@@ -102,7 +102,7 @@ export function TMToastProvider({ children }: { children: React.ReactNode }) {
                 animate={{ opacity: 1, x: 0, scale: 1 }}
                 exit={{ opacity: 0, x: 40, scale: 0.95 }}
                 transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                className={`pointer-events-auto relative w-[360px] overflow-hidden rounded-xl border ${config.border} ${config.bg} shadow-lg shadow-black/5`}
+                className={`pointer-events-auto relative w-full max-w-[360px] overflow-hidden rounded-xl border ${config.border} ${config.bg} shadow-lg shadow-black/5`}
               >
                 <div className="flex items-start gap-3 px-4 py-3 pr-10">
                   <div className="mt-0.5">

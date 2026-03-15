@@ -32,7 +32,7 @@ export function CookieBanner() {
   };
 
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[100] max-w-lg w-[calc(100%-2rem)] bg-slate-800/90 backdrop-blur-sm rounded-xl shadow-lg px-4 py-3 flex items-center justify-between gap-3">
+    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[100] max-w-md w-[calc(100%-2rem)] bg-slate-800/90 backdrop-blur-sm rounded-xl shadow-lg px-4 py-3 flex items-center justify-between gap-3">
       <p className="text-xs text-slate-300">
         This site uses essential cookies for authentication. No tracking cookies are used.
       </p>

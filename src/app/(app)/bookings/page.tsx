@@ -19,6 +19,7 @@ import {
 import { TMEmptyState } from '@/components/travelmanager/TMEmptyState';
 import { useTMToast } from '@/components/travelmanager/TMToast';
 import { TMDeleteDialog } from '@/components/travelmanager/TMDeleteDialog';
+import { DatePicker } from '@/components/travelmanager/DatePicker';
 
 type BookingType = 'FLIGHT' | 'HOTEL' | 'CAR_RENTAL' | 'TRAIN' | 'BUS' | 'OTHER';
 
@@ -618,11 +619,10 @@ export default function BookingsPage() {
                   placeholder="e.g. AA1234"
                   className="flex-1 text-sm"
                 />
-                <Input
-                  type="date"
-                  value={lookupDate}
-                  onChange={(e) => setLookupDate(e.target.value)}
-                  className="w-36 text-sm"
+                <DatePicker
+                  date={lookupDate}
+                  onDateChange={setLookupDate}
+                  placeholder="Flight date"
                 />
                 <Button
                   type="button"
@@ -715,22 +715,54 @@ export default function BookingsPage() {
             )}
 
             <div>
-              <Label htmlFor="booking-start">{typeLabels.startDateTime[form.type]}</Label>
-              <Input
-                id="booking-start"
-                type={dateOnly ? 'date' : 'datetime-local'}
-                value={form.startDateTime}
-                onChange={(e) => updateForm('startDateTime', e.target.value)}
-              />
+              <Label>{typeLabels.startDateTime[form.type]}</Label>
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <DatePicker
+                    date={form.startDateTime?.split('T')[0] || ''}
+                    onDateChange={(d) => {
+                      const time = form.startDateTime?.split('T')[1] || '';
+                      updateForm('startDateTime', time ? `${d}T${time}` : d);
+                    }}
+                  />
+                </div>
+                {!dateOnly && (
+                  <Input
+                    type="time"
+                    value={form.startDateTime?.split('T')[1] || ''}
+                    onChange={(e) => {
+                      const date = form.startDateTime?.split('T')[0] || '';
+                      updateForm('startDateTime', date ? `${date}T${e.target.value}` : '');
+                    }}
+                    className="w-24"
+                  />
+                )}
+              </div>
             </div>
             <div>
-              <Label htmlFor="booking-end">{typeLabels.endDateTime[form.type]}</Label>
-              <Input
-                id="booking-end"
-                type={dateOnly ? 'date' : 'datetime-local'}
-                value={form.endDateTime}
-                onChange={(e) => updateForm('endDateTime', e.target.value)}
-              />
+              <Label>{typeLabels.endDateTime[form.type]}</Label>
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <DatePicker
+                    date={form.endDateTime?.split('T')[0] || ''}
+                    onDateChange={(d) => {
+                      const time = form.endDateTime?.split('T')[1] || '';
+                      updateForm('endDateTime', time ? `${d}T${time}` : d);
+                    }}
+                  />
+                </div>
+                {!dateOnly && (
+                  <Input
+                    type="time"
+                    value={form.endDateTime?.split('T')[1] || ''}
+                    onChange={(e) => {
+                      const date = form.endDateTime?.split('T')[0] || '';
+                      updateForm('endDateTime', date ? `${date}T${e.target.value}` : '');
+                    }}
+                    className="w-24"
+                  />
+                )}
+              </div>
             </div>
 
             {showSeat && (

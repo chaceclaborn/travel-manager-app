@@ -84,11 +84,13 @@
   }
   html {
     scroll-behavior: smooth;
+    overflow-x: hidden;
   }
   body {
     @apply text-foreground antialiased;
     background: var(--background);
     min-height: 100vh;
+    overflow-x: hidden;
   }
 }
 

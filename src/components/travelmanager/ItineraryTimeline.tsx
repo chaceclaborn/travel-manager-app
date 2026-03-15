@@ -398,7 +398,7 @@ export function ItineraryTimeline({ items, tripId, onRefresh, tripStartDate, tri
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             onSubmit={handleAdd}
-            className="space-y-3 overflow-hidden rounded-lg border bg-slate-50 p-4"
+            className="space-y-3 rounded-lg border bg-slate-50 p-4"
           >
             {renderFormFields(form, setForm, timeError, 'itin')}
             <div className="flex gap-2">
