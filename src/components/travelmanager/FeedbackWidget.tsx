@@ -36,9 +36,9 @@ export function FeedbackWidget() {
   }
 
   return (
-    <div data-no-track className="fixed bottom-6 right-6 z-[55]">
+    <div data-no-track className="fixed bottom-6 right-4 sm:right-6 z-[55]">
       {open && (
-        <div className="absolute bottom-14 right-0 w-80 bg-white rounded-xl shadow-lg ring-1 ring-slate-200 overflow-hidden">
+        <div className="absolute bottom-14 right-0 w-[calc(100vw-2rem)] sm:w-80 bg-white rounded-xl shadow-lg ring-1 ring-slate-200 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 bg-amber-50 border-b border-amber-100">
             <span className="text-sm font-semibold text-amber-800">Send Feedback</span>
             <button

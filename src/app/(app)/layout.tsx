@@ -173,7 +173,7 @@ export default function TravelManagerLayout({
       )}
 
       <TMToastProvider>
-        <div className="flex min-h-screen">
+        <div className="flex min-h-screen max-w-[100vw] overflow-x-hidden">
           {/* Desktop Sidebar */}
           <aside className="hidden md:flex w-64 flex-col fixed inset-y-0 left-0 bg-slate-900 z-40" role="navigation" aria-label="Main navigation">
             <div className="flex items-center justify-between px-6 py-5 border-b border-white/10">
@@ -271,8 +271,8 @@ export default function TravelManagerLayout({
           </AnimatePresence>
 
           {/* Main Content */}
-          <main className="flex-1 md:ml-64 mt-16 md:mt-0">
-            <div className="p-4 md:p-8">{children}</div>
+          <main className="flex-1 min-w-0 md:ml-64 mt-16 md:mt-0 overflow-x-hidden">
+            <div className="p-4 md:p-8 max-w-full">{children}</div>
           </main>
         </div>
       </TMToastProvider>
