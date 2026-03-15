@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
   Plane, Building2, Car, Train, Bus, Package, Trash2, Plus, X, MapPin,
-  Clock, Hash, Armchair, Search, Link2,
+  Clock, Hash, Armchair, Search, Link2, Loader2, ExternalLink,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -374,6 +374,11 @@ export default function BookingsPage() {
   const [linkTarget, setLinkTarget] = useState<string | null>(null);
   const [linkTripId, setLinkTripId] = useState('');
   const [isLinking, setIsLinking] = useState(false);
+  const [lookupFlight, setLookupFlight] = useState('');
+  const [lookupDate, setLookupDate] = useState('');
+  const [lookupLoading, setLookupLoading] = useState(false);
+  const [lookupError, setLookupError] = useState('');
+  const [lookupFallbackUrl, setLookupFallbackUrl] = useState('');
 
   const fetchBookings = useCallback(async () => {
     try {
@@ -491,6 +496,46 @@ export default function BookingsPage() {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
+  const handleFlightLookup = async () => {
+    if (!lookupFlight.trim()) {
+      showToast('Enter a flight number (e.g., AA1234)', 'error');
+      return;
+    }
+    if (!lookupDate) {
+      showToast('Date is required for flight lookup', 'error');
+      return;
+    }
+    setLookupLoading(true);
+    setLookupError('');
+    setLookupFallbackUrl('');
+    try {
+      const params = new URLSearchParams({ flight: lookupFlight.trim() });
+      if (lookupDate) params.set('date', lookupDate);
+      const res = await fetch(`/api/bookings/flight-lookup?${params.toString()}`);
+      const data = await res.json();
+      if (!res.ok) {
+        setLookupError(data.error || 'Lookup failed');
+        if (data.fallbackUrl) setLookupFallbackUrl(data.fallbackUrl);
+        return;
+      }
+      setForm((prev) => ({
+        ...prev,
+        provider: data.airline || prev.provider,
+        location: data.departureAirport || prev.location,
+        endLocation: data.arrivalAirport || prev.endLocation,
+        startDateTime: data.departureTime ? data.departureTime.slice(0, 16) : prev.startDateTime,
+        endDateTime: data.arrivalTime ? data.arrivalTime.slice(0, 16) : prev.endDateTime,
+      }));
+      showToast(`Found: ${data.airline} ${data.flightNumber} (${data.departureAirport} → ${data.arrivalAirport})`);
+      setLookupFlight('');
+      setLookupDate('');
+    } catch {
+      setLookupError('Failed to lookup flight');
+    } finally {
+      setLookupLoading(false);
+    }
+  };
+
   const typeLabels = {
     location: { FLIGHT: 'Departure Airport', HOTEL: 'Location', CAR_RENTAL: 'Pickup Location', TRAIN: 'Departure Station', BUS: 'Departure Station', OTHER: 'Location' },
     endLocation: { FLIGHT: 'Arrival Airport', HOTEL: '', CAR_RENTAL: 'Dropoff Location', TRAIN: 'Arrival Station', BUS: 'Arrival Station', OTHER: '' },
@@ -562,6 +607,51 @@ export default function BookingsPage() {
               <X className="size-4" />
             </button>
           </div>
+
+          {form.type === 'FLIGHT' && (
+            <div className="rounded-lg border border-blue-200 bg-blue-50/50 p-3 space-y-2">
+              <p className="text-xs font-medium text-blue-700">Auto-fill from flight number</p>
+              <div className="flex gap-2">
+                <Input
+                  value={lookupFlight}
+                  onChange={(e) => setLookupFlight(e.target.value)}
+                  placeholder="e.g. AA1234"
+                  className="flex-1 text-sm"
+                />
+                <Input
+                  type="date"
+                  value={lookupDate}
+                  onChange={(e) => setLookupDate(e.target.value)}
+                  className="w-36 text-sm"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={lookupLoading}
+                  onClick={handleFlightLookup}
+                  className="bg-blue-500 hover:bg-blue-600 text-white shrink-0"
+                >
+                  {lookupLoading ? <Loader2 className="size-4 animate-spin" /> : 'Lookup'}
+                </Button>
+              </div>
+              {lookupError && (
+                <div className="space-y-1">
+                  <p className="text-xs text-red-600">{lookupError}</p>
+                  {lookupFallbackUrl && (
+                    <a
+                      href={lookupFallbackUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700 underline"
+                    >
+                      Look up on Google Flights
+                      <ExternalLink className="size-3" />
+                    </a>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-3 sm:col-span-2">

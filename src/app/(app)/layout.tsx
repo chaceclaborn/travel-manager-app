@@ -42,7 +42,13 @@ export default function TravelManagerLayout({
     : '';
 
   useEffect(() => {
-    setDemoDismissed(localStorage.getItem('tm-demo-dismissed') === 'true');
+    const dismissedAt = localStorage.getItem('tm-demo-dismissed');
+    if (dismissedAt) {
+      const weekMs = 7 * 24 * 60 * 60 * 1000;
+      setDemoDismissed(Date.now() - Number(dismissedAt) < weekMs);
+    } else {
+      setDemoDismissed(false);
+    }
     if (!navigator.platform.includes('Mac')) {
       setModKey('Ctrl');
     }
@@ -156,7 +162,7 @@ export default function TravelManagerLayout({
           <button
             onClick={() => {
               setDemoDismissed(true);
-              localStorage.setItem('tm-demo-dismissed', 'true');
+              localStorage.setItem('tm-demo-dismissed', String(Date.now()));
             }}
             className="text-white/60 hover:text-white transition-colors"
             aria-label="Dismiss"

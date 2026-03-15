@@ -8,15 +8,26 @@ export function CookieBanner() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    if (localStorage.getItem(STORAGE_KEY) !== 'true') {
-      setVisible(true);
-    }
+    const timer = setTimeout(() => {
+      try {
+        if (localStorage.getItem(STORAGE_KEY) !== 'true') {
+          setVisible(true);
+        }
+      } catch {
+        // Private browsing or storage unavailable — don't show banner
+      }
+    }, 500);
+    return () => clearTimeout(timer);
   }, []);
 
   if (!visible) return null;
 
   const dismiss = () => {
-    localStorage.setItem(STORAGE_KEY, 'true');
+    try {
+      localStorage.setItem(STORAGE_KEY, 'true');
+    } catch {
+      // Private browsing — still hide for current session
+    }
     setVisible(false);
   };
 

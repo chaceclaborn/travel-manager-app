@@ -207,8 +207,8 @@ describe('validateMagicBytes', () => {
     expect(validateMagicBytes(buf, 'application/pdf')).toBe(false);
   });
 
-  it('returns true for unknown MIME type', () => {
+  it('rejects unknown MIME type', () => {
     const buf = Buffer.alloc(16);
-    expect(validateMagicBytes(buf, 'text/plain')).toBe(true);
+    expect(validateMagicBytes(buf, 'text/plain')).toBe(false);
   });
 });
