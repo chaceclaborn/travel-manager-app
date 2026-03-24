@@ -22,6 +22,9 @@ import { TMDeleteDialog } from '@/components/travelmanager/TMDeleteDialog';
 import { DatePicker } from '@/components/travelmanager/DatePicker';
 import { formatDate, formatDateTime } from '@/lib/date-utils';
 import { type BookingType, BOOKING_TYPES, typeConfig, typeLabels, emptyBookingForm, getBookingFormHelpers } from '@/lib/travelmanager/booking-config';
+import { GmailImportModal } from '@/components/travelmanager/GmailImportModal';
+import type { ParsedBooking } from '@/lib/travelmanager/email-parser';
+import { Mail } from 'lucide-react';
 
 interface BookingTrip {
   id: string;
@@ -296,6 +299,8 @@ export default function BookingsPage() {
   const [lookupLoading, setLookupLoading] = useState(false);
   const [lookupError, setLookupError] = useState('');
   const [lookupFallbackUrl, setLookupFallbackUrl] = useState('');
+  const [gmailConnected, setGmailConnected] = useState(false);
+  const [showGmailModal, setShowGmailModal] = useState(false);
 
   const fetchBookings = useCallback(async () => {
     try {
@@ -316,6 +321,9 @@ export default function BookingsPage() {
     fetch('/api/trips')
       .then((res) => res.json())
       .then((data) => setTrips(Array.isArray(data) ? data : []))
+      .catch(() => {});
+    fetch('/api/gmail/search?q=test&maxResults=1')
+      .then((res) => setGmailConnected(res.ok))
       .catch(() => {});
   }, [fetchBookings]);
 
@@ -453,6 +461,22 @@ export default function BookingsPage() {
     }
   };
 
+  const handleGmailImport = (parsed: ParsedBooking) => {
+    setForm((prev) => ({
+      ...prev,
+      type: parsed.type || prev.type,
+      provider: parsed.provider || prev.provider,
+      confirmationNum: parsed.confirmationNum || prev.confirmationNum,
+      startDateTime: parsed.startDateTime ? parsed.startDateTime.slice(0, 16) : prev.startDateTime,
+      endDateTime: parsed.endDateTime ? parsed.endDateTime.slice(0, 16) : prev.endDateTime,
+      location: parsed.location || prev.location,
+      endLocation: parsed.endLocation || prev.endLocation,
+      seat: parsed.seat || prev.seat,
+    }));
+    setShowForm(true);
+    showToast('Booking details imported — review and save');
+  };
+
   const { showEndLocation, showSeat, dateOnly } = getBookingFormHelpers(form.type);
   const formTypeConfig = typeConfig[form.type];
 
@@ -483,13 +507,25 @@ export default function BookingsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-slate-800">Bookings</h1>
-        <Button
-          onClick={() => setShowForm(true)}
-          className="bg-amber-500 hover:bg-amber-600 text-white"
-        >
-          <Plus className="mr-2 size-4" />
-          New Booking
-        </Button>
+        <div className="flex items-center gap-2">
+          {gmailConnected && (
+            <Button
+              variant="outline"
+              onClick={() => setShowGmailModal(true)}
+              className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+            >
+              <Mail className="mr-2 size-4" />
+              Import from Gmail
+            </Button>
+          )}
+          <Button
+            onClick={() => setShowForm(true)}
+            className="bg-amber-500 hover:bg-amber-600 text-white"
+          >
+            <Plus className="mr-2 size-4" />
+            New Booking
+          </Button>
+        </div>
       </div>
 
       {showForm && (
@@ -859,6 +895,12 @@ export default function BookingsPage() {
           </motion.div>
         </div>
       )}
+
+      <GmailImportModal
+        open={showGmailModal}
+        onClose={() => setShowGmailModal(false)}
+        onImport={handleGmailImport}
+      />
     </div>
   );
 }

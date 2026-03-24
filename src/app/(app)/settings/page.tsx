@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { Shield, Download, FileText, Trash2, Loader2, Monitor, MapPin, X } from 'lucide-react';
+import { Shield, Download, FileText, Trash2, Loader2, Monitor, MapPin, X, Mail, CheckCircle2, Unlink } from 'lucide-react';
 import { useGeocodingSearch, formatGeoName } from '@/lib/travelmanager/useGeocodingSearch';
 import type { GeoResult } from '@/lib/travelmanager/useGeocodingSearch';
 import { Input } from '@/components/ui/input';
@@ -82,6 +82,9 @@ export default function SettingsPage() {
   const [exportingData, setExportingData] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState<string | null>(null);
   const [isSavingHome, setIsSavingHome] = useState(false);
+  const [gmailConnected, setGmailConnected] = useState(false);
+  const [gmailLoading, setGmailLoading] = useState(true);
+  const [gmailDisconnecting, setGmailDisconnecting] = useState(false);
   const {
     query: homeQuery,
     setQuery: setHomeQuery,
@@ -111,6 +114,26 @@ export default function SettingsPage() {
       .then((data) => setSessions(Array.isArray(data) ? data.slice(0, 10) : []))
       .catch(() => setSessions([]))
       .finally(() => setLoadingSessions(false));
+
+    fetch('/api/gmail/search?q=test&maxResults=1')
+      .then((res) => {
+        setGmailConnected(res.ok);
+      })
+      .catch(() => setGmailConnected(false))
+      .finally(() => setGmailLoading(false));
+
+    // Handle Gmail OAuth callback redirect
+    const params = new URLSearchParams(window.location.search);
+    const gmailParam = params.get('gmail');
+    if (gmailParam === 'connected') {
+      showToast('Gmail connected successfully');
+      setGmailConnected(true);
+      setGmailLoading(false);
+      window.history.replaceState({}, '', '/settings');
+    } else if (gmailParam === 'error') {
+      showToast('Failed to connect Gmail', 'error');
+      window.history.replaceState({}, '', '/settings');
+    }
   }, []);
 
   const avatarUrl = userInfo?.avatarUrl || user?.user_metadata?.avatar_url;
@@ -322,6 +345,78 @@ export default function SettingsPage() {
             Home set to: {userInfo.homeCity}
           </p>
         )}
+      </motion.div>
+
+      {/* Connected Accounts */}
+      <motion.div variants={item} className="rounded-xl bg-white p-6 shadow-sm">
+        <div className="flex items-center gap-2 mb-4">
+          <Mail className="size-5 text-amber-600" />
+          <h2 className="text-lg font-semibold text-slate-800">Connected Accounts</h2>
+        </div>
+        <div className="flex items-center justify-between rounded-lg border border-slate-100 p-4">
+          <div className="flex items-center gap-3">
+            <div className="flex size-10 items-center justify-center rounded-full bg-red-50 ring-2 ring-red-100">
+              <Mail className="size-5 text-red-500" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-slate-800">Gmail</p>
+              {gmailLoading ? (
+                <p className="text-xs text-slate-400">Checking...</p>
+              ) : gmailConnected ? (
+                <p className="flex items-center gap-1 text-xs text-green-600">
+                  <CheckCircle2 className="size-3" /> Connected — read-only access
+                </p>
+              ) : (
+                <p className="text-xs text-slate-400">Import bookings from email confirmations</p>
+              )}
+            </div>
+          </div>
+          {gmailLoading ? (
+            <Loader2 className="size-4 animate-spin text-slate-300" />
+          ) : gmailConnected ? (
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={gmailDisconnecting}
+              onClick={async () => {
+                setGmailDisconnecting(true);
+                try {
+                  const res = await fetch('/api/gmail/disconnect', { method: 'POST' });
+                  if (res.ok) {
+                    setGmailConnected(false);
+                    showToast('Gmail disconnected');
+                  } else {
+                    showToast('Failed to disconnect', 'error');
+                  }
+                } catch {
+                  showToast('Failed to disconnect', 'error');
+                } finally {
+                  setGmailDisconnecting(false);
+                }
+              }}
+              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+            >
+              {gmailDisconnecting ? <Loader2 className="mr-1 size-3 animate-spin" /> : <Unlink className="mr-1 size-3" />}
+              Disconnect
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              onClick={async () => {
+                try {
+                  const res = await fetch('/api/gmail/connect');
+                  const data = await res.json();
+                  if (data.url) window.location.href = data.url;
+                } catch {
+                  showToast('Failed to start Gmail connection', 'error');
+                }
+              }}
+              className="bg-amber-500 hover:bg-amber-600"
+            >
+              Connect Gmail
+            </Button>
+          )}
+        </div>
       </motion.div>
 
       {/* Security */}
