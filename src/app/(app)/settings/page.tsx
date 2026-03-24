@@ -115,10 +115,9 @@ export default function SettingsPage() {
       .catch(() => setSessions([]))
       .finally(() => setLoadingSessions(false));
 
-    fetch('/api/gmail/search?q=test&maxResults=1')
-      .then((res) => {
-        setGmailConnected(res.ok);
-      })
+    fetch('/api/gmail/status')
+      .then((res) => res.ok ? res.json() : { connected: false })
+      .then((data) => setGmailConnected(data.connected))
       .catch(() => setGmailConnected(false))
       .finally(() => setGmailLoading(false));
 

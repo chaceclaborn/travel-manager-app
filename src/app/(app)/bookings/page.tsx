@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
   Plane, Trash2, Plus, X, MapPin,
-  Clock, Hash, Armchair, Search, Link2, Loader2, ExternalLink, Pencil,
+  Clock, Hash, Armchair, Search, Link2, Loader2, ExternalLink, Pencil, Mail,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -25,7 +25,6 @@ import { formatDate, formatDateTime } from '@/lib/date-utils';
 import { type BookingType, BOOKING_TYPES, typeConfig, typeLabels, emptyBookingForm, getBookingFormHelpers } from '@/lib/travelmanager/booking-config';
 import { GmailImportModal } from '@/components/travelmanager/GmailImportModal';
 import type { ParsedBooking } from '@/lib/travelmanager/email-parser';
-import { Mail } from 'lucide-react';
 
 interface BookingTrip {
   id: string;
@@ -64,20 +63,156 @@ const cardVariants = {
   }),
 };
 
+function BookingCardView({ booking, config }: { booking: Booking; config: typeof typeConfig[BookingType] }) {
+  return (
+    <div className="space-y-1.5 text-sm">
+      {booking.type === 'FLIGHT' && (
+        <>
+          {(booking.location || booking.endLocation) && (
+            <div className="flex items-center gap-2 text-slate-600">
+              <MapPin className="size-3.5 shrink-0 text-blue-400" />
+              <span>{booking.location || '...'} &rarr; {booking.endLocation || '...'}</span>
+            </div>
+          )}
+          {booking.startDateTime && (
+            <div className="flex items-center gap-2 text-slate-600">
+              <Clock className="size-3.5 shrink-0 text-blue-400" />
+              <span>Depart: {formatDateTime(booking.startDateTime)}</span>
+            </div>
+          )}
+          {booking.endDateTime && (
+            <div className="flex items-center gap-2 text-slate-600">
+              <Clock className="size-3.5 shrink-0 text-blue-400" />
+              <span>Arrive: {formatDateTime(booking.endDateTime)}</span>
+            </div>
+          )}
+          {booking.seat && (
+            <div className="flex items-center gap-2 text-slate-600">
+              <Armchair className="size-3.5 shrink-0 text-blue-400" />
+              <span>Seat: {booking.seat}</span>
+            </div>
+          )}
+        </>
+      )}
+      {booking.type === 'HOTEL' && (
+        <>
+          {booking.startDateTime && <div className="flex items-center gap-2 text-slate-600"><Clock className="size-3.5 shrink-0 text-purple-400" /><span>Check-in: {formatDate(booking.startDateTime)}</span></div>}
+          {booking.endDateTime && <div className="flex items-center gap-2 text-slate-600"><Clock className="size-3.5 shrink-0 text-purple-400" /><span>Check-out: {formatDate(booking.endDateTime)}</span></div>}
+          {booking.location && <div className="flex items-center gap-2 text-slate-600"><MapPin className="size-3.5 shrink-0 text-purple-400" /><span>{booking.location}</span></div>}
+        </>
+      )}
+      {booking.type === 'CAR_RENTAL' && (
+        <>
+          {booking.startDateTime && <div className="flex items-center gap-2 text-slate-600"><Clock className="size-3.5 shrink-0 text-green-400" /><span>Pickup: {formatDateTime(booking.startDateTime)}</span></div>}
+          {booking.location && <div className="flex items-center gap-2 text-slate-600"><MapPin className="size-3.5 shrink-0 text-green-400" /><span>Pickup: {booking.location}</span></div>}
+          {booking.endDateTime && <div className="flex items-center gap-2 text-slate-600"><Clock className="size-3.5 shrink-0 text-green-400" /><span>Dropoff: {formatDateTime(booking.endDateTime)}</span></div>}
+          {booking.endLocation && <div className="flex items-center gap-2 text-slate-600"><MapPin className="size-3.5 shrink-0 text-green-400" /><span>Dropoff: {booking.endLocation}</span></div>}
+        </>
+      )}
+      {(booking.type === 'TRAIN' || booking.type === 'BUS') && (
+        <>
+          {(booking.location || booking.endLocation) && <div className="flex items-center gap-2 text-slate-600"><MapPin className="size-3.5 shrink-0 text-slate-400" /><span>{booking.location || '...'} &rarr; {booking.endLocation || '...'}</span></div>}
+          {booking.startDateTime && <div className="flex items-center gap-2 text-slate-600"><Clock className="size-3.5 shrink-0 text-slate-400" /><span>Depart: {formatDateTime(booking.startDateTime)}</span></div>}
+          {booking.endDateTime && <div className="flex items-center gap-2 text-slate-600"><Clock className="size-3.5 shrink-0 text-slate-400" /><span>Arrive: {formatDateTime(booking.endDateTime)}</span></div>}
+          {booking.seat && <div className="flex items-center gap-2 text-slate-600"><Armchair className="size-3.5 shrink-0 text-slate-400" /><span>Seat: {booking.seat}</span></div>}
+        </>
+      )}
+      {booking.type === 'OTHER' && (
+        <>
+          {booking.startDateTime && <div className="flex items-center gap-2 text-slate-600"><Clock className="size-3.5 shrink-0 text-slate-400" /><span>{formatDateTime(booking.startDateTime)}{booking.endDateTime ? ` - ${formatDateTime(booking.endDateTime)}` : ''}</span></div>}
+          {booking.location && <div className="flex items-center gap-2 text-slate-600"><MapPin className="size-3.5 shrink-0 text-slate-400" /><span>{booking.location}</span></div>}
+        </>
+      )}
+      {booking.confirmationNum && (
+        <div className="flex items-center gap-2 text-slate-600">
+          <Hash className="size-3.5 shrink-0 text-slate-400" />
+          <span className="font-mono text-xs">{booking.confirmationNum}</span>
+        </div>
+      )}
+      {booking.notes && <p className="mt-2 text-xs text-slate-400 italic">{booking.notes}</p>}
+    </div>
+  );
+}
+
 function BookingCard({
   booking,
   onDelete,
   onLinkTrip,
-  onEdit,
+  onSaved,
   index,
 }: {
   booking: Booking;
   onDelete: (id: string) => void;
   onLinkTrip: (id: string) => void;
-  onEdit: (booking: Booking) => void;
+  onSaved: () => void;
   index: number;
 }) {
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    type: booking.type,
+    provider: booking.provider,
+    confirmationNum: booking.confirmationNum || '',
+    startDateTime: booking.startDateTime || '',
+    endDateTime: booking.endDateTime || '',
+    location: booking.location || '',
+    endLocation: booking.endLocation || '',
+    seat: booking.seat || '',
+    notes: booking.notes || '',
+  });
+
   const config = typeConfig[booking.type];
+  const editConfig = typeConfig[form.type as BookingType];
+  const { showEndLocation, showSeat, dateOnly } = getBookingFormHelpers(form.type as BookingType);
+  const { showToast } = useTMToast();
+
+  const startEdit = () => {
+    setForm({
+      type: booking.type,
+      provider: booking.provider,
+      confirmationNum: booking.confirmationNum || '',
+      startDateTime: booking.startDateTime || '',
+      endDateTime: booking.endDateTime || '',
+      location: booking.location || '',
+      endLocation: booking.endLocation || '',
+      seat: booking.seat || '',
+      notes: booking.notes || '',
+    });
+    setEditing(true);
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.provider.trim()) { showToast('Provider is required', 'error'); return; }
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/bookings/${booking.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: form.type,
+          provider: form.provider.trim(),
+          confirmationNum: form.confirmationNum.trim() || undefined,
+          startDateTime: form.startDateTime || undefined,
+          endDateTime: form.endDateTime || undefined,
+          location: form.location.trim() || undefined,
+          endLocation: form.endLocation.trim() || undefined,
+          seat: form.seat.trim() || undefined,
+          notes: form.notes.trim() || undefined,
+        }),
+      });
+      if (!res.ok) throw new Error();
+      showToast('Booking updated');
+      setEditing(false);
+      onSaved();
+    } catch {
+      showToast('Failed to update booking', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const updateForm = (field: string, value: string) => setForm((prev) => ({ ...prev, [field]: value }));
 
   return (
     <motion.div
@@ -85,199 +220,122 @@ function BookingCard({
       variants={cardVariants}
       initial="hidden"
       animate="visible"
-      className={`rounded-lg border border-slate-100 bg-white p-4 shadow-sm transition-all duration-200 ${config.borderAccent} hover:-translate-y-0.5 hover:shadow-md`}
+      layout
+      className={`rounded-lg border bg-white p-4 shadow-sm transition-all duration-200 ${editing ? 'border-amber-300 ring-1 ring-amber-200' : `border-slate-100 ${config.borderAccent} hover:-translate-y-0.5 hover:shadow-md`}`}
     >
       <div className="mb-3 flex items-start justify-between">
-        <Link href={`/bookings/${booking.id}`} className="flex items-center gap-2.5 min-w-0 flex-1">
-          <span className={`flex items-center justify-center rounded-xl p-2.5 ring-2 ${config.iconBg}`}>
-            {config.icon}
-          </span>
-          <div>
-            <p className="font-semibold text-slate-800 hover:text-amber-600 transition-colors">{booking.provider}</p>
-            <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${config.badgeColor}`}>
-              {config.label}
-            </span>
+        {editing ? (
+          <div className="flex items-center gap-2">
+            <span className={`flex items-center justify-center rounded-lg p-1.5 ring-1 ${editConfig.iconBg}`}>{editConfig.icon}</span>
+            <p className="text-sm font-medium text-slate-700">Edit {editConfig.label}</p>
           </div>
-        </Link>
+        ) : (
+          <Link href={`/bookings/${booking.id}`} className="flex items-center gap-2.5 min-w-0 flex-1">
+            <span className={`flex items-center justify-center rounded-xl p-2.5 ring-2 ${config.iconBg}`}>{config.icon}</span>
+            <div>
+              <p className="font-semibold text-slate-800 hover:text-amber-600 transition-colors">{booking.provider}</p>
+              <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${config.badgeColor}`}>{config.label}</span>
+            </div>
+          </Link>
+        )}
         <div className="flex items-center gap-1">
-          <button
-            onClick={() => onEdit(booking)}
-            className="cursor-pointer rounded-md p-1.5 text-slate-300 transition-all duration-200 hover:bg-amber-50 hover:text-amber-500"
-            title="Edit booking"
-          >
-            <Pencil className="size-4" />
-          </button>
-          {!booking.tripId && (
-            <button
-              onClick={() => onLinkTrip(booking.id)}
-              className="cursor-pointer rounded-md p-1.5 text-slate-300 transition-all duration-200 hover:bg-amber-50 hover:text-amber-500"
-              title="Link to trip"
-            >
-              <Link2 className="size-4" />
-            </button>
+          {!editing && (
+            <>
+              <button onClick={startEdit} className="cursor-pointer rounded-md p-1.5 text-slate-300 transition-all duration-200 hover:bg-amber-50 hover:text-amber-500" title="Edit booking"><Pencil className="size-4" /></button>
+              {!booking.tripId && <button onClick={() => onLinkTrip(booking.id)} className="cursor-pointer rounded-md p-1.5 text-slate-300 transition-all duration-200 hover:bg-amber-50 hover:text-amber-500" title="Link to trip"><Link2 className="size-4" /></button>}
+              <button onClick={() => onDelete(booking.id)} className="cursor-pointer rounded-md p-1.5 text-slate-300 transition-all duration-200 hover:bg-red-50 hover:text-red-500" title="Delete booking"><Trash2 className="size-4" /></button>
+            </>
           )}
-          <button
-            onClick={() => onDelete(booking.id)}
-            className="cursor-pointer rounded-md p-1.5 text-slate-300 transition-all duration-200 hover:bg-red-50 hover:text-red-500"
-            title="Delete booking"
-          >
-            <Trash2 className="size-4" />
-          </button>
+          {editing && (
+            <button onClick={() => setEditing(false)} className="cursor-pointer rounded-md p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"><X className="size-4" /></button>
+          )}
         </div>
       </div>
 
-      {booking.trip && (
-        <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">
-          <MapPin className="size-3" />
-          {booking.trip.title}
-        </div>
-      )}
-
-      {!booking.tripId && (
-        <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-500">
-          Standalone booking
-        </div>
-      )}
-
-      <div className="space-y-1.5 text-sm">
-        {booking.type === 'FLIGHT' && (
-          <>
-            {(booking.location || booking.endLocation) && (
-              <div className="flex items-center gap-2 text-slate-600">
-                <MapPin className="size-3.5 shrink-0 text-blue-400" />
-                <span>{booking.location || '...'} &rarr; {booking.endLocation || '...'}</span>
+      {editing ? (
+        <form onSubmit={handleSave} className="space-y-3">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <Label className="text-xs">Type</Label>
+              <Select value={form.type} onValueChange={(v) => updateForm('type', v)}>
+                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="FLIGHT">Flight</SelectItem>
+                  <SelectItem value="HOTEL">Hotel</SelectItem>
+                  <SelectItem value="CAR_RENTAL">Car Rental</SelectItem>
+                  <SelectItem value="TRAIN">Train</SelectItem>
+                  <SelectItem value="BUS">Bus</SelectItem>
+                  <SelectItem value="OTHER">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Provider *</Label>
+              <Input value={form.provider} onChange={(e) => updateForm('provider', e.target.value)} className="h-8 text-xs" />
+            </div>
+            <div>
+              <Label className="text-xs">Confirmation #</Label>
+              <Input value={form.confirmationNum} onChange={(e) => updateForm('confirmationNum', e.target.value)} className="h-8 text-xs" />
+            </div>
+            <div>
+              <Label className="text-xs">{typeLabels.location[form.type as BookingType]}</Label>
+              <Input value={form.location} onChange={(e) => updateForm('location', e.target.value)} className="h-8 text-xs" />
+            </div>
+            {showEndLocation && (
+              <div>
+                <Label className="text-xs">{typeLabels.endLocation[form.type as BookingType]}</Label>
+                <Input value={form.endLocation} onChange={(e) => updateForm('endLocation', e.target.value)} className="h-8 text-xs" />
               </div>
             )}
-            {booking.startDateTime && (
-              <div className="flex items-center gap-2 text-slate-600">
-                <Clock className="size-3.5 shrink-0 text-blue-400" />
-                <span>Depart: {formatDateTime(booking.startDateTime)}</span>
+            <div>
+              <Label className="text-xs">{typeLabels.startDateTime[form.type as BookingType]}</Label>
+              <div className="flex gap-1">
+                <DatePicker date={form.startDateTime?.split('T')[0] || ''} onDateChange={(d) => { const time = form.startDateTime?.split('T')[1] || ''; updateForm('startDateTime', time ? `${d}T${time}` : d); }} />
+                {!dateOnly && <Input type="time" value={form.startDateTime?.split('T')[1] || ''} onChange={(e) => { const date = form.startDateTime?.split('T')[0] || ''; updateForm('startDateTime', date ? `${date}T${e.target.value}` : ''); }} className="w-20 h-8 text-xs" />}
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">{typeLabels.endDateTime[form.type as BookingType]}</Label>
+              <div className="flex gap-1">
+                <DatePicker date={form.endDateTime?.split('T')[0] || ''} onDateChange={(d) => { const time = form.endDateTime?.split('T')[1] || ''; updateForm('endDateTime', time ? `${d}T${time}` : d); }} />
+                {!dateOnly && <Input type="time" value={form.endDateTime?.split('T')[1] || ''} onChange={(e) => { const date = form.endDateTime?.split('T')[0] || ''; updateForm('endDateTime', date ? `${date}T${e.target.value}` : ''); }} className="w-20 h-8 text-xs" />}
+              </div>
+            </div>
+            {showSeat && (
+              <div>
+                <Label className="text-xs">Seat</Label>
+                <Input value={form.seat} onChange={(e) => updateForm('seat', e.target.value)} className="h-8 text-xs" />
               </div>
             )}
-            {booking.endDateTime && (
-              <div className="flex items-center gap-2 text-slate-600">
-                <Clock className="size-3.5 shrink-0 text-blue-400" />
-                <span>Arrive: {formatDateTime(booking.endDateTime)}</span>
-              </div>
-            )}
-            {booking.seat && (
-              <div className="flex items-center gap-2 text-slate-600">
-                <Armchair className="size-3.5 shrink-0 text-blue-400" />
-                <span>Seat: {booking.seat}</span>
-              </div>
-            )}
-          </>
-        )}
-
-        {booking.type === 'HOTEL' && (
-          <>
-            {booking.startDateTime && (
-              <div className="flex items-center gap-2 text-slate-600">
-                <Clock className="size-3.5 shrink-0 text-purple-400" />
-                <span>Check-in: {formatDate(booking.startDateTime)}</span>
-              </div>
-            )}
-            {booking.endDateTime && (
-              <div className="flex items-center gap-2 text-slate-600">
-                <Clock className="size-3.5 shrink-0 text-purple-400" />
-                <span>Check-out: {formatDate(booking.endDateTime)}</span>
-              </div>
-            )}
-            {booking.location && (
-              <div className="flex items-center gap-2 text-slate-600">
-                <MapPin className="size-3.5 shrink-0 text-purple-400" />
-                <span>{booking.location}</span>
-              </div>
-            )}
-          </>
-        )}
-
-        {booking.type === 'CAR_RENTAL' && (
-          <>
-            {booking.startDateTime && (
-              <div className="flex items-center gap-2 text-slate-600">
-                <Clock className="size-3.5 shrink-0 text-green-400" />
-                <span>Pickup: {formatDateTime(booking.startDateTime)}</span>
-              </div>
-            )}
-            {booking.location && (
-              <div className="flex items-center gap-2 text-slate-600">
-                <MapPin className="size-3.5 shrink-0 text-green-400" />
-                <span>Pickup: {booking.location}</span>
-              </div>
-            )}
-            {booking.endDateTime && (
-              <div className="flex items-center gap-2 text-slate-600">
-                <Clock className="size-3.5 shrink-0 text-green-400" />
-                <span>Dropoff: {formatDateTime(booking.endDateTime)}</span>
-              </div>
-            )}
-            {booking.endLocation && (
-              <div className="flex items-center gap-2 text-slate-600">
-                <MapPin className="size-3.5 shrink-0 text-green-400" />
-                <span>Dropoff: {booking.endLocation}</span>
-              </div>
-            )}
-          </>
-        )}
-
-        {(booking.type === 'TRAIN' || booking.type === 'BUS') && (
-          <>
-            {(booking.location || booking.endLocation) && (
-              <div className="flex items-center gap-2 text-slate-600">
-                <MapPin className="size-3.5 shrink-0 text-slate-400" />
-                <span>{booking.location || '...'} &rarr; {booking.endLocation || '...'}</span>
-              </div>
-            )}
-            {booking.startDateTime && (
-              <div className="flex items-center gap-2 text-slate-600">
-                <Clock className="size-3.5 shrink-0 text-slate-400" />
-                <span>Depart: {formatDateTime(booking.startDateTime)}</span>
-              </div>
-            )}
-            {booking.endDateTime && (
-              <div className="flex items-center gap-2 text-slate-600">
-                <Clock className="size-3.5 shrink-0 text-slate-400" />
-                <span>Arrive: {formatDateTime(booking.endDateTime)}</span>
-              </div>
-            )}
-            {booking.seat && (
-              <div className="flex items-center gap-2 text-slate-600">
-                <Armchair className="size-3.5 shrink-0 text-slate-400" />
-                <span>Seat: {booking.seat}</span>
-              </div>
-            )}
-          </>
-        )}
-
-        {booking.type === 'OTHER' && (
-          <>
-            {booking.startDateTime && (
-              <div className="flex items-center gap-2 text-slate-600">
-                <Clock className="size-3.5 shrink-0 text-slate-400" />
-                <span>{formatDateTime(booking.startDateTime)}{booking.endDateTime ? ` - ${formatDateTime(booking.endDateTime)}` : ''}</span>
-              </div>
-            )}
-            {booking.location && (
-              <div className="flex items-center gap-2 text-slate-600">
-                <MapPin className="size-3.5 shrink-0 text-slate-400" />
-                <span>{booking.location}</span>
-              </div>
-            )}
-          </>
-        )}
-
-        {booking.confirmationNum && (
-          <div className="flex items-center gap-2 text-slate-600">
-            <Hash className="size-3.5 shrink-0 text-slate-400" />
-            <span className="font-mono text-xs">{booking.confirmationNum}</span>
+            <div className="sm:col-span-2">
+              <Label className="text-xs">Notes</Label>
+              <Input value={form.notes} onChange={(e) => updateForm('notes', e.target.value)} className="h-8 text-xs" />
+            </div>
           </div>
-        )}
-
-        {booking.notes && (
-          <p className="mt-2 text-xs text-slate-400 italic">{booking.notes}</p>
-        )}
-      </div>
+          <div className="flex gap-2">
+            <Button type="submit" size="sm" disabled={saving} className="h-7 text-xs bg-amber-500 hover:bg-amber-600">
+              {saving ? 'Saving...' : 'Save'}
+            </Button>
+            <Button type="button" size="sm" variant="outline" onClick={() => setEditing(false)} className="h-7 text-xs">
+              Cancel
+            </Button>
+          </div>
+        </form>
+      ) : (
+        <>
+          {booking.trip && (
+            <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">
+              <MapPin className="size-3" />{booking.trip.title}
+            </div>
+          )}
+          {!booking.tripId && (
+            <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-500">
+              Standalone booking
+            </div>
+          )}
+          <BookingCardView booking={booking} config={config} />
+        </>
+      )}
     </motion.div>
   );
 }
@@ -297,7 +355,6 @@ export default function BookingsPage() {
   const [typeFilter, setTypeFilter] = useState('ALL');
   const [linkFilter, setLinkFilter] = useState('ALL');
   const [showForm, setShowForm] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
@@ -333,8 +390,9 @@ export default function BookingsPage() {
       .then((res) => res.json())
       .then((data) => setTrips(Array.isArray(data) ? data : []))
       .catch(() => {});
-    fetch('/api/gmail/search?q=test&maxResults=1')
-      .then((res) => setGmailConnected(res.ok))
+    fetch('/api/gmail/status')
+      .then((res) => res.ok ? res.json() : { connected: false })
+      .then((data) => setGmailConnected(data.connected))
       .catch(() => {});
   }, [fetchBookings]);
 
@@ -354,29 +412,6 @@ export default function BookingsPage() {
     });
   }, [bookings, search, typeFilter, linkFilter]);
 
-  const startEdit = (booking: Booking) => {
-    setEditingId(booking.id);
-    setForm({
-      type: booking.type,
-      provider: booking.provider,
-      confirmationNum: booking.confirmationNum || '',
-      startDateTime: booking.startDateTime || '',
-      endDateTime: booking.endDateTime || '',
-      location: booking.location || '',
-      endLocation: booking.endLocation || '',
-      seat: booking.seat || '',
-      notes: booking.notes || '',
-      tripId: booking.tripId || '',
-    });
-    setShowForm(true);
-  };
-
-  const cancelForm = () => {
-    setShowForm(false);
-    setEditingId(null);
-    setForm(emptyForm);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.provider.trim()) {
@@ -385,32 +420,30 @@ export default function BookingsPage() {
     }
 
     setSubmitting(true);
-    const payload = {
-      type: form.type,
-      provider: form.provider.trim(),
-      confirmationNum: form.confirmationNum.trim() || undefined,
-      startDateTime: form.startDateTime || undefined,
-      endDateTime: form.endDateTime || undefined,
-      location: form.location.trim() || undefined,
-      endLocation: form.endLocation.trim() || undefined,
-      seat: form.seat.trim() || undefined,
-      notes: form.notes.trim() || undefined,
-      tripId: form.tripId || undefined,
-    };
-
     try {
-      const url = editingId ? `/api/bookings/${editingId}` : '/api/bookings';
-      const res = await fetch(url, {
-        method: editingId ? 'PUT' : 'POST',
+      const res = await fetch('/api/bookings', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          type: form.type,
+          provider: form.provider.trim(),
+          confirmationNum: form.confirmationNum.trim() || undefined,
+          startDateTime: form.startDateTime || undefined,
+          endDateTime: form.endDateTime || undefined,
+          location: form.location.trim() || undefined,
+          endLocation: form.endLocation.trim() || undefined,
+          seat: form.seat.trim() || undefined,
+          notes: form.notes.trim() || undefined,
+          tripId: form.tripId || undefined,
+        }),
       });
       if (!res.ok) throw new Error();
-      showToast(editingId ? 'Booking updated' : 'Booking created');
-      cancelForm();
+      showToast('Booking created');
+      setForm(emptyForm);
+      setShowForm(false);
       fetchBookings();
     } catch {
-      showToast(editingId ? 'Failed to update booking' : 'Failed to create booking', 'error');
+      showToast('Failed to create booking', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -577,11 +610,11 @@ export default function BookingsPage() {
               <span className={`flex items-center justify-center rounded-lg p-1.5 ring-1 ${formTypeConfig.iconBg}`}>
                 {formTypeConfig.icon}
               </span>
-              <p className="text-sm font-medium text-slate-700">{editingId ? 'Edit' : 'New'} {formTypeConfig.label} Booking</p>
+              <p className="text-sm font-medium text-slate-700">New {formTypeConfig.label} Booking</p>
             </div>
             <button
               type="button"
-              onClick={() => cancelForm}
+              onClick={() => { setShowForm(false); setForm(emptyForm); }}
               className="cursor-pointer rounded-md p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
             >
               <X className="size-4" />
@@ -786,13 +819,13 @@ export default function BookingsPage() {
 
           <div className="flex gap-2">
             <Button type="submit" size="sm" disabled={submitting} className="bg-amber-500 hover:bg-amber-600">
-              {submitting ? (editingId ? 'Saving...' : 'Creating...') : (editingId ? 'Save Changes' : 'Create Booking')}
+              {submitting ? 'Creating...' : 'Create Booking'}
             </Button>
             <Button
               type="button"
               size="sm"
               variant="outline"
-              onClick={() => cancelForm}
+              onClick={() => { setShowForm(false); setForm(emptyForm); }}
             >
               Cancel
             </Button>
@@ -872,7 +905,7 @@ export default function BookingsPage() {
                 booking={booking}
                 onDelete={setDeleteTarget}
                 onLinkTrip={setLinkTarget}
-                onEdit={startEdit}
+                onSaved={fetchBookings}
                 index={i}
               />
             </motion.div>
