@@ -196,7 +196,7 @@ export default function VendorsPage() {
                 visible: { opacity: 1, y: 0 },
               }}
             >
-              <VendorCard vendor={vendor} />
+              <VendorCard vendor={vendor} onSaved={fetchVendors} onDeleted={fetchVendors} />
             </motion.div>
           ))}
         </motion.div>

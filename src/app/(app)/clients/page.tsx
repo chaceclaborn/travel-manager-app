@@ -190,7 +190,7 @@ export default function ClientsPage() {
                 visible: { opacity: 1, y: 0 },
               }}
             >
-              <ClientCard client={client} />
+              <ClientCard client={client} onSaved={fetchClients} onDeleted={fetchClients} />
             </motion.div>
           ))}
         </motion.div>
