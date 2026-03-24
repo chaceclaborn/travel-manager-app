@@ -107,8 +107,8 @@ export function ClientCard({ client, onSaved, onDeleted }: ClientCardProps) {
               {client.company && <p className="text-sm text-slate-500 mt-0.5">{client.company}</p>}
             </Link>
             <div className="flex items-center gap-1 shrink-0">
-              <button onClick={startEdit} className="rounded-md p-1.5 text-slate-300 opacity-0 transition-all duration-200 hover:bg-amber-50 hover:text-amber-500 group-hover:opacity-100" title="Edit"><Pencil className="size-3.5" /></button>
-              <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteOpen(true); }} className="rounded-md p-1.5 text-slate-300 opacity-0 transition-all duration-200 hover:bg-red-50 hover:text-red-500 group-hover:opacity-100" title="Delete"><Trash2 className="size-3.5" /></button>
+              <button onClick={startEdit} className="rounded-md p-1.5 text-slate-400 transition-all duration-200 hover:bg-amber-50 hover:text-amber-500" title="Edit"><Pencil className="size-3.5" /></button>
+              <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteOpen(true); }} className="rounded-md p-1.5 text-slate-400 transition-all duration-200 hover:bg-red-50 hover:text-red-500" title="Delete"><Trash2 className="size-3.5" /></button>
             </div>
           </div>
 

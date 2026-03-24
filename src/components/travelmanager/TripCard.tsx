@@ -182,7 +182,7 @@ export function TripCard({ trip, onSaved, onDeleted }: TripCardProps) {
                   tabIndex={0}
                   onClick={startEdit}
                   onKeyDown={(e) => { if (e.key === 'Enter') startEdit(e as unknown as React.MouseEvent); }}
-                  className="rounded-md p-1 text-slate-300 opacity-0 transition-all duration-200 hover:bg-amber-50 hover:text-amber-500 group-hover:opacity-100"
+                  className="rounded-md p-1 text-slate-400 transition-all duration-200 hover:bg-amber-50 hover:text-amber-500"
                   title="Edit trip"
                 >
                   <Pencil className="size-3.5" />
@@ -192,7 +192,7 @@ export function TripCard({ trip, onSaved, onDeleted }: TripCardProps) {
                   tabIndex={0}
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteOpen(true); }}
                   onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); setDeleteOpen(true); } }}
-                  className="rounded-md p-1 text-slate-300 opacity-0 transition-all duration-200 hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
+                  className="rounded-md p-1 text-slate-400 transition-all duration-200 hover:bg-red-50 hover:text-red-500"
                   title="Delete trip"
                 >
                   <Trash2 className="size-3.5" />
