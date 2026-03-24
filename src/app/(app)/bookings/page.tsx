@@ -287,18 +287,18 @@ function BookingCard({
                 <Input value={form.endLocation} onChange={(e) => updateForm('endLocation', e.target.value)} className="h-8 text-xs" />
               </div>
             )}
-            <div>
+            <div className="min-w-0">
               <Label className="text-xs">{typeLabels.startDateTime[form.type as BookingType]}</Label>
-              <div className="flex gap-1">
-                <DatePicker date={form.startDateTime?.split('T')[0] || ''} onDateChange={(d) => { const time = form.startDateTime?.split('T')[1] || ''; updateForm('startDateTime', time ? `${d}T${time}` : d); }} />
-                {!dateOnly && <Input type="time" value={form.startDateTime?.split('T')[1] || ''} onChange={(e) => { const date = form.startDateTime?.split('T')[0] || ''; updateForm('startDateTime', date ? `${date}T${e.target.value}` : ''); }} className="w-20 h-8 text-xs" />}
+              <div className="flex gap-1 min-w-0">
+                <div className="min-w-0 flex-1"><DatePicker date={form.startDateTime?.split('T')[0] || ''} onDateChange={(d) => { const time = form.startDateTime?.split('T')[1] || ''; updateForm('startDateTime', time ? `${d}T${time}` : d); }} /></div>
+                {!dateOnly && <Input type="time" value={form.startDateTime?.split('T')[1] || ''} onChange={(e) => { const date = form.startDateTime?.split('T')[0] || ''; updateForm('startDateTime', date ? `${date}T${e.target.value}` : ''); }} className="w-20 shrink-0 h-8 text-xs" />}
               </div>
             </div>
-            <div>
+            <div className="min-w-0">
               <Label className="text-xs">{typeLabels.endDateTime[form.type as BookingType]}</Label>
-              <div className="flex gap-1">
-                <DatePicker date={form.endDateTime?.split('T')[0] || ''} onDateChange={(d) => { const time = form.endDateTime?.split('T')[1] || ''; updateForm('endDateTime', time ? `${d}T${time}` : d); }} />
-                {!dateOnly && <Input type="time" value={form.endDateTime?.split('T')[1] || ''} onChange={(e) => { const date = form.endDateTime?.split('T')[0] || ''; updateForm('endDateTime', date ? `${date}T${e.target.value}` : ''); }} className="w-20 h-8 text-xs" />}
+              <div className="flex gap-1 min-w-0">
+                <div className="min-w-0 flex-1"><DatePicker date={form.endDateTime?.split('T')[0] || ''} onDateChange={(d) => { const time = form.endDateTime?.split('T')[1] || ''; updateForm('endDateTime', time ? `${d}T${time}` : d); }} /></div>
+                {!dateOnly && <Input type="time" value={form.endDateTime?.split('T')[1] || ''} onChange={(e) => { const date = form.endDateTime?.split('T')[0] || ''; updateForm('endDateTime', date ? `${date}T${e.target.value}` : ''); }} className="w-20 shrink-0 h-8 text-xs" />}
               </div>
             </div>
             {showSeat && (
@@ -574,7 +574,7 @@ export default function BookingsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-bold text-slate-800">Bookings</h1>
         <div className="flex items-center gap-2">
           {gmailConnected && (
@@ -624,18 +624,20 @@ export default function BookingsPage() {
           {form.type === 'FLIGHT' && (
             <div className="rounded-lg border border-blue-200 bg-blue-50/50 p-3 space-y-2">
               <p className="text-xs font-medium text-blue-700">Auto-fill from flight number</p>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Input
                   value={lookupFlight}
                   onChange={(e) => setLookupFlight(e.target.value)}
                   placeholder="e.g. AA1234"
-                  className="flex-1 text-sm"
+                  className="min-w-0 flex-1 basis-28 text-sm"
                 />
-                <DatePicker
-                  date={lookupDate}
-                  onDateChange={setLookupDate}
-                  placeholder="Flight date"
-                />
+                <div className="min-w-0 flex-1 basis-28">
+                  <DatePicker
+                    date={lookupDate}
+                    onDateChange={setLookupDate}
+                    placeholder="Flight date"
+                  />
+                </div>
                 <Button
                   type="button"
                   size="sm"
@@ -726,10 +728,10 @@ export default function BookingsPage() {
               </div>
             )}
 
-            <div>
+            <div className="min-w-0">
               <Label>{typeLabels.startDateTime[form.type]}</Label>
-              <div className="flex gap-2">
-                <div className="flex-1">
+              <div className="flex gap-2 min-w-0">
+                <div className="min-w-0 flex-1">
                   <DatePicker
                     date={form.startDateTime?.split('T')[0] || ''}
                     onDateChange={(d) => {
@@ -746,15 +748,15 @@ export default function BookingsPage() {
                       const date = form.startDateTime?.split('T')[0] || '';
                       updateForm('startDateTime', date ? `${date}T${e.target.value}` : '');
                     }}
-                    className="w-24"
+                    className="w-24 shrink-0"
                   />
                 )}
               </div>
             </div>
-            <div>
+            <div className="min-w-0">
               <Label>{typeLabels.endDateTime[form.type]}</Label>
-              <div className="flex gap-2">
-                <div className="flex-1">
+              <div className="flex gap-2 min-w-0">
+                <div className="min-w-0 flex-1">
                   <DatePicker
                     date={form.endDateTime?.split('T')[0] || ''}
                     onDateChange={(d) => {
@@ -771,7 +773,7 @@ export default function BookingsPage() {
                       const date = form.endDateTime?.split('T')[0] || '';
                       updateForm('endDateTime', date ? `${date}T${e.target.value}` : '');
                     }}
-                    className="w-24"
+                    className="w-24 shrink-0"
                   />
                 )}
               </div>
