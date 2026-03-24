@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { MapPin, Calendar, DollarSign, Users, Building2, ChevronRight } from 'lucide-react';
+import { MapPin, Calendar, DollarSign, Users, Building2, ChevronRight, Pencil } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { TMStatusBadge } from '@/components/travelmanager/TMStatusBadge';
 import { formatDate, formatDateDisplay } from '@/lib/date-utils';
@@ -111,7 +111,7 @@ export function TripCard({ trip }: TripCardProps) {
             </div>
           )}
 
-          {/* Footer: budget + arrow */}
+          {/* Footer: budget + edit + arrow */}
           <div className="mt-3.5 flex items-center justify-between border-t border-slate-50 pt-3">
             {trip.budget != null ? (
               <span className="flex items-center gap-1 text-sm font-semibold text-slate-700">
@@ -121,7 +121,19 @@ export function TripCard({ trip }: TripCardProps) {
             ) : (
               <span className="text-xs text-slate-400">No budget set</span>
             )}
-            <ChevronRight className="size-4 text-slate-300 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-slate-400" />
+            <div className="flex items-center gap-1">
+              <span
+                role="button"
+                tabIndex={0}
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.location.href = `/trips/${trip.id}?edit=true`; }}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); window.location.href = `/trips/${trip.id}?edit=true`; } }}
+                className="rounded-md p-1 text-slate-300 opacity-0 transition-all duration-200 hover:bg-amber-50 hover:text-amber-500 group-hover:opacity-100"
+                title="Edit trip"
+              >
+                <Pencil className="size-3.5" />
+              </span>
+              <ChevronRight className="size-4 text-slate-300 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-slate-400" />
+            </div>
           </div>
         </div>
       </motion.div>

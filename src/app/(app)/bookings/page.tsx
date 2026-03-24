@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
   Plane, Trash2, Plus, X, MapPin,
-  Clock, Hash, Armchair, Search, Link2, Loader2, ExternalLink,
+  Clock, Hash, Armchair, Search, Link2, Loader2, ExternalLink, Pencil,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -67,11 +68,13 @@ function BookingCard({
   booking,
   onDelete,
   onLinkTrip,
+  onEdit,
   index,
 }: {
   booking: Booking;
   onDelete: (id: string) => void;
   onLinkTrip: (id: string) => void;
+  onEdit: (booking: Booking) => void;
   index: number;
 }) {
   const config = typeConfig[booking.type];
@@ -85,18 +88,25 @@ function BookingCard({
       className={`rounded-lg border border-slate-100 bg-white p-4 shadow-sm transition-all duration-200 ${config.borderAccent} hover:-translate-y-0.5 hover:shadow-md`}
     >
       <div className="mb-3 flex items-start justify-between">
-        <div className="flex items-center gap-2.5">
+        <Link href={`/bookings/${booking.id}`} className="flex items-center gap-2.5 min-w-0 flex-1">
           <span className={`flex items-center justify-center rounded-xl p-2.5 ring-2 ${config.iconBg}`}>
             {config.icon}
           </span>
           <div>
-            <p className="font-semibold text-slate-800">{booking.provider}</p>
+            <p className="font-semibold text-slate-800 hover:text-amber-600 transition-colors">{booking.provider}</p>
             <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${config.badgeColor}`}>
               {config.label}
             </span>
           </div>
-        </div>
+        </Link>
         <div className="flex items-center gap-1">
+          <button
+            onClick={() => onEdit(booking)}
+            className="cursor-pointer rounded-md p-1.5 text-slate-300 transition-all duration-200 hover:bg-amber-50 hover:text-amber-500"
+            title="Edit booking"
+          >
+            <Pencil className="size-4" />
+          </button>
           {!booking.tripId && (
             <button
               onClick={() => onLinkTrip(booking.id)}
@@ -287,6 +297,7 @@ export default function BookingsPage() {
   const [typeFilter, setTypeFilter] = useState('ALL');
   const [linkFilter, setLinkFilter] = useState('ALL');
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
@@ -343,6 +354,29 @@ export default function BookingsPage() {
     });
   }, [bookings, search, typeFilter, linkFilter]);
 
+  const startEdit = (booking: Booking) => {
+    setEditingId(booking.id);
+    setForm({
+      type: booking.type,
+      provider: booking.provider,
+      confirmationNum: booking.confirmationNum || '',
+      startDateTime: booking.startDateTime || '',
+      endDateTime: booking.endDateTime || '',
+      location: booking.location || '',
+      endLocation: booking.endLocation || '',
+      seat: booking.seat || '',
+      notes: booking.notes || '',
+      tripId: booking.tripId || '',
+    });
+    setShowForm(true);
+  };
+
+  const cancelForm = () => {
+    setShowForm(false);
+    setEditingId(null);
+    setForm(emptyForm);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.provider.trim()) {
@@ -351,30 +385,32 @@ export default function BookingsPage() {
     }
 
     setSubmitting(true);
+    const payload = {
+      type: form.type,
+      provider: form.provider.trim(),
+      confirmationNum: form.confirmationNum.trim() || undefined,
+      startDateTime: form.startDateTime || undefined,
+      endDateTime: form.endDateTime || undefined,
+      location: form.location.trim() || undefined,
+      endLocation: form.endLocation.trim() || undefined,
+      seat: form.seat.trim() || undefined,
+      notes: form.notes.trim() || undefined,
+      tripId: form.tripId || undefined,
+    };
+
     try {
-      const res = await fetch('/api/bookings', {
-        method: 'POST',
+      const url = editingId ? `/api/bookings/${editingId}` : '/api/bookings';
+      const res = await fetch(url, {
+        method: editingId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: form.type,
-          provider: form.provider.trim(),
-          confirmationNum: form.confirmationNum.trim() || undefined,
-          startDateTime: form.startDateTime || undefined,
-          endDateTime: form.endDateTime || undefined,
-          location: form.location.trim() || undefined,
-          endLocation: form.endLocation.trim() || undefined,
-          seat: form.seat.trim() || undefined,
-          notes: form.notes.trim() || undefined,
-          tripId: form.tripId || undefined,
-        }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error();
-      showToast('Booking created');
-      setForm(emptyForm);
-      setShowForm(false);
+      showToast(editingId ? 'Booking updated' : 'Booking created');
+      cancelForm();
       fetchBookings();
     } catch {
-      showToast('Failed to create booking', 'error');
+      showToast(editingId ? 'Failed to update booking' : 'Failed to create booking', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -541,11 +577,11 @@ export default function BookingsPage() {
               <span className={`flex items-center justify-center rounded-lg p-1.5 ring-1 ${formTypeConfig.iconBg}`}>
                 {formTypeConfig.icon}
               </span>
-              <p className="text-sm font-medium text-slate-700">New {formTypeConfig.label} Booking</p>
+              <p className="text-sm font-medium text-slate-700">{editingId ? 'Edit' : 'New'} {formTypeConfig.label} Booking</p>
             </div>
             <button
               type="button"
-              onClick={() => { setShowForm(false); setForm(emptyForm); }}
+              onClick={() => cancelForm}
               className="cursor-pointer rounded-md p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
             >
               <X className="size-4" />
@@ -750,13 +786,13 @@ export default function BookingsPage() {
 
           <div className="flex gap-2">
             <Button type="submit" size="sm" disabled={submitting} className="bg-amber-500 hover:bg-amber-600">
-              {submitting ? 'Creating...' : 'Create Booking'}
+              {submitting ? (editingId ? 'Saving...' : 'Creating...') : (editingId ? 'Save Changes' : 'Create Booking')}
             </Button>
             <Button
               type="button"
               size="sm"
               variant="outline"
-              onClick={() => { setShowForm(false); setForm(emptyForm); }}
+              onClick={() => cancelForm}
             >
               Cancel
             </Button>
@@ -836,6 +872,7 @@ export default function BookingsPage() {
                 booking={booking}
                 onDelete={setDeleteTarget}
                 onLinkTrip={setLinkTarget}
+                onEdit={startEdit}
                 index={i}
               />
             </motion.div>

@@ -178,6 +178,17 @@ export default function TripDetailPage() {
     fetchAllClients();
   }, [fetchTrip, fetchItinerary, fetchTripVendors, fetchTripClients, fetchAllVendors, fetchAllClients]);
 
+  // Auto-open edit mode if ?edit=true is in the URL (from trip card edit button)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('edit') === 'true' && !loading && trip) {
+        setEditing(true);
+        window.history.replaceState({}, '', `/trips/${id}`);
+      }
+    }
+  }, [loading, trip, id]);
+
   const handleUpdate = async (data: any) => {
     setSaving(true);
     try {
