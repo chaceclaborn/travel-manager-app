@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Plane, Building2, Car, Train, Bus, Package, Trash2, Plus, X, MapPin, Clock, Hash, Armchair } from 'lucide-react';
+import { Plane, Trash2, Plus, X, MapPin, Clock, Hash, Armchair, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,8 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useTMToast } from '@/components/travelmanager/TMToast';
 import { TMDeleteDialog } from '@/components/travelmanager/TMDeleteDialog';
 import { DatePicker } from '@/components/travelmanager/DatePicker';
-
-type BookingType = 'FLIGHT' | 'HOTEL' | 'CAR_RENTAL' | 'TRAIN' | 'BUS' | 'OTHER';
+import { formatDate, formatDateTime } from '@/lib/date-utils';
+import { type BookingType, typeConfig, typeLabels, emptyBookingForm, getBookingFormHelpers } from '@/lib/travelmanager/booking-config';
 
 interface Booking {
   id: string;
@@ -33,80 +33,6 @@ interface TripBookingsProps {
   tripEndDate?: string | null;
 }
 
-const typeConfig: Record<BookingType, { icon: React.ReactNode; label: string; badgeColor: string; iconBg: string; borderAccent: string }> = {
-  FLIGHT: {
-    icon: <Plane className="size-5" />,
-    label: 'Flight',
-    badgeColor: 'bg-blue-100 text-blue-700',
-    iconBg: 'bg-blue-100 text-blue-600 ring-blue-200',
-    borderAccent: 'hover:border-blue-200',
-  },
-  HOTEL: {
-    icon: <Building2 className="size-5" />,
-    label: 'Hotel',
-    badgeColor: 'bg-purple-100 text-purple-700',
-    iconBg: 'bg-purple-100 text-purple-600 ring-purple-200',
-    borderAccent: 'hover:border-purple-200',
-  },
-  CAR_RENTAL: {
-    icon: <Car className="size-5" />,
-    label: 'Car Rental',
-    badgeColor: 'bg-green-100 text-green-700',
-    iconBg: 'bg-green-100 text-green-600 ring-green-200',
-    borderAccent: 'hover:border-green-200',
-  },
-  TRAIN: {
-    icon: <Train className="size-5" />,
-    label: 'Train',
-    badgeColor: 'bg-orange-100 text-orange-700',
-    iconBg: 'bg-orange-100 text-orange-600 ring-orange-200',
-    borderAccent: 'hover:border-orange-200',
-  },
-  BUS: {
-    icon: <Bus className="size-5" />,
-    label: 'Bus',
-    badgeColor: 'bg-teal-100 text-teal-700',
-    iconBg: 'bg-teal-100 text-teal-600 ring-teal-200',
-    borderAccent: 'hover:border-teal-200',
-  },
-  OTHER: {
-    icon: <Package className="size-5" />,
-    label: 'Other',
-    badgeColor: 'bg-slate-100 text-slate-700',
-    iconBg: 'bg-slate-100 text-slate-600 ring-slate-200',
-    borderAccent: 'hover:border-slate-300',
-  },
-};
-
-function formatDateTime(date: string | null) {
-  if (!date) return null;
-  const [datePart, timePart] = date.split('T');
-  if (!datePart) return date;
-  const [year, month, day] = datePart.split('-').map(Number);
-  const dateStr = new Date(year, month - 1, day).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-  if (!timePart) return dateStr;
-  const [hours, minutes] = timePart.split(':').map(Number);
-  const period = hours >= 12 ? 'PM' : 'AM';
-  const displayHours = hours % 12 || 12;
-  return `${dateStr}, ${displayHours}:${String(minutes).padStart(2, '0')} ${period}`;
-}
-
-function formatDate(date: string | null) {
-  if (!date) return null;
-  const datePart = date.split('T')[0];
-  if (!datePart) return date;
-  const [year, month, day] = datePart.split('-').map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-}
-
 const cardVariants = {
   hidden: { opacity: 0, y: 20 },
   visible: (i: number) => ({
@@ -116,7 +42,7 @@ const cardVariants = {
   }),
 };
 
-function BookingCard({ booking, onDelete, index }: { booking: Booking; onDelete: (id: string) => void; index: number }) {
+function BookingCard({ booking, onDelete, onEdit, index }: { booking: Booking; onDelete: (id: string) => void; onEdit: (booking: Booking) => void; index: number }) {
   const config = typeConfig[booking.type];
 
   return (
@@ -139,13 +65,22 @@ function BookingCard({ booking, onDelete, index }: { booking: Booking; onDelete:
             </span>
           </div>
         </div>
-        <button
-          onClick={() => onDelete(booking.id)}
-          className="cursor-pointer rounded-md p-1.5 text-slate-300 transition-all duration-200 hover:bg-red-50 hover:text-red-500"
-          title="Delete booking"
-        >
-          <Trash2 className="size-4" />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => onEdit(booking)}
+            className="cursor-pointer rounded-md p-1.5 text-slate-300 transition-all duration-200 hover:bg-amber-50 hover:text-amber-500"
+            title="Edit booking"
+          >
+            <Pencil className="size-4" />
+          </button>
+          <button
+            onClick={() => onDelete(booking.id)}
+            className="cursor-pointer rounded-md p-1.5 text-slate-300 transition-all duration-200 hover:bg-red-50 hover:text-red-500"
+            title="Delete booking"
+          >
+            <Trash2 className="size-4" />
+          </button>
+        </div>
       </div>
 
       <div className="space-y-1.5 text-sm">
@@ -291,26 +226,15 @@ function BookingCard({ booking, onDelete, index }: { booking: Booking; onDelete:
   );
 }
 
-const emptyForm = {
-  type: 'FLIGHT' as BookingType,
-  provider: '',
-  confirmationNum: '',
-  startDateTime: '',
-  endDateTime: '',
-  location: '',
-  endLocation: '',
-  seat: '',
-  notes: '',
-};
-
 export function TripBookings({ tripId, tripStartDate, tripEndDate }: TripBookingsProps) {
   const { showToast } = useTMToast();
 
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState(emptyForm);
+  const [form, setForm] = useState(emptyBookingForm);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -332,6 +256,28 @@ export function TripBookings({ tripId, tripStartDate, tripEndDate }: TripBooking
     fetchBookings();
   }, [fetchBookings]);
 
+  const startEdit = (booking: Booking) => {
+    setEditingId(booking.id);
+    setForm({
+      type: booking.type,
+      provider: booking.provider,
+      confirmationNum: booking.confirmationNum || '',
+      startDateTime: booking.startDateTime || '',
+      endDateTime: booking.endDateTime || '',
+      location: booking.location || '',
+      endLocation: booking.endLocation || '',
+      seat: booking.seat || '',
+      notes: booking.notes || '',
+    });
+    setShowForm(true);
+  };
+
+  const cancelForm = () => {
+    setShowForm(false);
+    setEditingId(null);
+    setForm(emptyBookingForm);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.provider.trim()) {
@@ -340,29 +286,33 @@ export function TripBookings({ tripId, tripStartDate, tripEndDate }: TripBooking
     }
 
     setSubmitting(true);
+    const payload = {
+      type: form.type,
+      provider: form.provider.trim(),
+      confirmationNum: form.confirmationNum.trim() || undefined,
+      startDateTime: form.startDateTime || undefined,
+      endDateTime: form.endDateTime || undefined,
+      location: form.location.trim() || undefined,
+      endLocation: form.endLocation.trim() || undefined,
+      seat: form.seat.trim() || undefined,
+      notes: form.notes.trim() || undefined,
+    };
+
     try {
-      const res = await fetch(`/api/trips/${tripId}/bookings`, {
-        method: 'POST',
+      const url = editingId
+        ? `/api/bookings/${editingId}`
+        : `/api/trips/${tripId}/bookings`;
+      const res = await fetch(url, {
+        method: editingId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: form.type,
-          provider: form.provider.trim(),
-          confirmationNum: form.confirmationNum.trim() || undefined,
-          startDateTime: form.startDateTime || undefined,
-          endDateTime: form.endDateTime || undefined,
-          location: form.location.trim() || undefined,
-          endLocation: form.endLocation.trim() || undefined,
-          seat: form.seat.trim() || undefined,
-          notes: form.notes.trim() || undefined,
-        }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error();
-      showToast('Booking added');
-      setForm(emptyForm);
-      setShowForm(false);
+      showToast(editingId ? 'Booking updated' : 'Booking added');
+      cancelForm();
       fetchBookings();
     } catch {
-      showToast('Failed to add booking', 'error');
+      showToast(editingId ? 'Failed to update booking' : 'Failed to add booking', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -388,16 +338,7 @@ export function TripBookings({ tripId, tripStartDate, tripEndDate }: TripBooking
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  const typeLabels = {
-    location: { FLIGHT: 'Departure Airport', HOTEL: 'Location', CAR_RENTAL: 'Pickup Location', TRAIN: 'Departure Station', BUS: 'Departure Station', OTHER: 'Location' },
-    endLocation: { FLIGHT: 'Arrival Airport', HOTEL: '', CAR_RENTAL: 'Dropoff Location', TRAIN: 'Arrival Station', BUS: 'Arrival Station', OTHER: '' },
-    startDateTime: { FLIGHT: 'Departure Time', HOTEL: 'Check-in Date', CAR_RENTAL: 'Pickup Time', TRAIN: 'Departure Time', BUS: 'Departure Time', OTHER: 'Start Date/Time' },
-    endDateTime: { FLIGHT: 'Arrival Time', HOTEL: 'Check-out Date', CAR_RENTAL: 'Dropoff Time', TRAIN: 'Arrival Time', BUS: 'Arrival Time', OTHER: 'End Date/Time' },
-  } as const;
-
-  const showEndLocation = form.type !== 'HOTEL';
-  const showSeat = form.type === 'FLIGHT' || form.type === 'TRAIN' || form.type === 'BUS';
-  const dateOnly = form.type === 'HOTEL';
+  const { showEndLocation, showSeat, dateOnly } = getBookingFormHelpers(form.type);
   const formTypeConfig = typeConfig[form.type];
 
   return (
@@ -429,11 +370,11 @@ export function TripBookings({ tripId, tripStartDate, tripEndDate }: TripBooking
               <span className={`flex items-center justify-center rounded-lg p-1.5 ring-1 ${formTypeConfig.iconBg}`}>
                 {formTypeConfig.icon}
               </span>
-              <p className="text-sm font-medium text-slate-700">New {formTypeConfig.label} Booking</p>
+              <p className="text-sm font-medium text-slate-700">{editingId ? 'Edit' : 'New'} {formTypeConfig.label} Booking</p>
             </div>
             <button
               type="button"
-              onClick={() => { setShowForm(false); setForm(emptyForm); }}
+              onClick={cancelForm}
               className="cursor-pointer rounded-md p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
             >
               <X className="size-4" />
@@ -583,13 +524,13 @@ export function TripBookings({ tripId, tripStartDate, tripEndDate }: TripBooking
 
           <div className="flex gap-2">
             <Button type="submit" size="sm" disabled={submitting} className="bg-amber-500 hover:bg-amber-600">
-              {submitting ? 'Adding...' : 'Add Booking'}
+              {submitting ? (editingId ? 'Saving...' : 'Adding...') : (editingId ? 'Save Changes' : 'Add Booking')}
             </Button>
             <Button
               type="button"
               size="sm"
               variant="outline"
-              onClick={() => { setShowForm(false); setForm(emptyForm); }}
+              onClick={cancelForm}
             >
               Cancel
             </Button>
@@ -612,7 +553,7 @@ export function TripBookings({ tripId, tripStartDate, tripEndDate }: TripBooking
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
           {bookings.map((booking, i) => (
-            <BookingCard key={booking.id} booking={booking} onDelete={setDeleteTarget} index={i} />
+            <BookingCard key={booking.id} booking={booking} onDelete={setDeleteTarget} onEdit={startEdit} index={i} />
           ))}
         </div>
       )}

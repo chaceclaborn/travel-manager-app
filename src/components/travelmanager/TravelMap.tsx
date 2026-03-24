@@ -4,6 +4,7 @@ import { useMemo, useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { formatDate } from '@/lib/date-utils';
 
 interface MapTrip {
   id: string;
@@ -63,11 +64,6 @@ function createMarkerIcon(color: string) {
     iconAnchor: [12, 36],
     popupAnchor: [0, -36],
   });
-}
-
-function formatDate(dateStr: string | null): string {
-  if (!dateStr) return '';
-  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 function createHomeIcon() {

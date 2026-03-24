@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { MapPin, Globe as GlobeIcon, Plane, Route, Loader2, Home, Search } from 'lucide-react';
 import { TMBreadcrumb } from '@/components/travelmanager/TMBreadcrumb';
 import { haversineDistance, KM_TO_MILES } from '@/lib/distance';
+import { useGeocodingSearch, formatGeoName } from '@/lib/travelmanager/useGeocodingSearch';
+import type { GeoResult } from '@/lib/travelmanager/useGeocodingSearch';
 
 const TravelMap = dynamic(
   () => import('@/components/travelmanager/TravelMap').then(m => ({ default: m.TravelMap })),
@@ -33,22 +35,6 @@ interface HomeLocation {
   latitude: number;
   longitude: number;
   city: string | null;
-}
-
-interface GeoResult {
-  display_name: string;
-  lat: string;
-  lon: string;
-  type: string;
-  address: Record<string, string>;
-}
-
-function formatGeoName(result: GeoResult): string {
-  const addr = result.address;
-  const city = addr.city || addr.town || addr.village || addr.hamlet || '';
-  const state = addr.state || '';
-  const country = addr.country || '';
-  return [city, state, country].filter(Boolean).join(', ') || result.display_name;
 }
 
 function calcDistance(
@@ -119,14 +105,18 @@ export default function MapPage() {
   const [trips, setTrips] = useState<MapTrip[]>([]);
   const [homeLocation, setHomeLocation] = useState<HomeLocation | null>(null);
   const [loading, setLoading] = useState(true);
-  const [homeQuery, setHomeQuery] = useState('');
-  const [homeResults, setHomeResults] = useState<GeoResult[]>([]);
-  const [homeSearchOpen, setHomeSearchOpen] = useState(false);
-  const [isSearchingHome, setIsSearchingHome] = useState(false);
   const [isSavingHome, setIsSavingHome] = useState(false);
-  const homeDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const homeLastFetchRef = useRef(0);
-  const homeContainerRef = useRef<HTMLDivElement>(null);
+  const {
+    query: homeQuery,
+    setQuery: setHomeQuery,
+    results: homeResults,
+    isOpen: homeSearchOpen,
+    setIsOpen: setHomeSearchOpen,
+    isSearching: isSearchingHome,
+    containerRef: homeContainerRef,
+    handleInputChange: handleHomeInputChange,
+    selectResult: selectHomeResult,
+  } = useGeocodingSearch();
 
   useEffect(() => {
     async function load() {
@@ -179,54 +169,8 @@ export default function MapPage() {
     load();
   }, []);
 
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (homeContainerRef.current && !homeContainerRef.current.contains(e.target as Node)) {
-        setHomeSearchOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  async function searchHomeLocation(q: string) {
-    if (q.length < 3) {
-      setHomeResults([]);
-      setHomeSearchOpen(false);
-      return;
-    }
-    const now = Date.now();
-    const elapsed = now - homeLastFetchRef.current;
-    if (elapsed < 1000) {
-      await new Promise(resolve => setTimeout(resolve, 1000 - elapsed));
-    }
-    setIsSearchingHome(true);
-    try {
-      homeLastFetchRef.current = Date.now();
-      const res = await fetch(`/api/geocode/search?q=${encodeURIComponent(q)}`);
-      if (res.ok) {
-        const data: GeoResult[] = await res.json();
-        setHomeResults(data);
-        setHomeSearchOpen(data.length > 0);
-      }
-    } catch { /* silent */ } finally {
-      setIsSearchingHome(false);
-    }
-  }
-
-  function handleHomeInputChange(val: string) {
-    setHomeQuery(val);
-    if (homeDebounceRef.current) clearTimeout(homeDebounceRef.current);
-    homeDebounceRef.current = setTimeout(() => searchHomeLocation(val), 400);
-  }
-
   async function handleSelectHome(result: GeoResult) {
-    const city = formatGeoName(result);
-    const lat = parseFloat(result.lat);
-    const lng = parseFloat(result.lon);
-    setHomeQuery(city);
-    setHomeSearchOpen(false);
-    setHomeResults([]);
+    const { name: city, lat, lng } = selectHomeResult(result);
     setIsSavingHome(true);
     try {
       const res = await fetch('/api/user', {

@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { useTMToast } from '@/components/travelmanager/TMToast';
 import { TMDeleteDialog } from '@/components/travelmanager/TMDeleteDialog';
 import { DatePicker } from '@/components/travelmanager/DatePicker';
+import { formatDateHeading } from '@/lib/date-utils';
 
 interface Note {
   id: string;
@@ -19,16 +20,6 @@ interface Note {
 
 interface TripJournalProps {
   tripId: string;
-}
-
-function formatDateHeading(date: string) {
-  return new Date(date).toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-    timeZone: 'UTC',
-  });
 }
 
 function formatTime(dateStr: string) {

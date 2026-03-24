@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useTMToast } from '@/components/travelmanager/TMToast';
 import { TMDeleteDialog } from '@/components/travelmanager/TMDeleteDialog';
+import { formatDate } from '@/lib/date-utils';
 
 interface Attachment {
   id: string;
@@ -48,14 +49,6 @@ function getFileIcon(mimeType: string) {
   if (mimeType.startsWith('image/')) return <ImageIcon className="size-5 text-amber-500" />;
   if (mimeType === 'application/pdf') return <FileText className="size-5 text-red-500" />;
   return <Paperclip className="size-5 text-slate-400" />;
-}
-
-function formatDate(date: string) {
-  return new Date(date).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
 }
 
 export function TripAttachments({ tripId, onRefresh }: TripAttachmentsProps) {

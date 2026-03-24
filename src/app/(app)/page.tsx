@@ -9,6 +9,7 @@ import { TMStatsCard } from '@/components/travelmanager/TMStatsCard';
 import { TMStatusBadge } from '@/components/travelmanager/TMStatusBadge';
 import { TMEmptyState } from '@/components/travelmanager/TMEmptyState';
 import { TMCalendarPreview } from '@/components/travelmanager/TMCalendarPreview';
+import { formatDate } from '@/lib/date-utils';
 
 import { useAuth } from '@/lib/travelmanager/useAuth';
 import type { TripWithRelations } from '@/lib/travelmanager/types';
@@ -60,15 +61,6 @@ const sectionCardHover = {
   boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 4px 10px -5px rgba(0, 0, 0, 0.04)',
   transition: { duration: 0.2, ease: 'easeOut' as const },
 };
-
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    timeZone: 'UTC',
-  });
-}
 
 function SkeletonPulse({ className }: { className?: string }) {
   return (

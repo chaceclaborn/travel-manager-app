@@ -16,12 +16,14 @@ import {
   Plus,
   Upload,
   DollarSign,
+  Pencil,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useTMToast } from '@/components/travelmanager/TMToast';
 import { TMDeleteDialog } from '@/components/travelmanager/TMDeleteDialog';
 import { DatePicker } from '@/components/travelmanager/DatePicker';
+import { formatDate } from '@/lib/date-utils';
 
 interface Expense {
   id: string;
@@ -76,15 +78,6 @@ const categoryColors: Record<string, { badge: string; icon: string }> = {
   OTHER: { badge: 'bg-slate-100 text-slate-700', icon: 'bg-slate-100 text-slate-600 ring-slate-200' },
 };
 
-function formatDate(date: string) {
-  return new Date(date).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    timeZone: 'UTC',
-  });
-}
-
 const listItemVariants = {
   hidden: { opacity: 0, y: 12 },
   visible: (i: number) => ({
@@ -103,6 +96,7 @@ export function TripExpenses({ tripId, tripStartDate, tripEndDate }: TripExpense
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [uploadingReceipt, setUploadingReceipt] = useState<string | null>(null);
@@ -158,7 +152,25 @@ export function TripExpenses({ tripId, tripStartDate, tripEndDate }: TripExpense
 
   const total = expenses.reduce((sum, e) => sum + e.amount, 0);
 
-  const handleAdd = async (e: React.FormEvent) => {
+  const startEdit = (expense: Expense) => {
+    setEditingId(expense.id);
+    setFormAmount(String(expense.amount));
+    setFormCategory(expense.category);
+    setFormDate(expense.date.split('T')[0] || expense.date);
+    setFormDescription(expense.description || '');
+    setShowForm(true);
+  };
+
+  const cancelForm = () => {
+    setShowForm(false);
+    setEditingId(null);
+    setFormAmount('');
+    setFormCategory('OTHER');
+    setFormDate(new Date().toLocaleDateString('en-CA'));
+    setFormDescription('');
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const amount = parseFloat(formAmount);
     if (isNaN(amount) || amount <= 0) {
@@ -167,27 +179,28 @@ export function TripExpenses({ tripId, tripStartDate, tripEndDate }: TripExpense
     }
 
     setAdding(true);
+    const payload = {
+      amount,
+      category: formCategory,
+      date: formDate,
+      description: formDescription || undefined,
+    };
+
     try {
-      const res = await fetch(`/api/trips/${tripId}/expenses`, {
-        method: 'POST',
+      const url = editingId
+        ? `/api/expenses/${editingId}`
+        : `/api/trips/${tripId}/expenses`;
+      const res = await fetch(url, {
+        method: editingId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amount,
-          category: formCategory,
-          date: formDate,
-          description: formDescription || undefined,
-        }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error();
-      showToast('Expense added');
-      setFormAmount('');
-      setFormCategory('OTHER');
-      setFormDate(new Date().toLocaleDateString('en-CA'));
-      setFormDescription('');
-      setShowForm(false);
+      showToast(editingId ? 'Expense updated' : 'Expense added');
+      cancelForm();
       fetchExpenses();
     } catch {
-      showToast('Failed to add expense', 'error');
+      showToast(editingId ? 'Failed to update expense' : 'Failed to add expense', 'error');
     } finally {
       setAdding(false);
     }
@@ -236,14 +249,16 @@ export function TripExpenses({ tripId, tripStartDate, tripEndDate }: TripExpense
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold text-slate-800">Expenses</h3>
-        <Button
-          size="sm"
-          onClick={() => setShowForm(!showForm)}
-          className="bg-amber-500 hover:bg-amber-600"
-        >
-          <Plus className="mr-1 size-3.5" />
-          Add Expense
-        </Button>
+        {!showForm && (
+          <Button
+            size="sm"
+            onClick={() => { setEditingId(null); setShowForm(true); }}
+            className="bg-amber-500 hover:bg-amber-600"
+          >
+            <Plus className="mr-1 size-3.5" />
+            Add Expense
+          </Button>
+        )}
       </div>
 
       {/* Total + Budget Bar */}
@@ -287,7 +302,7 @@ export function TripExpenses({ tripId, tripStartDate, tripEndDate }: TripExpense
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.25, ease: 'easeInOut' }}
-            onSubmit={handleAdd}
+            onSubmit={handleSubmit}
             className="overflow-hidden rounded-lg border border-amber-200 bg-amber-50/50 p-4"
           >
             <div className="grid gap-3 sm:grid-cols-2">
@@ -340,9 +355,9 @@ export function TripExpenses({ tripId, tripStartDate, tripEndDate }: TripExpense
             </div>
             <div className="mt-3 flex gap-2">
               <Button type="submit" size="sm" disabled={adding} className="bg-amber-500 hover:bg-amber-600">
-                {adding ? 'Adding...' : 'Add'}
+                {adding ? (editingId ? 'Saving...' : 'Adding...') : (editingId ? 'Save Changes' : 'Add')}
               </Button>
-              <Button type="button" size="sm" variant="outline" onClick={() => setShowForm(false)}>
+              <Button type="button" size="sm" variant="outline" onClick={cancelForm}>
                 Cancel
               </Button>
             </div>
@@ -392,6 +407,13 @@ export function TripExpenses({ tripId, tripStartDate, tripEndDate }: TripExpense
                   ${expense.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
                 <div className="flex shrink-0 items-center gap-1">
+                  <button
+                    onClick={() => startEdit(expense)}
+                    className="cursor-pointer rounded-md p-1.5 text-slate-300 transition-all duration-200 hover:bg-amber-50 hover:text-amber-500 group-hover:text-slate-400"
+                    title="Edit expense"
+                  >
+                    <Pencil className="size-4" />
+                  </button>
                   <button
                     onClick={() => {
                       setUploadingReceipt(expense.id);

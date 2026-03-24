@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Plane, Building2, Car, Train, Bus, Package, Trash2, Plus, X, MapPin,
+  Plane, Trash2, Plus, X, MapPin,
   Clock, Hash, Armchair, Search, Link2, Loader2, ExternalLink,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -20,8 +20,8 @@ import { TMEmptyState } from '@/components/travelmanager/TMEmptyState';
 import { useTMToast } from '@/components/travelmanager/TMToast';
 import { TMDeleteDialog } from '@/components/travelmanager/TMDeleteDialog';
 import { DatePicker } from '@/components/travelmanager/DatePicker';
-
-type BookingType = 'FLIGHT' | 'HOTEL' | 'CAR_RENTAL' | 'TRAIN' | 'BUS' | 'OTHER';
+import { formatDate, formatDateTime } from '@/lib/date-utils';
+import { type BookingType, BOOKING_TYPES, typeConfig, typeLabels, emptyBookingForm, getBookingFormHelpers } from '@/lib/travelmanager/booking-config';
 
 interface BookingTrip {
   id: string;
@@ -49,82 +49,6 @@ interface Trip {
   id: string;
   title: string;
   destination: string | null;
-}
-
-const BOOKING_TYPES = ['ALL', 'FLIGHT', 'HOTEL', 'CAR_RENTAL', 'TRAIN', 'BUS', 'OTHER'] as const;
-
-const typeConfig: Record<BookingType, { icon: React.ReactNode; label: string; badgeColor: string; iconBg: string; borderAccent: string }> = {
-  FLIGHT: {
-    icon: <Plane className="size-5" />,
-    label: 'Flight',
-    badgeColor: 'bg-blue-100 text-blue-700',
-    iconBg: 'bg-blue-100 text-blue-600 ring-blue-200',
-    borderAccent: 'hover:border-blue-200',
-  },
-  HOTEL: {
-    icon: <Building2 className="size-5" />,
-    label: 'Hotel',
-    badgeColor: 'bg-purple-100 text-purple-700',
-    iconBg: 'bg-purple-100 text-purple-600 ring-purple-200',
-    borderAccent: 'hover:border-purple-200',
-  },
-  CAR_RENTAL: {
-    icon: <Car className="size-5" />,
-    label: 'Car Rental',
-    badgeColor: 'bg-green-100 text-green-700',
-    iconBg: 'bg-green-100 text-green-600 ring-green-200',
-    borderAccent: 'hover:border-green-200',
-  },
-  TRAIN: {
-    icon: <Train className="size-5" />,
-    label: 'Train',
-    badgeColor: 'bg-orange-100 text-orange-700',
-    iconBg: 'bg-orange-100 text-orange-600 ring-orange-200',
-    borderAccent: 'hover:border-orange-200',
-  },
-  BUS: {
-    icon: <Bus className="size-5" />,
-    label: 'Bus',
-    badgeColor: 'bg-teal-100 text-teal-700',
-    iconBg: 'bg-teal-100 text-teal-600 ring-teal-200',
-    borderAccent: 'hover:border-teal-200',
-  },
-  OTHER: {
-    icon: <Package className="size-5" />,
-    label: 'Other',
-    badgeColor: 'bg-slate-100 text-slate-700',
-    iconBg: 'bg-slate-100 text-slate-600 ring-slate-200',
-    borderAccent: 'hover:border-slate-300',
-  },
-};
-
-function formatDateTime(date: string | null) {
-  if (!date) return null;
-  const [datePart, timePart] = date.split('T');
-  if (!datePart) return date;
-  const [year, month, day] = datePart.split('-').map(Number);
-  const dateStr = new Date(year, month - 1, day).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-  if (!timePart) return dateStr;
-  const [hours, minutes] = timePart.split(':').map(Number);
-  const period = hours >= 12 ? 'PM' : 'AM';
-  const displayHours = hours % 12 || 12;
-  return `${dateStr}, ${displayHours}:${String(minutes).padStart(2, '0')} ${period}`;
-}
-
-function formatDate(date: string | null) {
-  if (!date) return null;
-  const datePart = date.split('T')[0];
-  if (!datePart) return date;
-  const [year, month, day] = datePart.split('-').map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
 }
 
 const cardVariants = {
@@ -346,15 +270,7 @@ function BookingCard({
 }
 
 const emptyForm = {
-  type: 'FLIGHT' as BookingType,
-  provider: '',
-  confirmationNum: '',
-  startDateTime: '',
-  endDateTime: '',
-  location: '',
-  endLocation: '',
-  seat: '',
-  notes: '',
+  ...emptyBookingForm,
   tripId: '',
 };
 
@@ -537,16 +453,7 @@ export default function BookingsPage() {
     }
   };
 
-  const typeLabels = {
-    location: { FLIGHT: 'Departure Airport', HOTEL: 'Location', CAR_RENTAL: 'Pickup Location', TRAIN: 'Departure Station', BUS: 'Departure Station', OTHER: 'Location' },
-    endLocation: { FLIGHT: 'Arrival Airport', HOTEL: '', CAR_RENTAL: 'Dropoff Location', TRAIN: 'Arrival Station', BUS: 'Arrival Station', OTHER: '' },
-    startDateTime: { FLIGHT: 'Departure Time', HOTEL: 'Check-in Date', CAR_RENTAL: 'Pickup Time', TRAIN: 'Departure Time', BUS: 'Departure Time', OTHER: 'Start Date/Time' },
-    endDateTime: { FLIGHT: 'Arrival Time', HOTEL: 'Check-out Date', CAR_RENTAL: 'Dropoff Time', TRAIN: 'Arrival Time', BUS: 'Arrival Time', OTHER: 'End Date/Time' },
-  } as const;
-
-  const showEndLocation = form.type !== 'HOTEL';
-  const showSeat = form.type === 'FLIGHT' || form.type === 'TRAIN' || form.type === 'BUS';
-  const dateOnly = form.type === 'HOTEL';
+  const { showEndLocation, showSeat, dateOnly } = getBookingFormHelpers(form.type);
   const formTypeConfig = typeConfig[form.type];
 
   if (loading) {

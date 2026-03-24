@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, Square, X, Plus, ChevronDown, CheckCircle2 } from 'lucide-react';
+import { Check, Square, X, Plus, ChevronDown, CheckCircle2, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface ChecklistItem {
@@ -43,6 +43,8 @@ export function TripChecklist({ tripId }: TripChecklistProps) {
   const [newLabel, setNewLabel] = useState('');
   const [adding, setAdding] = useState(false);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editLabel, setEditLabel] = useState('');
 
   const fetchItems = useCallback(async () => {
     try {
@@ -97,6 +99,35 @@ export function TripChecklist({ tripId }: TripChecklistProps) {
     setItems((prev) => prev.filter((i) => i.id !== id));
     try {
       await fetch(`/api/checklists/${id}`, { method: 'DELETE' });
+    } catch {
+      fetchItems();
+    }
+  };
+
+  const startEditLabel = (item: ChecklistItem) => {
+    setEditingId(item.id);
+    setEditLabel(item.label);
+  };
+
+  const saveEditLabel = async (id: string) => {
+    const trimmed = editLabel.trim();
+    if (!trimmed) {
+      setEditingId(null);
+      return;
+    }
+    const original = items.find((i) => i.id === id)?.label;
+    if (trimmed === original) {
+      setEditingId(null);
+      return;
+    }
+    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, label: trimmed } : i)));
+    setEditingId(null);
+    try {
+      await fetch(`/api/checklists/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ label: trimmed }),
+      });
     } catch {
       fetchItems();
     }
@@ -196,15 +227,38 @@ export function TripChecklist({ tripId }: TripChecklistProps) {
                     )}
                   </AnimatePresence>
                 </button>
-                <motion.span
-                  animate={{
-                    color: item.checked ? 'rgb(148 163 184)' : 'rgb(51 65 85)',
-                  }}
-                  transition={{ duration: 0.25 }}
-                  className={`flex-1 text-sm ${item.checked ? 'line-through decoration-slate-300' : ''}`}
+                {editingId === item.id ? (
+                  <input
+                    type="text"
+                    value={editLabel}
+                    onChange={(e) => setEditLabel(e.target.value)}
+                    onBlur={() => saveEditLabel(item.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') saveEditLabel(item.id);
+                      if (e.key === 'Escape') setEditingId(null);
+                    }}
+                    autoFocus
+                    className="flex-1 rounded border border-amber-300 bg-white px-2 py-0.5 text-sm text-slate-700 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                  />
+                ) : (
+                  <motion.span
+                    animate={{
+                      color: item.checked ? 'rgb(148 163 184)' : 'rgb(51 65 85)',
+                    }}
+                    transition={{ duration: 0.25 }}
+                    className={`flex-1 text-sm ${item.checked ? 'line-through decoration-slate-300' : ''}`}
+                    onDoubleClick={() => startEditLabel(item)}
+                  >
+                    {item.label}
+                  </motion.span>
+                )}
+                <button
+                  onClick={() => startEditLabel(item)}
+                  className="flex-shrink-0 rounded-md p-1 text-slate-300 opacity-0 transition-all duration-200 hover:bg-amber-50 hover:text-amber-500 group-hover:opacity-100"
+                  title="Edit label"
                 >
-                  {item.label}
-                </motion.span>
+                  <Pencil className="size-3.5" />
+                </button>
                 <button
                   onClick={() => deleteItem(item.id)}
                   className="flex-shrink-0 rounded-md p-1 text-slate-300 opacity-0 transition-all duration-200 hover:bg-red-50 hover:text-red-400 group-hover:opacity-100"

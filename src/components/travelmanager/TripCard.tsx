@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { MapPin, Calendar, DollarSign, Users, Building2, ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { TMStatusBadge } from '@/components/travelmanager/TMStatusBadge';
+import { formatDate, formatDateDisplay } from '@/lib/date-utils';
 
 interface TripCardProps {
   trip: {
@@ -18,23 +19,6 @@ interface TripCardProps {
     vendors?: any[];
     clients?: any[];
   };
-}
-
-function formatDate(date: string) {
-  return new Date(date).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    timeZone: 'UTC',
-  });
-}
-
-function formatDateCompact(date: string) {
-  return new Date(date).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    timeZone: 'UTC',
-  });
 }
 
 function getDurationDays(start: string, end: string): number {
@@ -94,7 +78,7 @@ export function TripCard({ trip }: TripCardProps) {
             <div className="mt-1.5 flex items-center gap-1.5 text-sm text-slate-500">
               <Calendar className="size-3.5 shrink-0 text-slate-400" />
               <span>
-                {formatDateCompact(trip.startDate)} &ndash; {formatDate(trip.endDate)}
+                {formatDateDisplay(trip.startDate)} &ndash; {formatDate(trip.endDate)}
               </span>
               {days && (
                 <span className="ml-1 inline-flex items-center rounded-md bg-slate-50 px-1.5 py-0.5 text-xs font-medium text-slate-500 ring-1 ring-inset ring-slate-200">

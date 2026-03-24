@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { useTMToast } from '@/components/travelmanager/TMToast';
 import { TMDeleteDialog } from '@/components/travelmanager/TMDeleteDialog';
 import { DateRangePicker } from '@/components/travelmanager/DateRangePicker';
+import { formatDateHeading } from '@/lib/date-utils';
 
 interface ItineraryVendor {
   id: string;
@@ -46,16 +47,6 @@ interface ItineraryTimelineProps {
   tripEndDate?: string | null;
   vendors?: Array<{ id: string; name: string; category?: string }>;
   clients?: Array<{ id: string; name: string; company?: string | null }>;
-}
-
-function formatDateHeading(date: string) {
-  return new Date(date).toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-    timeZone: 'UTC',
-  });
 }
 
 function formatShortDate(date: string) {
