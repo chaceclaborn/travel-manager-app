@@ -32,21 +32,27 @@ export async function proxy(request: NextRequest) {
     // CSRF defense 2: Content-Type enforcement.
     // HTML forms can only send application/x-www-form-urlencoded, multipart/form-data,
     // or text/plain. Requiring application/json blocks form-based CSRF attacks.
+    // Skip for bodyless requests (DELETE, POST with no body) — no data to forge.
     const contentType = request.headers.get('content-type') || '';
-    const isFileUpload = pathname.endsWith('/receipt') || pathname.endsWith('/attachments');
-    if (isFileUpload) {
-      if (!contentType.startsWith('multipart/form-data') && !contentType.startsWith('application/json')) {
-        return NextResponse.json(
-          { error: 'Content-Type must be multipart/form-data or application/json' },
-          { status: 415 }
-        );
-      }
-    } else {
-      if (!contentType.startsWith('application/json')) {
-        return NextResponse.json(
-          { error: 'Content-Type must be application/json' },
-          { status: 415 }
-        );
+    const contentLength = request.headers.get('content-length');
+    const hasBody = contentLength !== null && contentLength !== '0';
+
+    if (hasBody) {
+      const isFileUpload = pathname.endsWith('/receipt') || pathname.endsWith('/attachments');
+      if (isFileUpload) {
+        if (!contentType.startsWith('multipart/form-data') && !contentType.startsWith('application/json')) {
+          return NextResponse.json(
+            { error: 'Content-Type must be multipart/form-data or application/json' },
+            { status: 415 }
+          );
+        }
+      } else {
+        if (!contentType.startsWith('application/json')) {
+          return NextResponse.json(
+            { error: 'Content-Type must be application/json' },
+            { status: 415 }
+          );
+        }
       }
     }
   }

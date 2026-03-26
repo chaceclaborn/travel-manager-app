@@ -380,7 +380,10 @@ export default function SettingsPage() {
               onClick={async () => {
                 setGmailDisconnecting(true);
                 try {
-                  const res = await fetch('/api/gmail/disconnect', { method: 'POST' });
+                  const res = await fetch('/api/gmail/disconnect', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                  });
                   if (res.ok) {
                     setGmailConnected(false);
                     showToast('Gmail disconnected');
