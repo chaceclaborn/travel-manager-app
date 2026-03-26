@@ -26,6 +26,8 @@
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.97.0",
     "@types/three": "^0.182.0",
+    "cheerio": "^1.2.0",
+    "chrono-node": "^2.9.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
