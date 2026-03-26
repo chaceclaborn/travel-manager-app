@@ -122,7 +122,7 @@ export default function MapPage() {
     async function load() {
       try {
         const [tripsRes, userRes] = await Promise.all([
-          fetch('/api/trips'),
+          fetch('/api/trips?fields=minimal'),
           fetch('/api/user'),
         ]);
 

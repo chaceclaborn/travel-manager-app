@@ -12,7 +12,9 @@ export async function GET(request: NextRequest) {
     const { user, response } = await requireAuth();
     if (!user) return response;
 
-    const trips = await getTrips(user.id);
+    const fields = request.nextUrl.searchParams.get('fields');
+    const mode = fields === 'minimal' ? 'minimal' : 'full';
+    const trips = await getTrips(user.id, mode);
     return NextResponse.json(trips);
   } catch (error) {
     console.error('Error fetching trips:', error instanceof Error ? error.message : error);

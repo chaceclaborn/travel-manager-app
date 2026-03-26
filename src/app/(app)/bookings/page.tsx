@@ -386,7 +386,7 @@ export default function BookingsPage() {
 
   useEffect(() => {
     fetchBookings();
-    fetch('/api/trips')
+    fetch('/api/trips?fields=minimal')
       .then((res) => res.json())
       .then((data) => setTrips(Array.isArray(data) ? data : []))
       .catch(() => {});

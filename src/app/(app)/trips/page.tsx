@@ -93,7 +93,7 @@ function TripsPageContent() {
     setError(null);
 
     try {
-      const res = await fetch('/api/trips', { signal: controller.signal });
+      const res = await fetch('/api/trips?fields=minimal', { signal: controller.signal });
       if (!res.ok) throw new Error(`Server error (${res.status})`);
       const data = await res.json();
       if (!Array.isArray(data)) throw new Error('Unexpected response format');

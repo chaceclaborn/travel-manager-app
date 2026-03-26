@@ -27,6 +27,7 @@ interface TripCardProps {
     notes?: string | null;
     vendors?: any[];
     clients?: any[];
+    _count?: { vendors: number; clients: number };
   };
   onSaved?: () => void;
   onDeleted?: () => void;
@@ -72,8 +73,8 @@ export function TripCard({ trip, onSaved, onDeleted }: TripCardProps) {
   const { showToast } = useTMToast();
 
   const days = trip.startDate && trip.endDate ? getDurationDays(trip.startDate, trip.endDate) : null;
-  const vendorCount = trip.vendors?.length || 0;
-  const clientCount = trip.clients?.length || 0;
+  const vendorCount = trip._count?.vendors ?? trip.vendors?.length ?? 0;
+  const clientCount = trip._count?.clients ?? trip.clients?.length ?? 0;
   const borderColor = statusBorderColors[trip.status] ?? 'border-l-slate-300';
 
   const startEdit = (e: React.MouseEvent) => {
