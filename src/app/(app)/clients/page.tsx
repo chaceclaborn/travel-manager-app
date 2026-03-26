@@ -141,11 +141,12 @@ export default function ClientsPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search clients by name, company, or email..."
+            aria-label="Search clients"
             className="pl-10"
           />
         </div>
         <Select value={sortBy} onValueChange={setSortBy}>
-          <SelectTrigger className="w-full sm:w-44">
+          <SelectTrigger className="w-full sm:w-44" aria-label="Sort clients">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

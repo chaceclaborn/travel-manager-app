@@ -134,11 +134,12 @@ export default function VendorsPage() {
             placeholder="Search by name or city..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            aria-label="Search vendors"
             className="pl-9"
           />
         </div>
         <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-          <SelectTrigger className="w-full sm:w-44">
+          <SelectTrigger className="w-full sm:w-44" aria-label="Filter by category">
             <SelectValue placeholder="Category" />
           </SelectTrigger>
           <SelectContent>
@@ -150,7 +151,7 @@ export default function VendorsPage() {
           </SelectContent>
         </Select>
         <Select value={sortBy} onValueChange={setSortBy}>
-          <SelectTrigger className="w-full sm:w-44">
+          <SelectTrigger className="w-full sm:w-44" aria-label="Sort vendors">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

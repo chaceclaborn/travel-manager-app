@@ -855,11 +855,12 @@ export default function BookingsPage() {
             placeholder="Search by provider, location, or confirmation..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            aria-label="Search bookings"
             className="pl-9"
           />
         </div>
         <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="w-full sm:w-44">
+          <SelectTrigger className="w-full sm:w-44" aria-label="Filter by type">
             <SelectValue placeholder="Type" />
           </SelectTrigger>
           <SelectContent>
@@ -871,7 +872,7 @@ export default function BookingsPage() {
           </SelectContent>
         </Select>
         <Select value={linkFilter} onValueChange={setLinkFilter}>
-          <SelectTrigger className="w-full sm:w-44">
+          <SelectTrigger className="w-full sm:w-44" aria-label="Filter by link status">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

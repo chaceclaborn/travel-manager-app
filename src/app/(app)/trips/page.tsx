@@ -193,12 +193,14 @@ function TripsPageContent() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by trip name or destination..."
+              aria-label="Search trips"
               className="pl-9 pr-9 h-10 bg-white border-slate-200 shadow-sm placeholder:text-slate-400 focus-visible:ring-amber-500/30 focus-visible:border-amber-400"
             />
             {search && (
               <button
                 onClick={() => setSearch('')}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                aria-label="Clear search"
               >
                 <X className="size-4" />
               </button>
@@ -206,7 +208,7 @@ function TripsPageContent() {
           </div>
           <div className="flex gap-2">
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-44 h-10 bg-white border-slate-200 shadow-sm">
+              <SelectTrigger className="w-full sm:w-44 h-10 bg-white border-slate-200 shadow-sm" aria-label="Filter by status">
                 <div className="flex items-center gap-2">
                   <SlidersHorizontal className="size-3.5 text-slate-400" />
                   <SelectValue />
@@ -221,7 +223,7 @@ function TripsPageContent() {
               </SelectContent>
             </Select>
             <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-full sm:w-44 h-10 bg-white border-slate-200 shadow-sm">
+              <SelectTrigger className="w-full sm:w-44 h-10 bg-white border-slate-200 shadow-sm" aria-label="Sort trips">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
