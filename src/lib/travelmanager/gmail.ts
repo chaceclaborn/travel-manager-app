@@ -1,5 +1,6 @@
 import { google } from 'googleapis';
 import prisma from '@/lib/prisma';
+import { encryptToken, decryptToken } from '@/lib/encryption';
 
 const SCOPES = ['https://www.googleapis.com/auth/gmail.readonly'];
 
@@ -27,40 +28,63 @@ export async function exchangeCodeForTokens(code: string) {
   return tokens;
 }
 
+export async function storeOAuthTokens(
+  userId: string,
+  tokens: { access_token?: string | null; refresh_token?: string | null; expiry_date?: number | null }
+) {
+  const encryptedAccess = tokens.access_token ? encryptToken(tokens.access_token) : null;
+  const encryptedRefresh = tokens.refresh_token ? encryptToken(tokens.refresh_token) : null;
+
+  await prisma.oAuthToken.upsert({
+    where: { userId_provider: { userId, provider: 'google' } },
+    create: {
+      userId,
+      provider: 'google',
+      accessToken: encryptedAccess || '',
+      refreshToken: encryptedRefresh,
+      expiresAt: tokens.expiry_date ? new Date(tokens.expiry_date) : null,
+    },
+    update: {
+      accessToken: encryptedAccess || '',
+      ...(encryptedRefresh ? { refreshToken: encryptedRefresh } : {}),
+      expiresAt: tokens.expiry_date ? new Date(tokens.expiry_date) : null,
+    },
+  });
+}
+
 export async function getGmailClient(userId: string) {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { gmailAccessToken: true, gmailRefreshToken: true, gmailTokenExpiry: true },
+  const tokenRecord = await prisma.oAuthToken.findUnique({
+    where: { userId_provider: { userId, provider: 'google' } },
   });
 
-  if (!user?.gmailRefreshToken) return null;
+  if (!tokenRecord?.refreshToken) return null;
+
+  const accessToken = tokenRecord.accessToken ? decryptToken(tokenRecord.accessToken) : null;
+  const refreshToken = decryptToken(tokenRecord.refreshToken);
 
   const oauth2Client = getOAuth2Client();
   oauth2Client.setCredentials({
-    access_token: user.gmailAccessToken,
-    refresh_token: user.gmailRefreshToken,
-    expiry_date: user.gmailTokenExpiry?.getTime(),
+    access_token: accessToken,
+    refresh_token: refreshToken,
+    expiry_date: tokenRecord.expiresAt?.getTime(),
   });
 
   // Auto-refresh if expired
   const now = Date.now();
-  const expiry = user.gmailTokenExpiry?.getTime() || 0;
+  const expiry = tokenRecord.expiresAt?.getTime() || 0;
   if (now >= expiry - 60_000) {
     try {
       const { credentials } = await oauth2Client.refreshAccessToken();
-      await prisma.user.update({
-        where: { id: userId },
-        data: {
-          gmailAccessToken: credentials.access_token,
-          gmailTokenExpiry: credentials.expiry_date ? new Date(credentials.expiry_date) : null,
-        },
+      await storeOAuthTokens(userId, {
+        access_token: credentials.access_token,
+        refresh_token: credentials.refresh_token,
+        expiry_date: credentials.expiry_date,
       });
       oauth2Client.setCredentials(credentials);
     } catch {
       // Refresh token revoked — clear Gmail connection
-      await prisma.user.update({
-        where: { id: userId },
-        data: { gmailAccessToken: null, gmailRefreshToken: null, gmailTokenExpiry: null },
+      await prisma.oAuthToken.delete({
+        where: { userId_provider: { userId, provider: 'google' } },
       });
       return null;
     }
@@ -70,24 +94,31 @@ export async function getGmailClient(userId: string) {
 }
 
 export async function revokeGmailAccess(userId: string) {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { gmailAccessToken: true, gmailRefreshToken: true },
+  const tokenRecord = await prisma.oAuthToken.findUnique({
+    where: { userId_provider: { userId, provider: 'google' } },
   });
 
-  if (user?.gmailAccessToken) {
+  if (tokenRecord?.accessToken) {
     try {
+      const accessToken = decryptToken(tokenRecord.accessToken);
       const oauth2Client = getOAuth2Client();
-      await oauth2Client.revokeToken(user.gmailAccessToken);
+      await oauth2Client.revokeToken(accessToken);
     } catch {
       // Token may already be revoked — that's fine
     }
   }
 
-  await prisma.user.update({
-    where: { id: userId },
-    data: { gmailAccessToken: null, gmailRefreshToken: null, gmailTokenExpiry: null },
+  await prisma.oAuthToken.deleteMany({
+    where: { userId, provider: 'google' },
   });
+}
+
+export async function isGmailConnected(userId: string): Promise<boolean> {
+  const tokenRecord = await prisma.oAuthToken.findUnique({
+    where: { userId_provider: { userId, provider: 'google' } },
+    select: { refreshToken: true },
+  });
+  return !!tokenRecord?.refreshToken;
 }
 
 export interface GmailSearchResult {

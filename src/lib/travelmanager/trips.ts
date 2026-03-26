@@ -363,16 +363,10 @@ export async function deleteAllUserData(userId: string) {
   await prisma.auditLog.deleteMany({ where: { userId } });
 
   // Revoke Gmail tokens if connected
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { gmailAccessToken: true },
-  });
-  if (user?.gmailAccessToken) {
-    try {
-      const { revokeGmailAccess } = await import('@/lib/travelmanager/gmail');
-      await revokeGmailAccess(userId);
-    } catch {
-      // Best-effort revocation — continue with deletion
-    }
+  try {
+    const { revokeGmailAccess } = await import('@/lib/travelmanager/gmail');
+    await revokeGmailAccess(userId);
+  } catch {
+    // Best-effort revocation — continue with deletion
   }
 }

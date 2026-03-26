@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/travelmanager/auth';
-import { exchangeCodeForTokens } from '@/lib/travelmanager/gmail';
+import { exchangeCodeForTokens, storeOAuthTokens } from '@/lib/travelmanager/gmail';
 import { rateLimit } from '@/lib/rate-limit';
-import prisma from '@/lib/prisma';
 
 export async function GET(request: NextRequest) {
   const rateLimitResult = rateLimit(request, 'write');
@@ -18,15 +17,7 @@ export async function GET(request: NextRequest) {
     }
 
     const tokens = await exchangeCodeForTokens(code);
-
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        gmailAccessToken: tokens.access_token || null,
-        gmailRefreshToken: tokens.refresh_token || null,
-        gmailTokenExpiry: tokens.expiry_date ? new Date(tokens.expiry_date) : null,
-      },
-    });
+    await storeOAuthTokens(user.id, tokens);
 
     return NextResponse.redirect(new URL('/settings?gmail=connected', request.url));
   } catch {

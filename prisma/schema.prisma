@@ -20,9 +20,6 @@ model User {
   homeCity      String?
   homeLatitude  Float?
   homeLongitude Float?
-  gmailAccessToken  String?
-  gmailRefreshToken String?
-  gmailTokenExpiry  DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -37,6 +34,23 @@ model User {
   tripNotes       TripNote[]
   clickEvents     ClickEvent[]
   feedbacks       Feedback[]
+  oauthTokens     OAuthToken[]
+}
+
+model OAuthToken {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider     String   // "google", "microsoft", etc.
+  accessToken  String   // AES-256-GCM encrypted (base64)
+  refreshToken String?  // AES-256-GCM encrypted (base64)
+  keyVersion   Int      @default(1)
+  expiresAt    DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([userId, provider])
+  @@map("oauth_tokens")
 }
 
 model AuditLog {
