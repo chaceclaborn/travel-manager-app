@@ -14,24 +14,27 @@ export interface EmailClassification {
 
 const CLASSIFICATION_PROMPT = `You are an email classifier for a travel management application. Analyze the email and classify it.
 
-CATEGORIES:
-- "flight" — Confirmed flight booking (itinerary, flight numbers, PNR/confirmation code)
-- "hotel" — Confirmed hotel/lodging reservation (check-in/out dates, confirmation number)
-- "car_rental" — Confirmed car rental reservation
-- "train_bus" — Confirmed train or bus ticket/reservation
-- "other_booking" — Other confirmed travel booking (cruise, ferry, tour, activity)
-- "not_booking" — NOT a booking confirmation
+IMPORTANT: Only classify as a booking if the email contains a CONFIRMATION NUMBER, RESERVATION CODE, or BOOKING REFERENCE. If there is no confirmation/reservation number, classify as "not_booking".
 
-CLASSIFY AS "not_booking":
+CATEGORIES:
+- "flight" — Confirmed flight booking with a PNR/confirmation code
+- "hotel" — Confirmed hotel/lodging reservation with a confirmation number
+- "car_rental" — Confirmed car rental with a reservation number
+- "train_bus" — Confirmed train or bus ticket with a booking reference
+- "other_booking" — Other confirmed travel booking with a reference number
+- "not_booking" — NOT a booking confirmation (no confirmation number found)
+
+ALWAYS CLASSIFY AS "not_booking":
+- Emails without a confirmation/reservation/booking number
 - Promotional/marketing emails (sales, deals, "book now", fare alerts, price drops)
 - Loyalty program updates (miles, status, points)
 - Restaurant reservations (these are not travel bookings)
 - Check-in reminders or trip reminders (the booking already exists elsewhere)
 - Cancellation or refund confirmations
-- Surveys, feedback requests, or review prompts
+- Surveys, feedback requests, "thank you for staying" post-stay emails
 - Newsletter or blog content about travel
 - Credit card or travel benefit notifications
-- Distillery tours, theme parks, or local entertainment (not travel bookings)
+- Distillery tours, theme parks, local entertainment, university applications
 
 Respond with ONLY valid JSON:
 {

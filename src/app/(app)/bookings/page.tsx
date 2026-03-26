@@ -531,6 +531,15 @@ export default function BookingsPage() {
   };
 
   const handleGmailImport = (parsed: ParsedBooking) => {
+    // Build notes from extra details that don't have dedicated form fields
+    const notesParts: string[] = [];
+    if (parsed.flightNumber) notesParts.push(`Flight: ${parsed.flightNumber}`);
+    if (parsed.passengerName) notesParts.push(`Guest: ${parsed.passengerName}`);
+    if (parsed.address) notesParts.push(`Address: ${parsed.address}`);
+    if (parsed.terminal) notesParts.push(`Terminal: ${parsed.terminal}`);
+    if (parsed.gate) notesParts.push(`Gate: ${parsed.gate}`);
+    const notes = notesParts.join(' | ');
+
     setForm((prev) => ({
       ...prev,
       type: parsed.type || prev.type,
@@ -541,6 +550,7 @@ export default function BookingsPage() {
       location: parsed.location || prev.location,
       endLocation: parsed.endLocation || prev.endLocation,
       seat: parsed.seat || prev.seat,
+      notes: notes || prev.notes,
     }));
     setShowForm(true);
     showToast('Booking details imported — review and save');
