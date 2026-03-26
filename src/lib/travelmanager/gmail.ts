@@ -59,8 +59,16 @@ export async function getGmailClient(userId: string) {
 
   if (!tokenRecord?.refreshToken) return null;
 
-  const accessToken = tokenRecord.accessToken ? decryptToken(tokenRecord.accessToken) : null;
-  const refreshToken = decryptToken(tokenRecord.refreshToken);
+  let accessToken: string | null;
+  let refreshToken: string;
+  try {
+    accessToken = tokenRecord.accessToken ? decryptToken(tokenRecord.accessToken) : null;
+    refreshToken = decryptToken(tokenRecord.refreshToken);
+  } catch {
+    // Tokens encrypted with a different key — purge and require reconnect
+    await prisma.oAuthToken.deleteMany({ where: { userId, provider: 'google' } });
+    return null;
+  }
 
   const oauth2Client = getOAuth2Client();
   oauth2Client.setCredentials({
