@@ -124,25 +124,32 @@ function extractSchemaOrg(html: string): ParsedBooking | null {
 
 // ── Layer 2: Gemini AI structured extraction ──
 
-const EXTRACTION_PROMPT = `You are a travel booking data extractor. Extract ALL booking details from this confirmation email into structured JSON.
+const EXTRACTION_PROMPT = `You are a travel booking data extractor. Extract booking details from this confirmation email.
 
-RULES:
-- Extract ONLY information explicitly stated in the email. Never guess or infer missing fields.
-- For dates, use ISO 8601 format: "YYYY-MM-DDTHH:MM" (include time if available, date-only "YYYY-MM-DD" if not)
+CRITICAL DATE FORMAT RULES:
+- ALL dates MUST be ISO 8601: "YYYY-MM-DDTHH:MM" with time, or "YYYY-MM-DD" without time
+- Example: "March 17, 2026 at 3:30 PM" → "2026-03-17T15:30"
+- Example: "Mar 17, 2026" → "2026-03-17"
+- Example: "Check-in: Tuesday, March 17" with year 2026 context → "2026-03-17"
+- NEVER return dates in any other format (no "March 17, 2026", no "3/17/2026")
+
+OTHER RULES:
+- Extract ONLY information explicitly stated in the email. Never guess.
 - For airport codes, use 3-letter IATA codes (e.g., "LAX", "JFK")
-- If a field is not found in the email, return an empty string for it
-- If the email contains multiple segments (e.g., round-trip flight), extract the FIRST outbound segment as the primary booking
-- For hotels, include the hotel name AND city in the location field
+- If a field is not found, return an empty string
+- For round-trip flights, extract the FIRST outbound segment
+- For hotels: location = "Hotel Name, City" (e.g., "Residence Inn, Huntsville")
+- startDateTime = check-in/departure/pickup date. endDateTime = check-out/arrival/dropoff date.
 
-BOOKING TYPE DETECTION:
-- "FLIGHT": airline confirmation with flight numbers, airports, departure/arrival times
+BOOKING TYPES:
+- "FLIGHT": airline confirmation with flight numbers and airports
 - "HOTEL": lodging reservation with check-in/check-out dates
 - "CAR_RENTAL": vehicle rental with pickup/dropoff details
 - "TRAIN": rail ticket with station names
 - "BUS": bus ticket with stop names
-- "OTHER": any other confirmed travel booking
+- "OTHER": any other travel booking
 
-If this email is NOT a travel booking confirmation (e.g., promotional, newsletter, restaurant), set type to "OTHER" and leave other fields empty.`;
+If this is NOT a booking confirmation, set type to "OTHER" and leave other fields empty.`;
 
 const EXTRACTION_SCHEMA = {
   type: Type.OBJECT,
