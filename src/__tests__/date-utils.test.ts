@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { toLocalDateString, parseLocalDate, formatDateDisplay } from '@/lib/date-utils';
+import { toLocalDateString, parseLocalDate, formatDateDisplay, formatDate, formatDateLong, formatDateShort } from '@/lib/date-utils';
 
 describe('toLocalDateString', () => {
   it('formats a standard date as YYYY-MM-DD', () => {
@@ -72,5 +72,55 @@ describe('formatDateDisplay', () => {
 
   it('returns empty string for empty input', () => {
     expect(formatDateDisplay('')).toBe('');
+  });
+});
+
+describe('formatDate', () => {
+  it('formats an ISO string as "Mon DD, YYYY"', () => {
+    expect(formatDate('2024-03-15')).toBe('Mar 15, 2024');
+  });
+
+  it('formats a Date object', () => {
+    expect(formatDate(new Date(2024, 2, 15))).toBe('Mar 15, 2024');
+  });
+
+  it('handles ISO string with time part', () => {
+    expect(formatDate('2024-03-15T14:30:00')).toBe('Mar 15, 2024');
+  });
+
+  it('returns null for null input', () => {
+    expect(formatDate(null)).toBeNull();
+  });
+
+  it('returns null for undefined input', () => {
+    expect(formatDate(undefined)).toBeNull();
+  });
+});
+
+describe('formatDateLong', () => {
+  it('formats as "Month DD, YYYY"', () => {
+    expect(formatDateLong('2024-03-15')).toBe('March 15, 2024');
+  });
+
+  it('formats a Date object', () => {
+    expect(formatDateLong(new Date(Date.UTC(2024, 0, 1)))).toBe('January 1, 2024');
+  });
+
+  it('returns null for null input', () => {
+    expect(formatDateLong(null)).toBeNull();
+  });
+});
+
+describe('formatDateShort', () => {
+  it('formats as "Mon DD" (no year)', () => {
+    expect(formatDateShort('2024-03-15')).toBe('Mar 15');
+  });
+
+  it('formats a Date object', () => {
+    expect(formatDateShort(new Date(Date.UTC(2024, 11, 25)))).toBe('Dec 25');
+  });
+
+  it('returns null for null input', () => {
+    expect(formatDateShort(null)).toBeNull();
   });
 });

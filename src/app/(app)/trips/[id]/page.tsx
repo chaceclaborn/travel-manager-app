@@ -38,15 +38,7 @@ import { TripBookings } from '@/components/travelmanager/TripBookings';
 import { TripChecklist } from '@/components/travelmanager/TripChecklist';
 import { TripJournal } from '@/components/travelmanager/TripJournal';
 import { useTMToast } from '@/components/travelmanager/TMToast';
-
-function formatDate(date: string) {
-  return new Date(date).toLocaleDateString('en-US', {
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-    timeZone: 'UTC',
-  });
-}
+import { formatDateLong as formatDate } from '@/lib/date-utils';
 
 const statusOrder = ['DRAFT', 'PLANNED', 'IN_PROGRESS', 'COMPLETED'];
 const statusLabels: Record<string, string> = {
