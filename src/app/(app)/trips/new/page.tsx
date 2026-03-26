@@ -25,10 +25,11 @@ function NewTripPageContent() {
   const handleSubmit = async (data: any) => {
     setIsLoading(true);
     try {
+      const { clientIds, ...tripData } = data;
       const res = await fetch('/api/trips', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify(tripData),
       });
 
       if (!res.ok) {
@@ -37,6 +38,19 @@ function NewTripPageContent() {
       }
 
       const trip = await res.json();
+
+      if (clientIds?.length > 0) {
+        await Promise.allSettled(
+          clientIds.map((clientId: string) =>
+            fetch(`/api/trips/${trip.id}/clients`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'link', clientId }),
+            })
+          )
+        );
+      }
+
       showToast('Trip created successfully');
       router.push(`/trips/${trip.id}`);
     } catch (err: any) {

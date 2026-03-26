@@ -24,6 +24,7 @@ export async function createVendor(data: CreateVendorInput, userId: string) {
   return prisma.vendor.create({
     data: {
       name: data.name,
+      contactName: data.contactName,
       category: data.category,
       email: data.email,
       phone: data.phone,

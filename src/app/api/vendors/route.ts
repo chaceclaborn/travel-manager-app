@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     if (!user) return response;
 
     const body = await request.json();
-    const sanitized = sanitizeObject(body, ['name', 'category', 'email', 'phone', 'address', 'city', 'state', 'website', 'notes']);
+    const sanitized = sanitizeObject(body, ['name', 'contactName', 'category', 'email', 'phone', 'address', 'city', 'state', 'website', 'notes']);
     const { name, category, email } = sanitized;
 
     if (!name || typeof name !== 'string') {

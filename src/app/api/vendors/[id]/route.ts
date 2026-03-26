@@ -39,7 +39,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     const body = await request.json();
-    const sanitized = sanitizeObject(body, ['name', 'category', 'email', 'phone', 'address', 'city', 'state', 'website', 'notes']);
+    const sanitized = sanitizeObject(body, ['name', 'contactName', 'category', 'email', 'phone', 'address', 'city', 'state', 'website', 'notes']);
 
     if (sanitized.category && !validateEnum(sanitized.category as string, VENDOR_CATEGORY_VALUES)) {
       return NextResponse.json({ error: 'Invalid vendor category' }, { status: 400 });

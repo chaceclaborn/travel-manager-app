@@ -12,9 +12,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { MapPin, Loader2, Plane, Car } from 'lucide-react';
+import { MapPin, Loader2, Plane, Car, X, Users } from 'lucide-react';
 import { DateRangePicker } from '@/components/travelmanager/DateRangePicker';
 import { AirportPicker } from '@/components/travelmanager/AirportPicker';
+import { Badge } from '@/components/ui/badge';
+
+interface SimpleClient {
+  id: string;
+  name: string;
+  company?: string | null;
+}
 
 interface TripFormProps {
   initialData?: any;
@@ -211,6 +218,18 @@ export function TripForm({ initialData, onSubmit, isLoading }: TripFormProps) {
     } : null
   );
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [allClients, setAllClients] = useState<SimpleClient[]>([]);
+  const [selectedClientIds, setSelectedClientIds] = useState<string[]>(
+    initialData?.clientIds || []
+  );
+  const [clientSearch, setClientSearch] = useState('');
+
+  useEffect(() => {
+    fetch('/api/clients')
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => setAllClients(data))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (initialData) {
@@ -278,6 +297,7 @@ export function TripForm({ initialData, onSubmit, isLoading }: TripFormProps) {
       arrivalAirportName: arrivalAirport?.name || null,
       arrivalAirportLat: arrivalAirport?.lat || null,
       arrivalAirportLng: arrivalAirport?.lng || null,
+      clientIds: selectedClientIds,
     });
   };
 
@@ -415,6 +435,76 @@ export function TripForm({ initialData, onSubmit, isLoading }: TripFormProps) {
             />
             {errors.arrivalAirport && <p className="text-xs text-red-500">{errors.arrivalAirport}</p>}
           </div>
+        </div>
+      )}
+
+      {allClients.length > 0 && (
+        <div className="space-y-1.5">
+          <Label>Clients</Label>
+          {selectedClientIds.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {selectedClientIds.map((id) => {
+                const client = allClients.find((c) => c.id === id);
+                if (!client) return null;
+                return (
+                  <Badge key={id} variant="secondary" className="gap-1 pl-2 pr-1 py-0.5 bg-amber-50 text-amber-700 border-amber-200">
+                    {client.name}
+                    <button
+                      type="button"
+                      onClick={() => setSelectedClientIds((prev) => prev.filter((cid) => cid !== id))}
+                      className="rounded-full p-0.5 hover:bg-amber-200/50 transition-colors"
+                    >
+                      <X className="size-3" />
+                    </button>
+                  </Badge>
+                );
+              })}
+            </div>
+          )}
+          <div className="relative">
+            <Input
+              value={clientSearch}
+              onChange={(e) => setClientSearch(e.target.value)}
+              placeholder="Search clients to add..."
+              className="pr-8"
+            />
+            <Users className="absolute right-2 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
+          </div>
+          {clientSearch.length > 0 && (
+            <div className="border border-slate-200 rounded-lg bg-white shadow-sm max-h-[150px] overflow-y-auto">
+              {allClients
+                .filter(
+                  (c) =>
+                    !selectedClientIds.includes(c.id) &&
+                    (c.name.toLowerCase().includes(clientSearch.toLowerCase()) ||
+                      c.company?.toLowerCase().includes(clientSearch.toLowerCase()))
+                )
+                .map((client) => (
+                  <button
+                    key={client.id}
+                    type="button"
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 border-b border-slate-100 last:border-b-0"
+                    onClick={() => {
+                      setSelectedClientIds((prev) => [...prev, client.id]);
+                      setClientSearch('');
+                    }}
+                  >
+                    <span className="font-medium text-slate-700">{client.name}</span>
+                    {client.company && (
+                      <span className="text-slate-400 ml-1.5">({client.company})</span>
+                    )}
+                  </button>
+                ))}
+              {allClients.filter(
+                (c) =>
+                  !selectedClientIds.includes(c.id) &&
+                  (c.name.toLowerCase().includes(clientSearch.toLowerCase()) ||
+                    c.company?.toLowerCase().includes(clientSearch.toLowerCase()))
+              ).length === 0 && (
+                <p className="px-3 py-2 text-sm text-slate-400">No matching clients</p>
+              )}
+            </div>
+          )}
         </div>
       )}
 

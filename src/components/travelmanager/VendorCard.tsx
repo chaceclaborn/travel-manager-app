@@ -43,6 +43,7 @@ export function VendorCard({ vendor, onSaved, onDeleted }: VendorCardProps) {
   const [deleting, setDeleting] = useState(false);
   const [form, setForm] = useState({
     name: vendor.name,
+    contactName: (vendor as any).contactName || '',
     category: vendor.category,
     email: vendor.email || '',
     phone: vendor.phone || '',
@@ -59,7 +60,7 @@ export function VendorCard({ vendor, onSaved, onDeleted }: VendorCardProps) {
   const startEdit = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setForm({ name: vendor.name, category: vendor.category, email: vendor.email || '', phone: vendor.phone || '', city: vendor.city || '', state: vendor.state || '' });
+    setForm({ name: vendor.name, contactName: (vendor as any).contactName || '', category: vendor.category, email: vendor.email || '', phone: vendor.phone || '', city: vendor.city || '', state: vendor.state || '' });
     setEditing(true);
   };
 
@@ -71,7 +72,7 @@ export function VendorCard({ vendor, onSaved, onDeleted }: VendorCardProps) {
       const res = await fetch(`/api/vendors/${vendor.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: form.name.trim(), category: form.category, email: form.email.trim() || undefined, phone: form.phone.trim() || undefined, city: form.city.trim() || undefined, state: form.state.trim() || undefined }),
+        body: JSON.stringify({ name: form.name.trim(), contactName: form.contactName.trim() || undefined, category: form.category, email: form.email.trim() || undefined, phone: form.phone.trim() || undefined, city: form.city.trim() || undefined, state: form.state.trim() || undefined }),
       });
       if (!res.ok) throw new Error();
       showToast('Vendor updated');
@@ -102,6 +103,7 @@ export function VendorCard({ vendor, onSaved, onDeleted }: VendorCardProps) {
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div><Label className="text-xs">Name *</Label><Input value={form.name} onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))} className="h-8 text-xs" /></div>
+            <div><Label className="text-xs">Contact Name</Label><Input value={form.contactName} onChange={(e) => setForm(f => ({ ...f, contactName: e.target.value }))} className="h-8 text-xs" placeholder="Contact person" /></div>
             <div>
               <Label className="text-xs">Category</Label>
               <Select value={form.category} onValueChange={(v) => setForm(f => ({ ...f, category: v }))}>

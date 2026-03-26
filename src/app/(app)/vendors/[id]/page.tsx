@@ -12,6 +12,7 @@ import {
   MapPin,
   Globe,
   FileText,
+  User,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -171,6 +172,12 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
           <Card className="bg-white p-6">
             <h2 className="mb-4 text-lg font-semibold text-slate-800">Contact Details</h2>
             <div className="space-y-3">
+              {vendor.contactName && (
+                <div className="flex items-center gap-2 text-sm text-slate-600">
+                  <User className="size-4 text-slate-400" />
+                  <span>{vendor.contactName}</span>
+                </div>
+              )}
               {vendor.email && (
                 <div className="flex items-center gap-2 text-sm text-slate-600">
                   <Mail className="size-4 text-slate-400" />
@@ -212,7 +219,7 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
                   <span>{vendor.notes}</span>
                 </div>
               )}
-              {!vendor.email && !vendor.phone && !location && !vendor.website && !vendor.notes && (
+              {!vendor.contactName && !vendor.email && !vendor.phone && !location && !vendor.website && !vendor.notes && (
                 <p className="text-sm text-slate-400">No contact details added yet.</p>
               )}
             </div>

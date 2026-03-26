@@ -577,7 +577,7 @@ export default function BookingsPage() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-bold text-slate-800">Bookings</h1>
         <div className="flex items-center gap-2">
-          {gmailConnected && (
+          {gmailConnected ? (
             <Button
               variant="outline"
               onClick={() => setShowGmailModal(true)}
@@ -585,6 +585,17 @@ export default function BookingsPage() {
             >
               <Mail className="mr-2 size-4" />
               Import from Gmail
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              asChild
+              className="text-slate-500 hover:text-red-600 hover:bg-red-50 border-slate-200 hover:border-red-200"
+            >
+              <Link href="/settings">
+                <Mail className="mr-2 size-4" />
+                Connect Gmail
+              </Link>
             </Button>
           )}
           <Button
@@ -880,10 +891,15 @@ export default function BookingsPage() {
           title={bookings.length === 0 ? 'No bookings yet' : 'No matching bookings'}
           description={
             bookings.length === 0
-              ? 'Create your first booking to get started. Bookings can be standalone or linked to a trip.'
+              ? 'Create your first booking or import from your email. Connect Gmail in Settings to automatically pull in flight, hotel, and car rental confirmations.'
               : 'Try adjusting your search or filters.'
           }
           icon={Plane}
+          {...(bookings.length === 0 && !gmailConnected
+            ? { secondaryAction: { label: 'Connect Gmail to import bookings →', onClick: () => window.location.assign('/settings') } }
+            : bookings.length === 0 && gmailConnected
+            ? { secondaryAction: { label: 'Import from Gmail →', onClick: () => setShowGmailModal(true) } }
+            : {})}
         />
       ) : (
         <motion.div

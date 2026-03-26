@@ -23,6 +23,7 @@ interface VendorFormProps {
 
 export function VendorForm({ initialData, onSubmit, isLoading }: VendorFormProps) {
   const [name, setName] = useState(initialData?.name || '');
+  const [contactName, setContactName] = useState(initialData?.contactName || '');
   const [category, setCategory] = useState(initialData?.category || 'SUPPLIER');
   const [email, setEmail] = useState(initialData?.email || '');
   const [phone, setPhone] = useState(initialData?.phone || '');
@@ -55,6 +56,7 @@ export function VendorForm({ initialData, onSubmit, isLoading }: VendorFormProps
     setErrors({});
     onSubmit({
       name: name.trim(),
+      contactName: contactName.trim() || undefined,
       category,
       email: email.trim() || undefined,
       phone: phone.trim() || undefined,
@@ -81,6 +83,16 @@ export function VendorForm({ initialData, onSubmit, isLoading }: VendorFormProps
           className={errors.name ? 'border-red-500' : ''}
         />
         {errors.name && <p id="name-error" className="text-xs text-red-500">{errors.name}</p>}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="contactName">Contact Name</Label>
+        <Input
+          id="contactName"
+          value={contactName}
+          onChange={(e) => setContactName(e.target.value)}
+          placeholder="Primary contact person"
+        />
       </div>
 
       <div className="space-y-2">

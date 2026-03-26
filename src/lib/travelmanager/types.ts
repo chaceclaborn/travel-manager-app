@@ -63,6 +63,7 @@ export interface UpdateTripInput extends Partial<CreateTripInput> {}
 
 export interface CreateVendorInput {
   name: string;
+  contactName?: string;
   category?: VendorCategory;
   email?: string;
   phone?: string;

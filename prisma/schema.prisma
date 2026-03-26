@@ -36,6 +36,7 @@ model User {
   checklists      ChecklistItem[]
   tripNotes       TripNote[]
   clickEvents     ClickEvent[]
+  feedbacks       Feedback[]
 }
 
 model AuditLog {
@@ -102,6 +103,21 @@ enum TransportMode {
   CAR
 }
 
+enum FeedbackCategory {
+  BUG
+  FEATURE
+  UX
+  OTHER
+}
+
+enum FeedbackStatus {
+  NEW
+  REVIEWED
+  IN_PROGRESS
+  RESOLVED
+  DISMISSED
+}
+
 model Trip {
   id          String          @id @default(cuid())
   userId      String
@@ -156,13 +172,14 @@ model TripAttachment {
 }
 
 model Vendor {
-  id       String         @id @default(cuid())
-  userId   String
-  user     User           @relation(fields: [userId], references: [id])
-  name     String
-  category VendorCategory @default(SUPPLIER)
-  email    String?
-  phone    String?
+  id          String         @id @default(cuid())
+  userId      String
+  user        User           @relation(fields: [userId], references: [id])
+  name        String
+  contactName String?
+  category    VendorCategory @default(SUPPLIER)
+  email       String?
+  phone       String?
   address  String?
   city     String?
   state    String?
@@ -301,6 +318,22 @@ model TripNote {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   @@index([tripId])
+  @@index([userId])
+}
+
+// ─── Feedback ───
+
+model Feedback {
+  id         String           @id @default(cuid())
+  userId     String
+  user       User             @relation(fields: [userId], references: [id])
+  message    String
+  category   FeedbackCategory @default(OTHER)
+  status     FeedbackStatus   @default(NEW)
+  resolvedAt DateTime?
+  createdAt  DateTime         @default(now())
+
+  @@index([status])
   @@index([userId])
 }
 
