@@ -6,10 +6,13 @@ export function toLocalDateString(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-/** Parse a YYYY-MM-DD string into a Date in local time (avoids UTC midnight shift). */
+/** Parse a date string into a Date in local time (avoids UTC midnight shift).
+ *  Accepts both YYYY-MM-DD and full ISO datetime (strips time part). */
 export function parseLocalDate(dateStr: string): Date | undefined {
   if (!dateStr) return undefined;
-  const [y, m, d] = dateStr.split('-').map(Number);
+  const datePart = dateStr.split('T')[0];
+  const [y, m, d] = datePart.split('-').map(Number);
+  if (isNaN(y) || isNaN(m) || isNaN(d)) return undefined;
   return new Date(y, m - 1, d);
 }
 

@@ -13,13 +13,17 @@ import { proxy } from '@/proxy';
 function createRequest(
   method: string,
   pathname: string,
-  contentType?: string
+  contentType?: string,
+  hasBody = false
 ): NextRequest {
   const url = `http://localhost:3000${pathname}`;
   const headers = new Headers();
   headers.set('host', 'localhost:3000');
   if (contentType) {
     headers.set('content-type', contentType);
+  }
+  if (hasBody) {
+    headers.set('content-length', '2');
   }
   return new NextRequest(url, { method, headers });
 }
@@ -79,9 +83,9 @@ describe('proxy — Content-Type CSRF protection', () => {
     expect(res.status).toBe(200);
   });
 
-  // POST without Content-Type should be blocked (CSRF vector)
+  // POST without Content-Type should be blocked when body is present (CSRF vector)
   it('blocks POST without Content-Type header', async () => {
-    const req = createRequest('POST', '/api/trips');
+    const req = createRequest('POST', '/api/trips', undefined, true);
     const res = await proxy(req);
     expect(res.status).toBe(415);
     const body = await res.json();
@@ -90,23 +94,30 @@ describe('proxy — Content-Type CSRF protection', () => {
 
   // POST with form-urlencoded should be blocked (CSRF via HTML form)
   it('blocks POST with application/x-www-form-urlencoded', async () => {
-    const req = createRequest('POST', '/api/trips', 'application/x-www-form-urlencoded');
+    const req = createRequest('POST', '/api/trips', 'application/x-www-form-urlencoded', true);
     const res = await proxy(req);
     expect(res.status).toBe(415);
   });
 
   // POST with text/plain should be blocked (CSRF via form with enctype)
   it('blocks POST with text/plain', async () => {
-    const req = createRequest('POST', '/api/vendors', 'text/plain');
+    const req = createRequest('POST', '/api/vendors', 'text/plain', true);
     const res = await proxy(req);
     expect(res.status).toBe(415);
   });
 
   // DELETE with wrong Content-Type should be blocked
   it('blocks DELETE with text/html', async () => {
-    const req = createRequest('DELETE', '/api/trips/123', 'text/html');
+    const req = createRequest('DELETE', '/api/trips/123', 'text/html', true);
     const res = await proxy(req);
     expect(res.status).toBe(415);
+  });
+
+  // Bodyless mutations (no Content-Length) should pass without Content-Type
+  it('allows bodyless POST without Content-Type', async () => {
+    const req = createRequest('POST', '/api/gmail/disconnect');
+    const res = await proxy(req);
+    expect(res.status).toBe(200);
   });
 
   // File upload: receipt route with multipart/form-data should pass
@@ -140,7 +151,7 @@ describe('proxy — Content-Type CSRF protection', () => {
 
   // File upload route with wrong Content-Type should be blocked
   it('blocks text/plain on receipt upload route', async () => {
-    const req = createRequest('POST', '/api/expenses/123/receipt', 'text/plain');
+    const req = createRequest('POST', '/api/expenses/123/receipt', 'text/plain', true);
     const res = await proxy(req);
     expect(res.status).toBe(415);
     const body = await res.json();
@@ -149,7 +160,7 @@ describe('proxy — Content-Type CSRF protection', () => {
 
   // Non-upload route should not accept multipart/form-data
   it('blocks multipart/form-data on non-upload route', async () => {
-    const req = createRequest('POST', '/api/trips', 'multipart/form-data');
+    const req = createRequest('POST', '/api/trips', 'multipart/form-data', true);
     const res = await proxy(req);
     expect(res.status).toBe(415);
   });

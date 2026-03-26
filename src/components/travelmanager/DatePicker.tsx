@@ -15,6 +15,8 @@ interface DatePickerProps {
   placeholder?: string;
   minDate?: string;
   maxDate?: string;
+  /** Month to show when the picker opens (overrides selected date). Useful for end-date pickers that should snap to the start date's month. */
+  defaultMonth?: string;
 }
 
 export function DatePicker({
@@ -25,6 +27,7 @@ export function DatePicker({
   placeholder = 'Select date',
   minDate,
   maxDate,
+  defaultMonth: defaultMonthStr,
 }: DatePickerProps) {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<Date | undefined>(() => parseLocalDate(date));
@@ -72,7 +75,7 @@ export function DatePicker({
           mode="single"
           selected={selected}
           onSelect={handleSelect}
-          defaultMonth={selected || new Date()}
+          defaultMonth={selected || (defaultMonthStr ? parseLocalDate(defaultMonthStr) : undefined) || new Date()}
           disabled={disabled.length > 0 ? disabled : undefined}
         />
       </PopoverContent>

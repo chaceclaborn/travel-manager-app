@@ -55,6 +55,24 @@ describe('parseLocalDate', () => {
     const result = parseLocalDate('2024-01-15');
     expect(result!.getDate()).toBe(15);
   });
+
+  it('handles full ISO datetime strings (strips time part)', () => {
+    const result = parseLocalDate('2026-02-20T00:00:00.000Z');
+    expect(result).toBeInstanceOf(Date);
+    expect(result!.getFullYear()).toBe(2026);
+    expect(result!.getMonth()).toBe(1); // February
+    expect(result!.getDate()).toBe(20);
+  });
+
+  it('handles ISO datetime with timezone offset', () => {
+    const result = parseLocalDate('2026-02-20T12:30:00+05:00');
+    expect(result).toBeInstanceOf(Date);
+    expect(result!.getDate()).toBe(20);
+  });
+
+  it('returns undefined for garbage input', () => {
+    expect(parseLocalDate('not-a-date')).toBeUndefined();
+  });
 });
 
 describe('formatDateDisplay', () => {
