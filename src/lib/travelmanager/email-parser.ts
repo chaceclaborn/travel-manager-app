@@ -320,7 +320,8 @@ ${body}`,
       gate: clean(data.gate),
       confidence: 'high',
     };
-  } catch {
+  } catch (err) {
+    console.error('[Gemini Extraction Error]', err);
     return null;
   }
 }

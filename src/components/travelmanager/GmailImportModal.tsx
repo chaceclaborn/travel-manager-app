@@ -235,6 +235,35 @@ const AI_CATEGORY_MAP: Record<string, Category> = {
   other_booking: 'other',
 };
 
+// Hard promo detection — if ANY of these match subject+snippet, it's not a booking. Period.
+const HARD_PROMO_REJECT = [
+  /\bsave\s+\d+%/i,
+  /\b\d+%\s+off\b/i,
+  /\blow\s+fares?\b/i,
+  /\bearn\s+\d/i,
+  /\bbonus\s+(points|miles)\b/i,
+  /\bdouble\s+points\b/i,
+  /\bflash\s+sale\b/i,
+  /\blimited\s+time\b/i,
+  /\bbook\s+now\s*[:\-!]/i,
+  /\bprices?\s+from\s+\$/i,
+  /\bstarting\s+(at|from)\s+\$/i,
+  /\bspecial\s+offer\b/i,
+  /\bexclusive\s+deal\b/i,
+  /\bact\s+now\b/i,
+  /\bunsubscribe\b/i,
+  /\blearn\s+how\b.*\bsave\b/i,
+  /\bthank\s+you\s+for\s+(staying|choosing|visiting)\b/i,
+  /\bhow\s+was\s+your\b/i,
+  /\brate\s+your\b/i,
+  /\breview\s+your\s+(stay|trip|experience)\b/i,
+];
+
+function isHardPromo(email: EmailResult): boolean {
+  const text = `${email.subject} ${email.snippet}`;
+  return HARD_PROMO_REJECT.some((p) => p.test(text));
+}
+
 function filterAndSort(
   emails: EmailResult[],
   aiClassifications: Record<string, AIClassification>
@@ -243,10 +272,14 @@ function filterAndSort(
 
   return emails
     .map((email) => {
+      // Hard reject obvious promos regardless of AI
+      if (isHardPromo(email)) {
+        return { ...email, category: 'other' as Category, score: -100 };
+      }
+
       const ai = aiClassifications[email.id];
 
       if (ai) {
-        // AI is the authority — trust it completely
         if (ai.category === 'not_booking') {
           return { ...email, category: 'other' as Category, score: -100 };
         }
@@ -254,13 +287,17 @@ function filterAndSort(
         return { ...email, category, score: Math.round(ai.confidence * 100) };
       }
 
+      // No AI classification for this email — use local scoring as fallback only
       if (hasAI) {
-        // AI was available but didn't classify this email — treat as unknown, drop it
+        // AI ran but skipped this email — drop it
         return { ...email, category: 'other' as Category, score: -1 };
       }
 
-      // No AI available at all — fall back to local scoring
-      return scoreAndCategorize(email);
+      // AI completely unavailable — use local scoring but require high threshold
+      const scored = scoreAndCategorize(email);
+      // Require both a known sender domain AND confirmation patterns
+      if (scored.score < 60) scored.score = -1;
+      return scored;
     })
     .filter((e) => e.score > 0)
     .sort((a, b) => b.score - a.score);

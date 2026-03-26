@@ -180,8 +180,8 @@ Respond with ONLY a valid JSON array: [{ "id": "...", "category": "...", "confid
         });
       }
     }
-  } catch {
-    // AI classification failed — return empty, frontend scoring will be the fallback
+  } catch (err) {
+    console.error('[Gemini Batch Classification Error]', err);
   }
 
   return results;
