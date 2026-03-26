@@ -6,6 +6,7 @@ import { Mail, Search, Loader2, X, Plane, Building2, Car, Train, Bus, Package, A
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { formatDate } from '@/lib/date-utils';
 import type { ParsedBooking } from '@/lib/travelmanager/email-parser';
 
 interface EmailResult {
@@ -114,13 +115,7 @@ export function GmailImportModal({ open, onClose, onImport }: GmailImportModalPr
     onClose();
   };
 
-  const formatEmailDate = (dateStr: string) => {
-    try {
-      return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    } catch {
-      return dateStr;
-    }
-  };
+  const formatEmailDate = (dateStr: string) => formatDate(dateStr) ?? dateStr;
 
   const formatFrom = (from: string) => {
     const match = from.match(/(?:"?([^"<]+)"?\s*)?<.*>/);

@@ -21,16 +21,43 @@ export function formatDateDisplay(dateStr: string): string {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-/** Format an ISO date string (YYYY-MM-DD or with T) as "Mar 15, 2024". Returns null for falsy input. */
-export function formatDate(date: string | null | undefined): string | null {
-  if (!date) return null;
+/** Normalize a Date or ISO string to a UTC-safe Date for display formatting. */
+function toUTCDate(date: Date | string): Date {
+  if (date instanceof Date) return date;
   const datePart = date.split('T')[0];
-  if (!datePart) return date;
+  if (!datePart) return new Date(date);
   const [year, month, day] = datePart.split('-').map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString('en-US', {
+  return new Date(year, month - 1, day);
+}
+
+/** Format a date as "Mar 15, 2024". Accepts Date objects or ISO strings. Returns null for falsy input. */
+export function formatDate(date: Date | string | null | undefined): string | null {
+  if (!date) return null;
+  return toUTCDate(date).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
+  });
+}
+
+/** Format a date as "March 15, 2024" (long month). Accepts Date objects or ISO strings. */
+export function formatDateLong(date: Date | string | null | undefined): string | null {
+  if (!date) return null;
+  return new Date(date).toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+}
+
+/** Format a date as "Mar 15" (no year). Accepts Date objects or ISO strings. */
+export function formatDateShort(date: Date | string | null | undefined): string | null {
+  if (!date) return null;
+  return new Date(date).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC',
   });
 }
 

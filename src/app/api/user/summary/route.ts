@@ -4,6 +4,7 @@ import autoTable from 'jspdf-autotable';
 import prisma from '@/lib/prisma';
 import { requireAuth } from '@/lib/travelmanager/auth';
 import { rateLimit } from '@/lib/rate-limit';
+import { formatDate as _formatDate } from '@/lib/date-utils';
 
 const PERIODS: Record<string, { label: string; months: number }> = {
   '3months': { label: 'Last 3 Months', months: 3 },
@@ -12,12 +13,7 @@ const PERIODS: Record<string, { label: string; months: number }> = {
 };
 
 function formatDate(date: Date) {
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    timeZone: 'UTC',
-  });
+  return _formatDate(date) ?? '';
 }
 
 export async function GET(request: NextRequest) {

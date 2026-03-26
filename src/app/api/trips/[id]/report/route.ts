@@ -5,14 +5,10 @@ import prisma from '@/lib/prisma';
 import { requireAuth } from '@/lib/travelmanager/auth';
 import { rateLimit } from '@/lib/rate-limit';
 import { validateUUID } from '@/lib/sanitize';
+import { formatDate as _formatDate } from '@/lib/date-utils';
 
 function formatDate(date: Date) {
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    timeZone: 'UTC',
-  });
+  return _formatDate(date) ?? '';
 }
 
 function formatTime(time: string | null) {

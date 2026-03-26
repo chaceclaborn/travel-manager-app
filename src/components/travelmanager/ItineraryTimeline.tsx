@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { useTMToast } from '@/components/travelmanager/TMToast';
+import { formatDateShort } from '@/lib/date-utils';
 import { TMDeleteDialog } from '@/components/travelmanager/TMDeleteDialog';
 import { DateRangePicker } from '@/components/travelmanager/DateRangePicker';
 import { formatDateHeading } from '@/lib/date-utils';
@@ -50,11 +51,7 @@ interface ItineraryTimelineProps {
 }
 
 function formatShortDate(date: string) {
-  return new Date(date).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    timeZone: 'UTC',
-  });
+  return formatDateShort(date) ?? '';
 }
 
 function groupByDate(items: ItineraryItem[]) {
