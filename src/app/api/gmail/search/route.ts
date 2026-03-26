@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'Invalid message ID' }, { status: 400 });
       }
       const { html, plainText, headers } = await getEmailContent(gmailClient, messageId);
-      const parsed = parseBookingEmail(html, plainText, headers);
+      const parsed = await parseBookingEmail(html, plainText, headers);
       return NextResponse.json(parsed);
     }
 

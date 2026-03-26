@@ -1,3 +1,4 @@
+import { GoogleGenAI, Type } from '@google/genai';
 import type { BookingType } from '@/lib/travelmanager/booking-config';
 
 export interface ParsedBooking {
@@ -9,32 +10,15 @@ export interface ParsedBooking {
   location?: string;
   endLocation?: string;
   seat?: string;
+  flightNumber?: string;
+  address?: string;
+  passengerName?: string;
+  terminal?: string;
+  gate?: string;
   confidence: 'high' | 'medium' | 'low';
 }
 
-// IATA airport codes for validation (common US/international)
-const KNOWN_AIRPORTS = new Set([
-  'ATL','LAX','ORD','DFW','DEN','JFK','SFO','SEA','LAS','MCO','EWR','MIA','CLT','PHX','IAH',
-  'BOS','MSP','FLL','DTW','PHL','LGA','BWI','SLC','SAN','IAD','DCA','MDW','TPA','PDX','HNL',
-  'STL','BNA','AUS','RDU','MCI','SJC','SMF','CLE','OAK','PIT','CVG','IND','CMH','MKE','SAT',
-  'LHR','CDG','FRA','AMS','MAD','BCN','FCO','MUC','ZRH','IST','DXB','SIN','HKG','NRT','HND',
-  'ICN','BKK','SYD','MEL','YYZ','YVR','MEX','GRU','EZE','BOG','LIM','SCL','CUN',
-]);
-
-export function parseBookingEmail(html: string, plainText: string, headers: Record<string, string>): ParsedBooking {
-  // Layer 1: Schema.org JSON-LD
-  const schemaResult = extractSchemaOrg(html);
-  if (schemaResult && schemaResult.provider) return schemaResult;
-
-  // Layer 2: Known sender patterns
-  const from = headers['From'] || '';
-  const subject = headers['Subject'] || '';
-  const senderResult = extractFromKnownSender(from, subject, plainText || html);
-  if (senderResult && senderResult.provider) return senderResult;
-
-  // Layer 3: Generic regex
-  return extractGeneric(from, subject, plainText || html);
-}
+// ── Layer 1: Schema.org JSON-LD (free, instant, highest confidence) ──
 
 function extractSchemaOrg(html: string): ParsedBooking | null {
   const jsonLdPattern = /<script[^>]*type\s*=\s*["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
@@ -59,19 +43,27 @@ function extractSchemaOrg(html: string): ParsedBooking | null {
             location: flight.departureAirport?.iataCode || flight.departureAirport?.name,
             endLocation: flight.arrivalAirport?.iataCode || flight.arrivalAirport?.name,
             seat: item.airplaneSeat,
+            flightNumber: flight.flightNumber ? `${flight.airline?.iataCode || ''}${flight.flightNumber}` : undefined,
+            terminal: flight.departureTerminal,
+            gate: flight.departureGate,
+            passengerName: item.underName?.name,
             confidence: 'high',
           };
         }
 
         if (type === 'LodgingReservation') {
           const hotel = item.reservationFor || {};
+          const addr = hotel.address;
           return {
             type: 'HOTEL',
             provider: hotel.name || item.provider?.name,
             confirmationNum: item.reservationNumber,
             startDateTime: item.checkinTime,
             endDateTime: item.checkoutTime,
-            location: hotel.address?.streetAddress || hotel.address?.addressLocality,
+            location: hotel.name ? `${hotel.name}, ${addr?.addressLocality || ''}`.replace(/, $/, '') : addr?.addressLocality,
+            address: addr ? [addr.streetAddress, addr.addressLocality, addr.addressRegion, addr.postalCode].filter(Boolean).join(', ') : undefined,
+            seat: item.reservationFor?.roomType || undefined,
+            passengerName: item.underName?.name,
             confidence: 'high',
           };
         }
@@ -85,6 +77,8 @@ function extractSchemaOrg(html: string): ParsedBooking | null {
             endDateTime: item.dropoffTime,
             location: item.pickupLocation?.name || item.pickupLocation?.address?.addressLocality,
             endLocation: item.dropoffLocation?.name || item.dropoffLocation?.address?.addressLocality,
+            seat: item.reservationFor?.vehicleType || undefined,
+            passengerName: item.underName?.name,
             confidence: 'high',
           };
         }
@@ -100,6 +94,7 @@ function extractSchemaOrg(html: string): ParsedBooking | null {
             location: train.departureStation?.name,
             endLocation: train.arrivalStation?.name,
             seat: item.reservedTicket?.ticketedSeat?.seatNumber,
+            passengerName: item.underName?.name,
             confidence: 'high',
           };
         }
@@ -114,6 +109,7 @@ function extractSchemaOrg(html: string): ParsedBooking | null {
             endDateTime: bus.arrivalTime,
             location: bus.departureBusStop?.name,
             endLocation: bus.arrivalBusStop?.name,
+            passengerName: item.underName?.name,
             confidence: 'high',
           };
         }
@@ -126,72 +122,259 @@ function extractSchemaOrg(html: string): ParsedBooking | null {
   return null;
 }
 
-const KNOWN_SENDERS: Record<string, { type: BookingType; name: string }> = {
-  'delta.com': { type: 'FLIGHT', name: 'Delta Air Lines' },
-  'united.com': { type: 'FLIGHT', name: 'United Airlines' },
-  'aa.com': { type: 'FLIGHT', name: 'American Airlines' },
-  'southwest.com': { type: 'FLIGHT', name: 'Southwest Airlines' },
-  'jetblue.com': { type: 'FLIGHT', name: 'JetBlue' },
-  'spirit.com': { type: 'FLIGHT', name: 'Spirit Airlines' },
-  'frontier.com': { type: 'FLIGHT', name: 'Frontier Airlines' },
-  'alaskaair.com': { type: 'FLIGHT', name: 'Alaska Airlines' },
-  'hawaiianairlines.com': { type: 'FLIGHT', name: 'Hawaiian Airlines' },
-  'marriott.com': { type: 'HOTEL', name: 'Marriott' },
-  'hilton.com': { type: 'HOTEL', name: 'Hilton' },
-  'ihg.com': { type: 'HOTEL', name: 'IHG' },
-  'hyatt.com': { type: 'HOTEL', name: 'Hyatt' },
-  'wyndhamhotels.com': { type: 'HOTEL', name: 'Wyndham' },
-  'choicehotels.com': { type: 'HOTEL', name: 'Choice Hotels' },
-  'airbnb.com': { type: 'HOTEL', name: 'Airbnb' },
-  'booking.com': { type: 'HOTEL', name: 'Booking.com' },
-  'hotels.com': { type: 'HOTEL', name: 'Hotels.com' },
-  'expedia.com': { type: 'OTHER', name: 'Expedia' },
-  'hertz.com': { type: 'CAR_RENTAL', name: 'Hertz' },
-  'enterprise.com': { type: 'CAR_RENTAL', name: 'Enterprise' },
-  'avis.com': { type: 'CAR_RENTAL', name: 'Avis' },
-  'budget.com': { type: 'CAR_RENTAL', name: 'Budget' },
-  'nationalcar.com': { type: 'CAR_RENTAL', name: 'National' },
-  'turo.com': { type: 'CAR_RENTAL', name: 'Turo' },
-  'amtrak.com': { type: 'TRAIN', name: 'Amtrak' },
-  'greyhound.com': { type: 'BUS', name: 'Greyhound' },
+// ── Layer 2: Gemini AI structured extraction ──
+
+const EXTRACTION_PROMPT = `You are a travel booking data extractor. Extract ALL booking details from this confirmation email into structured JSON.
+
+RULES:
+- Extract ONLY information explicitly stated in the email. Never guess or infer missing fields.
+- For dates, use ISO 8601 format: "YYYY-MM-DDTHH:MM" (include time if available, date-only "YYYY-MM-DD" if not)
+- For airport codes, use 3-letter IATA codes (e.g., "LAX", "JFK")
+- If a field is not found in the email, return an empty string for it
+- If the email contains multiple segments (e.g., round-trip flight), extract the FIRST outbound segment as the primary booking
+- For hotels, include the hotel name AND city in the location field
+
+BOOKING TYPE DETECTION:
+- "FLIGHT": airline confirmation with flight numbers, airports, departure/arrival times
+- "HOTEL": lodging reservation with check-in/check-out dates
+- "CAR_RENTAL": vehicle rental with pickup/dropoff details
+- "TRAIN": rail ticket with station names
+- "BUS": bus ticket with stop names
+- "OTHER": any other confirmed travel booking
+
+If this email is NOT a travel booking confirmation (e.g., promotional, newsletter, restaurant), set type to "OTHER" and leave other fields empty.`;
+
+const EXTRACTION_SCHEMA = {
+  type: Type.OBJECT,
+  properties: {
+    type: {
+      type: Type.STRING,
+      description: 'Booking type: FLIGHT, HOTEL, CAR_RENTAL, TRAIN, BUS, or OTHER',
+    },
+    provider: {
+      type: Type.STRING,
+      description: 'Airline, hotel chain, or rental company name',
+    },
+    confirmationNum: {
+      type: Type.STRING,
+      description: 'Confirmation/reservation/PNR code',
+    },
+    startDateTime: {
+      type: Type.STRING,
+      description: 'Departure time, check-in date, or pickup time (ISO 8601)',
+    },
+    endDateTime: {
+      type: Type.STRING,
+      description: 'Arrival time, check-out date, or dropoff time (ISO 8601)',
+    },
+    location: {
+      type: Type.STRING,
+      description: 'Departure airport code, hotel name + city, or pickup location',
+    },
+    endLocation: {
+      type: Type.STRING,
+      description: 'Arrival airport code, or dropoff location',
+    },
+    seat: {
+      type: Type.STRING,
+      description: 'Seat number, room type, or vehicle class',
+    },
+    flightNumber: {
+      type: Type.STRING,
+      description: 'Flight number (e.g., DL1234) — flights only',
+    },
+    address: {
+      type: Type.STRING,
+      description: 'Full street address of hotel or pickup location',
+    },
+    passengerName: {
+      type: Type.STRING,
+      description: 'Primary passenger or guest name',
+    },
+    terminal: {
+      type: Type.STRING,
+      description: 'Departure terminal — flights only',
+    },
+    gate: {
+      type: Type.STRING,
+      description: 'Departure gate — flights only',
+    },
+  },
+  required: ['type', 'provider'],
 };
 
-function extractFromKnownSender(from: string, subject: string, body: string): ParsedBooking | null {
-  const fromLower = from.toLowerCase();
-  let senderInfo: { type: BookingType; name: string } | undefined;
-
-  for (const [domain, info] of Object.entries(KNOWN_SENDERS)) {
-    if (fromLower.includes(domain)) {
-      senderInfo = info;
-      break;
-    }
+function cleanEmailForExtraction(html: string, plainText: string): string {
+  // Prefer plain text if it's substantial
+  if (plainText?.trim() && plainText.trim().length > 200) {
+    return plainText.trim().slice(0, 6000);
   }
 
-  if (!senderInfo) return null;
-
-  const confirmationNum = extractConfirmationNum(subject + ' ' + body);
-  const dates = extractDates(body);
-  const airports = senderInfo.type === 'FLIGHT' ? extractAirportCodes(subject + ' ' + body) : [];
-
-  return {
-    type: senderInfo.type,
-    provider: senderInfo.name,
-    confirmationNum: confirmationNum || undefined,
-    startDateTime: dates.start || undefined,
-    endDateTime: dates.end || undefined,
-    location: airports[0] || undefined,
-    endLocation: airports[1] || undefined,
-    confidence: 'medium',
-  };
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<img[^>]*>/gi, '')
+    .replace(/<!--[\s\S]*?-->/g, '')
+    // Preserve table structure as readable text
+    .replace(/<\/td>\s*<td/gi, ' | <td')
+    .replace(/<\/tr>/gi, '\n')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<\/div>/gi, '\n')
+    .replace(/<\/h[1-6]>/gi, '\n')
+    // Strip remaining tags
+    .replace(/<[^>]+>/g, ' ')
+    // Decode entities
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&#\d+;/g, '')
+    // Clean whitespace
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n\s*\n\s*\n/g, '\n\n')
+    .trim()
+    .slice(0, 6000);
 }
 
-function extractGeneric(from: string, subject: string, body: string): ParsedBooking {
+async function extractWithGemini(
+  html: string,
+  plainText: string,
+  headers: Record<string, string>
+): Promise<ParsedBooking | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const ai = new GoogleGenAI({ apiKey });
+  const body = cleanEmailForExtraction(html, plainText);
+  const subject = headers['Subject'] || '';
+  const from = headers['From'] || '';
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.0-flash',
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            {
+              text: `${EXTRACTION_PROMPT}
+
+EMAIL SUBJECT: ${subject}
+EMAIL FROM: ${from}
+EMAIL BODY:
+${body}`,
+            },
+          ],
+        },
+      ],
+      config: {
+        temperature: 0,
+        maxOutputTokens: 500,
+        responseMimeType: 'application/json',
+        responseSchema: EXTRACTION_SCHEMA,
+      },
+    });
+
+    const text = response.text?.trim();
+    if (!text) return null;
+
+    const data = JSON.parse(text);
+
+    // Map to BookingType
+    const validTypes: Record<string, BookingType> = {
+      FLIGHT: 'FLIGHT',
+      HOTEL: 'HOTEL',
+      CAR_RENTAL: 'CAR_RENTAL',
+      TRAIN: 'TRAIN',
+      BUS: 'BUS',
+      OTHER: 'OTHER',
+    };
+
+    const type = validTypes[data.type] || undefined;
+
+    // Strip empty strings (Gemini returns "" for missing fields with responseSchema)
+    const clean = (val: string | undefined) => val?.trim() || undefined;
+
+    return {
+      type,
+      provider: clean(data.provider),
+      confirmationNum: clean(data.confirmationNum),
+      startDateTime: clean(data.startDateTime),
+      endDateTime: clean(data.endDateTime),
+      location: clean(data.location),
+      endLocation: clean(data.endLocation),
+      seat: clean(data.seat),
+      flightNumber: clean(data.flightNumber),
+      address: clean(data.address),
+      passengerName: clean(data.passengerName),
+      terminal: clean(data.terminal),
+      gate: clean(data.gate),
+      confidence: 'high',
+    };
+  } catch {
+    return null;
+  }
+}
+
+// ── Layer 3: Regex fallback (last resort) ──
+
+const KNOWN_AIRPORTS = new Set([
+  'ATL','LAX','ORD','DFW','DEN','JFK','SFO','SEA','LAS','MCO','EWR','MIA','CLT','PHX','IAH',
+  'BOS','MSP','FLL','DTW','PHL','LGA','BWI','SLC','SAN','IAD','DCA','MDW','TPA','PDX','HNL',
+  'STL','BNA','AUS','RDU','MCI','SJC','SMF','CLE','OAK','PIT','CVG','IND','CMH','MKE','SAT',
+  'HSV','GSP','TYS','CHA','BHM','MEM','LIT','MSY','JAX','RSW','PBI','SRQ','DAB','SDF','LEX',
+  'LHR','CDG','FRA','AMS','MAD','BCN','FCO','MUC','ZRH','IST','DXB','SIN','HKG','NRT','HND',
+  'ICN','BKK','SYD','MEL','YYZ','YVR','MEX','GRU','EZE','BOG','LIM','SCL','CUN',
+]);
+
+function extractConfirmationNum(text: string): string | null {
+  const patterns = [
+    /(?:confirmation|booking|reservation|reference|pnr|record\s*locator)[:\s#]*([A-Z0-9]{4,10})/i,
+    /(?:conf(?:irmation)?\.?\s*(?:no|number|#|code))[:\s]*([A-Z0-9]{4,10})/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match?.[1]) return match[1].toUpperCase();
+  }
+
+  return null;
+}
+
+function extractDates(text: string): { start: string | null; end: string | null } {
+  const datePatterns = [
+    /(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/g,
+    /(\w{3,9}\s+\d{1,2},?\s+\d{4})/g,
+    /(\d{1,2}\/\d{1,2}\/\d{4})/g,
+  ];
+
+  const dates: string[] = [];
+  for (const pattern of datePatterns) {
+    let match;
+    while ((match = pattern.exec(text)) !== null) {
+      dates.push(match[0]);
+      if (dates.length >= 2) break;
+    }
+    if (dates.length >= 2) break;
+  }
+
+  return { start: dates[0] || null, end: dates[1] || null };
+}
+
+function extractAirportCodes(text: string): string[] {
+  const matches = text.match(/\b([A-Z]{3})\b/g) || [];
+  const airports = matches.filter((code) => KNOWN_AIRPORTS.has(code));
+  return [...new Set(airports)].slice(0, 2);
+}
+
+function extractRegexFallback(from: string, subject: string, body: string): ParsedBooking {
   const combined = subject + ' ' + body;
   const confirmationNum = extractConfirmationNum(combined);
   const dates = extractDates(body);
   const airports = extractAirportCodes(combined);
 
-  // Guess type from subject keywords
   const subjectLower = subject.toLowerCase();
   let type: BookingType | undefined;
   if (/\b(flight|airline|boarding|depart|arrive)\b/i.test(subjectLower)) type = 'FLIGHT';
@@ -200,7 +383,6 @@ function extractGeneric(from: string, subject: string, body: string): ParsedBook
   else if (/\b(train|rail|amtrak)\b/i.test(subjectLower)) type = 'TRAIN';
   else if (/\b(bus|coach|greyhound)\b/i.test(subjectLower)) type = 'BUS';
 
-  // Try to extract provider from From header
   const fromMatch = from.match(/(?:"?([^"<]+)"?\s*)?</);
   const provider = fromMatch?.[1]?.trim();
 
@@ -216,49 +398,23 @@ function extractGeneric(from: string, subject: string, body: string): ParsedBook
   };
 }
 
-function extractConfirmationNum(text: string): string | null {
-  // Match patterns like "Confirmation: ABC123", "Booking #: XYZ789", "PNR: ABCDEF"
-  const patterns = [
-    /(?:confirmation|booking|reservation|reference|pnr|record\s*locator)[:\s#]*([A-Z0-9]{4,10})/i,
-    /(?:conf(?:irmation)?\.?\s*(?:no|number|#|code))[:\s]*([A-Z0-9]{4,10})/i,
-  ];
+// ── Main entry point ──
 
-  for (const pattern of patterns) {
-    const match = text.match(pattern);
-    if (match?.[1]) return match[1].toUpperCase();
-  }
+export async function parseBookingEmail(
+  html: string,
+  plainText: string,
+  headers: Record<string, string>
+): Promise<ParsedBooking> {
+  // Layer 1: Schema.org JSON-LD (free, instant, perfect when present)
+  const schemaResult = extractSchemaOrg(html);
+  if (schemaResult && schemaResult.provider) return schemaResult;
 
-  return null;
-}
+  // Layer 2: Gemini AI extraction (handles everything else)
+  const geminiResult = await extractWithGemini(html, plainText, headers);
+  if (geminiResult && geminiResult.provider) return geminiResult;
 
-function extractDates(text: string): { start: string | null; end: string | null } {
-  // Match dates like "March 15, 2024", "Mar 15, 2024", "03/15/2024", "2024-03-15"
-  const datePatterns = [
-    /(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/g,  // ISO format with time
-    /(\w{3,9}\s+\d{1,2},?\s+\d{4})/g,       // "March 15, 2024" or "Mar 15 2024"
-    /(\d{1,2}\/\d{1,2}\/\d{4})/g,           // "03/15/2024"
-  ];
-
-  const dates: string[] = [];
-  for (const pattern of datePatterns) {
-    let match;
-    while ((match = pattern.exec(text)) !== null) {
-      dates.push(match[0]);
-      if (dates.length >= 2) break;
-    }
-    if (dates.length >= 2) break;
-  }
-
-  return {
-    start: dates[0] || null,
-    end: dates[1] || null,
-  };
-}
-
-function extractAirportCodes(text: string): string[] {
-  // Find 3-letter uppercase sequences that are known airport codes
-  const matches = text.match(/\b([A-Z]{3})\b/g) || [];
-  const airports = matches.filter((code) => KNOWN_AIRPORTS.has(code));
-  // Deduplicate and take first 2
-  return [...new Set(airports)].slice(0, 2);
+  // Layer 3: Regex fallback (last resort)
+  const from = headers['From'] || '';
+  const subject = headers['Subject'] || '';
+  return extractRegexFallback(from, subject, plainText || html);
 }

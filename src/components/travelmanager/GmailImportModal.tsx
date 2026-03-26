@@ -704,10 +704,46 @@ export function GmailImportModal({ open, onClose, onImport }: GmailImportModalPr
                   )}
                   {parsedPreview.seat && (
                     <div className="text-sm">
-                      <span className="text-slate-400">Seat: </span>
+                      <span className="text-slate-400">
+                        {parsedPreview.type === 'HOTEL' ? 'Room: ' : parsedPreview.type === 'CAR_RENTAL' ? 'Vehicle: ' : 'Seat: '}
+                      </span>
                       <span className="font-medium text-slate-700">
                         {parsedPreview.seat}
                       </span>
+                    </div>
+                  )}
+                  {parsedPreview.flightNumber && (
+                    <div className="text-sm">
+                      <span className="text-slate-400">Flight: </span>
+                      <span className="font-mono font-medium text-slate-700">
+                        {parsedPreview.flightNumber}
+                      </span>
+                    </div>
+                  )}
+                  {parsedPreview.address && (
+                    <div className="text-sm sm:col-span-2">
+                      <span className="text-slate-400">Address: </span>
+                      <span className="font-medium text-slate-700">
+                        {parsedPreview.address}
+                      </span>
+                    </div>
+                  )}
+                  {parsedPreview.passengerName && (
+                    <div className="text-sm">
+                      <span className="text-slate-400">Guest: </span>
+                      <span className="font-medium text-slate-700">
+                        {parsedPreview.passengerName}
+                      </span>
+                    </div>
+                  )}
+                  {(parsedPreview.terminal || parsedPreview.gate) && (
+                    <div className="text-sm">
+                      {parsedPreview.terminal && (
+                        <><span className="text-slate-400">Terminal: </span><span className="font-medium text-slate-700 mr-3">{parsedPreview.terminal}</span></>
+                      )}
+                      {parsedPreview.gate && (
+                        <><span className="text-slate-400">Gate: </span><span className="font-medium text-slate-700">{parsedPreview.gate}</span></>
+                      )}
                     </div>
                   )}
                 </div>
