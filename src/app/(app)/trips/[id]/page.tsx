@@ -38,6 +38,7 @@ import { TripBookings } from '@/components/travelmanager/TripBookings';
 import { TripChecklist } from '@/components/travelmanager/TripChecklist';
 import { TripJournal } from '@/components/travelmanager/TripJournal';
 import { useTMToast } from '@/components/travelmanager/TMToast';
+import { useDeleteEntity } from '@/lib/travelmanager/useDeleteEntity';
 import { formatDateLong as formatDate } from '@/lib/date-utils';
 
 const statusOrder = ['DRAFT', 'PLANNED', 'IN_PROGRESS', 'COMPLETED'];
@@ -81,13 +82,12 @@ export default function TripDetailPage() {
   const params = useParams();
   const id = params.id as string;
   const { showToast } = useTMToast();
+  const { deleteOpen, setDeleteOpen, deleting, handleDelete } = useDeleteEntity(`/api/trips/${id}`, '/trips', 'Trip');
 
   const [trip, setTrip] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deleting, setDeleting] = useState(false);
   const [activeTab, setActiveTab] = useState('itinerary');
 
   const [itinerary, setItinerary] = useState<any[]>([]);
@@ -198,19 +198,6 @@ export default function TripDetailPage() {
       showToast('Failed to update trip', 'error');
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    setDeleting(true);
-    try {
-      const res = await fetch(`/api/trips/${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error();
-      showToast('Trip deleted');
-      router.push('/trips');
-    } catch {
-      showToast('Failed to delete trip', 'error');
-      setDeleting(false);
     }
   };
 

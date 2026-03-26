@@ -24,6 +24,7 @@ import { TMStatusBadge } from '@/components/travelmanager/TMStatusBadge';
 import { TMEmptyState } from '@/components/travelmanager/TMEmptyState';
 import { TMBreadcrumb } from '@/components/travelmanager/TMBreadcrumb';
 import { useTMToast } from '@/components/travelmanager/TMToast';
+import { useDeleteEntity } from '@/lib/travelmanager/useDeleteEntity';
 
 const categoryColors: Record<string, string> = {
   SUPPLIER: 'bg-blue-100 text-blue-700',
@@ -37,13 +38,12 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
   const { id } = use(params);
   const router = useRouter();
   const { showToast } = useTMToast();
+  const { deleteOpen: showDelete, setDeleteOpen: setShowDelete, deleting: isDeleting, handleDelete } = useDeleteEntity(`/api/vendors/${id}`, '/vendors', 'Vendor');
 
   const [vendor, setVendor] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [showDelete, setShowDelete] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     fetch(`/api/vendors/${id}`)
@@ -75,22 +75,6 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
       showToast('Failed to update vendor', 'error');
     } finally {
       setIsSaving(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    setIsDeleting(true);
-    try {
-      const res = await fetch(`/api/vendors/${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Failed to delete');
-
-      showToast('Vendor deleted');
-      router.push('/vendors');
-    } catch {
-      showToast('Failed to delete vendor', 'error');
-    } finally {
-      setIsDeleting(false);
-      setShowDelete(false);
     }
   };
 

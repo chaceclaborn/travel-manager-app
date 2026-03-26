@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { TMDeleteDialog } from '@/components/travelmanager/TMDeleteDialog';
 import { TMBreadcrumb } from '@/components/travelmanager/TMBreadcrumb';
 import { useTMToast } from '@/components/travelmanager/TMToast';
+import { useDeleteEntity } from '@/lib/travelmanager/useDeleteEntity';
 import { DatePicker } from '@/components/travelmanager/DatePicker';
 import { formatDate, formatDateTime } from '@/lib/date-utils';
 import { type BookingType, typeConfig, typeLabels, getBookingFormHelpers } from '@/lib/travelmanager/booking-config';
@@ -36,13 +37,12 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
   const { id } = use(params);
   const router = useRouter();
   const { showToast } = useTMToast();
+  const { deleteOpen, setDeleteOpen, deleting, handleDelete } = useDeleteEntity(`/api/bookings/${id}`, '/bookings', 'Booking');
 
   const [booking, setBooking] = useState<BookingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deleting, setDeleting] = useState(false);
 
   const [form, setForm] = useState({
     type: 'FLIGHT' as BookingType,
@@ -112,20 +112,6 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
       showToast('Failed to update booking', 'error');
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    setDeleting(true);
-    try {
-      const res = await fetch(`/api/bookings/${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error();
-      showToast('Booking deleted');
-      router.push('/bookings');
-    } catch {
-      showToast('Failed to delete booking', 'error');
-    } finally {
-      setDeleting(false);
     }
   };
 

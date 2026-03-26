@@ -12,6 +12,7 @@ import { TMDeleteDialog } from '@/components/travelmanager/TMDeleteDialog';
 import { TMStatusBadge } from '@/components/travelmanager/TMStatusBadge';
 import { TMBreadcrumb } from '@/components/travelmanager/TMBreadcrumb';
 import { useTMToast } from '@/components/travelmanager/TMToast';
+import { useDeleteEntity } from '@/lib/travelmanager/useDeleteEntity';
 
 interface Trip {
   id: string;
@@ -36,13 +37,12 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
   const { id } = use(params);
   const router = useRouter();
   const { showToast } = useTMToast();
+  const { deleteOpen, setDeleteOpen, deleting, handleDelete } = useDeleteEntity(`/api/clients/${id}`, '/clients', 'Client');
 
   const [client, setClient] = useState<ClientData | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetch(`/api/clients/${id}`)
@@ -78,20 +78,6 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
       showToast('Failed to update client', 'error');
     } finally {
       setSaving(false);
-    }
-  }
-
-  async function handleDelete() {
-    setDeleting(true);
-    try {
-      const res = await fetch(`/api/clients/${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Failed to delete');
-      showToast('Client deleted');
-      router.push('/clients');
-    } catch {
-      showToast('Failed to delete client', 'error');
-    } finally {
-      setDeleting(false);
     }
   }
 
