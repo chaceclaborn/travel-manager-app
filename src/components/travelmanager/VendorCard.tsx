@@ -99,7 +99,7 @@ export function VendorCard({ vendor, onSaved, onDeleted }: VendorCardProps) {
         <form onSubmit={handleSave} className="space-y-3">
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium text-slate-700">Edit Vendor</p>
-            <button type="button" onClick={() => setEditing(false)} className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"><X className="size-4" /></button>
+            <button type="button" onClick={() => setEditing(false)} className="rounded-md p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600" aria-label="Cancel editing"><X className="size-4" /></button>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div><Label className="text-xs">Name *</Label><Input value={form.name} onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))} className="h-8 text-xs" /></div>
@@ -140,8 +140,8 @@ export function VendorCard({ vendor, onSaved, onDeleted }: VendorCardProps) {
               <h3 className="font-semibold text-lg text-slate-800 line-clamp-1 hover:text-amber-600 transition-colors" title={vendor.name}>{vendor.name}</h3>
             </Link>
             <div className="flex items-center gap-1 shrink-0">
-              <button onClick={startEdit} className="rounded-md p-1.5 text-slate-400 transition-all duration-200 hover:bg-amber-50 hover:text-amber-500" title="Edit"><Pencil className="size-3.5" /></button>
-              <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteOpen(true); }} className="rounded-md p-1.5 text-slate-400 transition-all duration-200 hover:bg-red-50 hover:text-red-500" title="Delete"><Trash2 className="size-3.5" /></button>
+              <button onClick={startEdit} className="rounded-md p-2 text-slate-400 transition-all duration-200 hover:bg-amber-50 hover:text-amber-500" title="Edit" aria-label="Edit vendor"><Pencil className="size-4" /></button>
+              <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteOpen(true); }} className="rounded-md p-2 text-slate-400 transition-all duration-200 hover:bg-red-50 hover:text-red-500" title="Delete" aria-label="Delete vendor"><Trash2 className="size-4" /></button>
               <Badge className={`${colorClass} border-0 ml-1`}>{categoryLabel}</Badge>
             </div>
           </div>

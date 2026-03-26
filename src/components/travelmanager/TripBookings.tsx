@@ -68,15 +68,17 @@ function BookingCard({ booking, onDelete, onEdit, index }: { booking: Booking; o
         <div className="flex items-center gap-1">
           <button
             onClick={() => onEdit(booking)}
-            className="cursor-pointer rounded-md p-1.5 text-slate-300 transition-all duration-200 hover:bg-amber-50 hover:text-amber-500"
+            className="cursor-pointer rounded-md p-2 text-slate-300 transition-all duration-200 hover:bg-amber-50 hover:text-amber-500"
             title="Edit booking"
+            aria-label="Edit booking"
           >
             <Pencil className="size-4" />
           </button>
           <button
             onClick={() => onDelete(booking.id)}
-            className="cursor-pointer rounded-md p-1.5 text-slate-300 transition-all duration-200 hover:bg-red-50 hover:text-red-500"
+            className="cursor-pointer rounded-md p-2 text-slate-300 transition-all duration-200 hover:bg-red-50 hover:text-red-500"
             title="Delete booking"
+            aria-label="Delete booking"
           >
             <Trash2 className="size-4" />
           </button>

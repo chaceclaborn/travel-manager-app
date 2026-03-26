@@ -133,7 +133,7 @@ export function TripCard({ trip, onSaved, onDeleted }: TripCardProps) {
           <form onSubmit={handleSave} className="space-y-3">
             <div className="flex items-center justify-between">
               <p className="text-sm font-medium text-slate-700">Edit Trip</p>
-              <button type="button" onClick={() => setEditing(false)} className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"><X className="size-4" /></button>
+              <button type="button" onClick={() => setEditing(false)} className="rounded-md p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600" aria-label="Cancel editing"><X className="size-4" /></button>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="sm:col-span-2"><Label className="text-xs">Title *</Label><Input value={form.title} onChange={(e) => setForm(f => ({ ...f, title: e.target.value }))} className="h-8 text-xs" /></div>
@@ -177,26 +177,24 @@ export function TripCard({ trip, onSaved, onDeleted }: TripCardProps) {
             <div className="flex items-start justify-between gap-3">
               <h3 className="font-semibold text-slate-800 leading-snug line-clamp-2 min-w-0 flex-1">{trip.title}</h3>
               <div className="flex items-center gap-1 shrink-0">
-                <span
-                  role="button"
-                  tabIndex={0}
+                <button
+                  type="button"
                   onClick={startEdit}
-                  onKeyDown={(e) => { if (e.key === 'Enter') startEdit(e as unknown as React.MouseEvent); }}
-                  className="rounded-md p-1 text-slate-400 transition-all duration-200 hover:bg-amber-50 hover:text-amber-500"
+                  className="rounded-md p-2 text-slate-400 transition-all duration-200 hover:bg-amber-50 hover:text-amber-500"
                   title="Edit trip"
+                  aria-label="Edit trip"
                 >
-                  <Pencil className="size-3.5" />
-                </span>
-                <span
-                  role="button"
-                  tabIndex={0}
+                  <Pencil className="size-4" />
+                </button>
+                <button
+                  type="button"
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteOpen(true); }}
-                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); setDeleteOpen(true); } }}
-                  className="rounded-md p-1 text-slate-400 transition-all duration-200 hover:bg-red-50 hover:text-red-500"
+                  className="rounded-md p-2 text-slate-400 transition-all duration-200 hover:bg-red-50 hover:text-red-500"
                   title="Delete trip"
+                  aria-label="Delete trip"
                 >
-                  <Trash2 className="size-3.5" />
-                </span>
+                  <Trash2 className="size-4" />
+                </button>
                 <TMStatusBadge status={trip.status} />
               </div>
             </div>
