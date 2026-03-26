@@ -1,7 +1,7 @@
 import * as dotenv from "dotenv";
 dotenv.config();
 dotenv.config({ path: ".env.local", override: true });
-import { defineConfig, env } from "prisma/config";
+import { defineConfig } from "prisma/config";
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
@@ -9,6 +9,9 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    url: env("DIRECT_URL"),
+    // DIRECT_URL is only needed for migrations (run locally).
+    // prisma generate doesn't connect to the DB, so a placeholder is fine
+    // for CI/Vercel builds where .env.local doesn't exist.
+    url: process.env.DIRECT_URL || "postgresql://placeholder:5432/placeholder",
   },
 });
