@@ -15,7 +15,35 @@ async function verifyTripOwnership(tripId: string, userId: string) {
   return trip;
 }
 
-export async function getTrips(userId: string) {
+export async function getTrips(userId: string, mode: 'full' | 'minimal' = 'full') {
+  if (mode === 'minimal') {
+    return prisma.trip.findMany({
+      where: { userId },
+      select: {
+        id: true,
+        title: true,
+        destination: true,
+        startDate: true,
+        endDate: true,
+        status: true,
+        budget: true,
+        latitude: true,
+        longitude: true,
+        transportMode: true,
+        departureAirportCode: true,
+        departureAirportName: true,
+        departureAirportLat: true,
+        departureAirportLng: true,
+        arrivalAirportCode: true,
+        arrivalAirportName: true,
+        arrivalAirportLat: true,
+        arrivalAirportLng: true,
+        _count: { select: { vendors: true, clients: true } },
+      },
+      orderBy: { startDate: 'asc' },
+    });
+  }
+
   return prisma.trip.findMany({
     where: { userId },
     include: tripInclude,
