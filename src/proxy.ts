@@ -11,7 +11,12 @@ export async function proxy(request: NextRequest) {
   // have the auth cookie anyway, so Supabase auth will reject unauthorized requests.
   const method = request.method;
   const pathname = request.nextUrl.pathname;
-  if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method) && pathname.startsWith('/api/')) {
+  const isMutationApi = ['POST', 'PUT', 'DELETE', 'PATCH'].includes(method) && pathname.startsWith('/api/');
+
+  if (isMutationApi) {
+    // CSRF defense 1: Origin header validation.
+    // Browsers always send Origin on cross-origin requests; if it mismatches Host, reject.
+    // Absent Origin means server-to-server/curl which won't have the auth cookie anyway.
     const origin = request.headers.get('origin');
     if (origin) {
       const host = request.headers.get('host');
@@ -21,6 +26,27 @@ export async function proxy(request: NextRequest) {
       const originHost = new URL(origin).host;
       if (originHost !== host) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+    }
+
+    // CSRF defense 2: Content-Type enforcement.
+    // HTML forms can only send application/x-www-form-urlencoded, multipart/form-data,
+    // or text/plain. Requiring application/json blocks form-based CSRF attacks.
+    const contentType = request.headers.get('content-type') || '';
+    const isFileUpload = pathname.endsWith('/receipt') || pathname.endsWith('/attachments');
+    if (isFileUpload) {
+      if (!contentType.startsWith('multipart/form-data') && !contentType.startsWith('application/json')) {
+        return NextResponse.json(
+          { error: 'Content-Type must be multipart/form-data or application/json' },
+          { status: 415 }
+        );
+      }
+    } else {
+      if (!contentType.startsWith('application/json')) {
+        return NextResponse.json(
+          { error: 'Content-Type must be application/json' },
+          { status: 415 }
+        );
       }
     }
   }

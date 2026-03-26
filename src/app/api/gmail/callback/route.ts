@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/travelmanager/auth';
 import { exchangeCodeForTokens } from '@/lib/travelmanager/gmail';
+import { rateLimit } from '@/lib/rate-limit';
 import prisma from '@/lib/prisma';
 
 export async function GET(request: NextRequest) {
+  const rateLimitResult = rateLimit(request, 'write');
+  if (rateLimitResult) return rateLimitResult;
+
   try {
     const { user, response } = await requireAuth();
     if (!user) return response;
