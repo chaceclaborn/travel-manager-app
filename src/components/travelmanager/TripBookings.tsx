@@ -484,8 +484,9 @@ export function TripBookings({ tripId, tripStartDate, tripEndDate }: TripBooking
                       const time = form.endDateTime?.split('T')[1] || '';
                       updateForm('endDateTime', time ? `${d}T${time}` : d);
                     }}
-                    minDate={tripStartDate?.split('T')[0]}
+                    minDate={form.startDateTime?.split('T')[0] || tripStartDate?.split('T')[0]}
                     maxDate={tripEndDate?.split('T')[0]}
+                    defaultMonth={form.startDateTime?.split('T')[0]}
                   />
                 </div>
                 {!dateOnly && (

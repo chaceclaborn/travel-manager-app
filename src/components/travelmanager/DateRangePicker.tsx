@@ -31,6 +31,7 @@ export function DateRangePicker({
 }: DateRangePickerProps) {
   const [open, setOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [viewMonth, setViewMonth] = useState<Date>(() => parseLocalDate(startDate) || new Date());
   const [range, setRange] = useState<DateRange | undefined>(() => {
     const from = parseLocalDate(startDate);
     const to = parseLocalDate(endDate);
@@ -55,6 +56,14 @@ export function DateRangePicker({
       setRange(undefined);
     }
   }, [startDate, endDate]);
+
+  // Snap calendar to the right month when opened
+  useEffect(() => {
+    if (open) {
+      const target = parseLocalDate(startDate) || parseLocalDate(endDate);
+      if (target) setViewMonth(target);
+    }
+  }, [open, startDate, endDate]);
 
   const handleSelect = (selected: DateRange | undefined) => {
     setRange(selected);
@@ -110,7 +119,8 @@ export function DateRangePicker({
           selected={range}
           onSelect={handleSelect}
           numberOfMonths={isMobile ? 1 : 2}
-          defaultMonth={range?.from || new Date()}
+          month={viewMonth}
+          onMonthChange={setViewMonth}
           disabled={disabled.length > 0 ? disabled : undefined}
         />
       </PopoverContent>

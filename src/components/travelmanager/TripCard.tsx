@@ -140,7 +140,7 @@ export function TripCard({ trip, onSaved, onDeleted }: TripCardProps) {
               <div className="sm:col-span-2"><Label className="text-xs">Title *</Label><Input value={form.title} onChange={(e) => setForm(f => ({ ...f, title: e.target.value }))} className="h-8 text-xs" /></div>
               <div className="sm:col-span-2"><Label className="text-xs">Destination</Label><Input value={form.destination} onChange={(e) => setForm(f => ({ ...f, destination: e.target.value }))} className="h-8 text-xs" placeholder="City, Country" /></div>
               <div><Label className="text-xs">Start Date</Label><DatePicker date={form.startDate} onDateChange={(d) => setForm(f => ({ ...f, startDate: d }))} /></div>
-              <div><Label className="text-xs">End Date</Label><DatePicker date={form.endDate} onDateChange={(d) => setForm(f => ({ ...f, endDate: d }))} defaultMonth={form.startDate} /></div>
+              <div><Label className="text-xs">End Date</Label><DatePicker date={form.endDate} onDateChange={(d) => setForm(f => ({ ...f, endDate: d }))} minDate={form.startDate} defaultMonth={form.startDate} /></div>
               <div>
                 <Label className="text-xs">Status</Label>
                 <Select value={form.status} onValueChange={(v) => setForm(f => ({ ...f, status: v }))}>

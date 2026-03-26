@@ -241,6 +241,8 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
                         const time = form.endDateTime?.split('T')[1] || '';
                         updateForm('endDateTime', time ? `${d}T${time}` : d);
                       }}
+                      minDate={form.startDateTime?.split('T')[0]}
+                      defaultMonth={form.startDateTime?.split('T')[0]}
                     />
                   </div>
                   {!dateOnly && (

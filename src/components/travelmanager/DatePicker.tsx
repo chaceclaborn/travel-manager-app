@@ -13,9 +13,13 @@ interface DatePickerProps {
   error?: string;
   required?: boolean;
   placeholder?: string;
+  /** Disable dates before this date (YYYY-MM-DD or ISO string). */
   minDate?: string;
+  /** Disable dates after this date (YYYY-MM-DD or ISO string). */
   maxDate?: string;
-  /** Month to show when the picker opens (overrides selected date). Useful for end-date pickers that should snap to the start date's month. */
+  /** Navigate calendar to this month when opened (YYYY-MM-DD or ISO string).
+   *  Updates live — if the linked date changes while closed, the next open
+   *  will show the new month. Selected date takes priority if present. */
   defaultMonth?: string;
 }
 
@@ -31,10 +35,22 @@ export function DatePicker({
 }: DatePickerProps) {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<Date | undefined>(() => parseLocalDate(date));
+  const [viewMonth, setViewMonth] = useState<Date>(() => {
+    return parseLocalDate(date) || parseLocalDate(defaultMonthStr ?? '') || new Date();
+  });
 
   useEffect(() => {
     setSelected(parseLocalDate(date));
   }, [date]);
+
+  // When the popover opens, snap to the right month:
+  // selected date's month if we have one, otherwise the defaultMonth prop
+  useEffect(() => {
+    if (open) {
+      const target = parseLocalDate(date) || parseLocalDate(defaultMonthStr ?? '');
+      if (target) setViewMonth(target);
+    }
+  }, [open, date, defaultMonthStr]);
 
   const handleSelect = (day: Date | undefined) => {
     setSelected(day);
@@ -75,7 +91,8 @@ export function DatePicker({
           mode="single"
           selected={selected}
           onSelect={handleSelect}
-          defaultMonth={selected || (defaultMonthStr ? parseLocalDate(defaultMonthStr) : undefined) || new Date()}
+          month={viewMonth}
+          onMonthChange={setViewMonth}
           disabled={disabled.length > 0 ? disabled : undefined}
         />
       </PopoverContent>

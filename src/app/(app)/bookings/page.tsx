@@ -297,7 +297,7 @@ function BookingCard({
             <div className="min-w-0">
               <Label className="text-xs">{typeLabels.endDateTime[form.type as BookingType]}</Label>
               <div className="flex gap-1 min-w-0">
-                <div className="min-w-0 flex-1"><DatePicker date={form.endDateTime?.split('T')[0] || ''} onDateChange={(d) => { const time = form.endDateTime?.split('T')[1] || ''; updateForm('endDateTime', time ? `${d}T${time}` : d); }} defaultMonth={form.startDateTime?.split('T')[0]} /></div>
+                <div className="min-w-0 flex-1"><DatePicker date={form.endDateTime?.split('T')[0] || ''} onDateChange={(d) => { const time = form.endDateTime?.split('T')[1] || ''; updateForm('endDateTime', time ? `${d}T${time}` : d); }} minDate={form.startDateTime?.split('T')[0]} defaultMonth={form.startDateTime?.split('T')[0]} /></div>
                 {!dateOnly && <Input type="time" value={form.endDateTime?.split('T')[1] || ''} onChange={(e) => { const date = form.endDateTime?.split('T')[0] || ''; updateForm('endDateTime', date ? `${date}T${e.target.value}` : ''); }} className="w-20 shrink-0 h-8 text-xs" />}
               </div>
             </div>
@@ -774,6 +774,8 @@ export default function BookingsPage() {
                       const time = form.endDateTime?.split('T')[1] || '';
                       updateForm('endDateTime', time ? `${d}T${time}` : d);
                     }}
+                    minDate={form.startDateTime?.split('T')[0]}
+                    defaultMonth={form.startDateTime?.split('T')[0]}
                   />
                 </div>
                 {!dateOnly && (
