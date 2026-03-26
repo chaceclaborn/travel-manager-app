@@ -34,6 +34,20 @@ describe('sanitizeString', () => {
   it('handles self-closing tags', () => {
     expect(sanitizeString('Hello<br/>World')).toBe('HelloWorld');
   });
+
+  it('truncates to default max length (255)', () => {
+    const long = 'a'.repeat(300);
+    expect(sanitizeString(long)).toHaveLength(255);
+  });
+
+  it('truncates to custom max length', () => {
+    const long = 'a'.repeat(100);
+    expect(sanitizeString(long, 50)).toHaveLength(50);
+  });
+
+  it('does not truncate strings under the limit', () => {
+    expect(sanitizeString('short')).toBe('short');
+  });
 });
 
 describe('sanitizeObject', () => {
@@ -56,6 +70,36 @@ describe('sanitizeObject', () => {
   it('handles missing fields gracefully', () => {
     const result = sanitizeObject({ name: 'Alice' }, ['name', 'email']);
     expect(result).toEqual({ name: 'Alice' });
+  });
+
+  it('truncates short fields to 255 chars', () => {
+    const result = sanitizeObject({ name: 'a'.repeat(300) }, ['name']);
+    expect((result.name as string).length).toBe(255);
+  });
+
+  it('truncates long fields (notes) to 5000 chars', () => {
+    const result = sanitizeObject({ notes: 'a'.repeat(6000) }, ['notes']);
+    expect((result.notes as string).length).toBe(5000);
+  });
+
+  it('truncates content field to 5000 chars', () => {
+    const result = sanitizeObject({ content: 'a'.repeat(6000) }, ['content']);
+    expect((result.content as string).length).toBe(5000);
+  });
+
+  it('truncates description field to 5000 chars', () => {
+    const result = sanitizeObject({ description: 'b'.repeat(6000) }, ['description']);
+    expect((result.description as string).length).toBe(5000);
+  });
+
+  it('applies short limit to title, email, phone etc.', () => {
+    const result = sanitizeObject(
+      { title: 'x'.repeat(300), email: 'y'.repeat(300), phone: 'z'.repeat(300) },
+      ['title', 'email', 'phone']
+    );
+    expect((result.title as string).length).toBe(255);
+    expect((result.email as string).length).toBe(255);
+    expect((result.phone as string).length).toBe(255);
   });
 });
 
