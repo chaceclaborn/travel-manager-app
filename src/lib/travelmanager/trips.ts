@@ -217,10 +217,12 @@ export async function deleteItineraryItem(id: string, userId: string) {
 }
 
 export async function getDashboardStats(userId: string) {
-  const totalTrips = await prisma.trip.count({ where: { userId } });
-  const upcomingTrips = await prisma.trip.count({ where: { userId, startDate: { gte: new Date() }, status: { in: ['PLANNED', 'IN_PROGRESS'] } } });
-  const totalVendors = await prisma.vendor.count({ where: { userId } });
-  const totalClients = await prisma.client.count({ where: { userId } });
+  const [totalTrips, upcomingTrips, totalVendors, totalClients] = await Promise.all([
+    prisma.trip.count({ where: { userId } }),
+    prisma.trip.count({ where: { userId, startDate: { gte: new Date() }, status: { in: ['PLANNED', 'IN_PROGRESS'] } } }),
+    prisma.vendor.count({ where: { userId } }),
+    prisma.client.count({ where: { userId } }),
+  ]);
 
   return { totalTrips, upcomingTrips, totalVendors, totalClients };
 }
@@ -244,21 +246,23 @@ export async function getRecentActivity(userId: string, limit = 5) {
 }
 
 export async function searchAll(query: string, userId: string) {
-  const trips = await prisma.trip.findMany({
-    where: { userId, OR: [{ title: { contains: query, mode: 'insensitive' } }, { destination: { contains: query, mode: 'insensitive' } }] },
-    take: 5,
-    orderBy: { updatedAt: 'desc' },
-  });
-  const vendors = await prisma.vendor.findMany({
-    where: { userId, OR: [{ name: { contains: query, mode: 'insensitive' } }, { city: { contains: query, mode: 'insensitive' } }] },
-    take: 5,
-    orderBy: { updatedAt: 'desc' },
-  });
-  const clients = await prisma.client.findMany({
-    where: { userId, OR: [{ name: { contains: query, mode: 'insensitive' } }, { company: { contains: query, mode: 'insensitive' } }] },
-    take: 5,
-    orderBy: { updatedAt: 'desc' },
-  });
+  const [trips, vendors, clients] = await Promise.all([
+    prisma.trip.findMany({
+      where: { userId, OR: [{ title: { contains: query, mode: 'insensitive' } }, { destination: { contains: query, mode: 'insensitive' } }] },
+      take: 5,
+      orderBy: { updatedAt: 'desc' },
+    }),
+    prisma.vendor.findMany({
+      where: { userId, OR: [{ name: { contains: query, mode: 'insensitive' } }, { city: { contains: query, mode: 'insensitive' } }] },
+      take: 5,
+      orderBy: { updatedAt: 'desc' },
+    }),
+    prisma.client.findMany({
+      where: { userId, OR: [{ name: { contains: query, mode: 'insensitive' } }, { company: { contains: query, mode: 'insensitive' } }] },
+      take: 5,
+      orderBy: { updatedAt: 'desc' },
+    }),
+  ]);
   return { trips, vendors, clients };
 }
 
