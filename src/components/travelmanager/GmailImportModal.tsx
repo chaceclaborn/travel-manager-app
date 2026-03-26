@@ -38,13 +38,10 @@ interface AIClassification {
   reason: string;
 }
 
-// Tighter query: requires confirmation-like language, excludes promos/ads
-// Also leverage Gmail's built-in category system to exclude promotions
-const BOOKING_QUERY = [
-  'category:updates OR category:primary',
-  'subject:(confirmation OR "booking confirmed" OR "reservation confirmed" OR "itinerary" OR "boarding pass" OR "e-ticket" OR "check-in" OR "your trip" OR "your flight" OR "your reservation")',
-  '-subject:(sale OR deal OR offer OR save OR promo OR "low fares" OR unsubscribe OR newsletter OR "limited time" OR rewards OR upgrade OR "earn points" OR survey)',
-].join(' ');
+// Broad query — cast a wide net, let AI classification do the filtering.
+// Only exclude obvious non-travel categories at the Gmail level.
+const BOOKING_QUERY =
+  'from:(airline OR airlines OR air OR hotel OR hilton OR marriott OR hyatt OR ihg OR hertz OR enterprise OR avis OR booking OR expedia OR delta OR united OR american OR southwest OR jetblue OR airbnb OR amtrak) OR subject:(flight OR hotel OR booking OR reservation OR confirmation OR itinerary OR "boarding pass" OR "check-in" OR "car rental" OR "your trip") -category:promotions -category:social -category:forums';
 
 // ── Sender domain → category mapping (highest confidence signal) ──
 
@@ -242,22 +239,27 @@ function filterAndSort(
   emails: EmailResult[],
   aiClassifications: Record<string, AIClassification>
 ): ScoredEmail[] {
+  const hasAI = Object.keys(aiClassifications).length > 0;
+
   return emails
     .map((email) => {
       const ai = aiClassifications[email.id];
 
-      // If AI classified it as not_booking with high confidence, drop it
-      if (ai && ai.category === 'not_booking' && ai.confidence >= 0.7) {
-        return { ...email, category: 'other' as Category, score: -100 };
-      }
-
-      // If AI has a positive classification, use it (overrides local scoring)
-      if (ai && ai.category !== 'not_booking' && ai.confidence >= 0.5) {
+      if (ai) {
+        // AI is the authority — trust it completely
+        if (ai.category === 'not_booking') {
+          return { ...email, category: 'other' as Category, score: -100 };
+        }
         const category = AI_CATEGORY_MAP[ai.category] || 'other';
         return { ...email, category, score: Math.round(ai.confidence * 100) };
       }
 
-      // Fall back to local scoring when AI didn't classify or had low confidence
+      if (hasAI) {
+        // AI was available but didn't classify this email — treat as unknown, drop it
+        return { ...email, category: 'other' as Category, score: -1 };
+      }
+
+      // No AI available at all — fall back to local scoring
       return scoreAndCategorize(email);
     })
     .filter((e) => e.score > 0)
