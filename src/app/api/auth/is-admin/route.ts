@@ -7,5 +7,7 @@ export async function GET(request: NextRequest) {
   if (rateLimited) return rateLimited;
 
   const { user } = await requireAdmin();
-  return NextResponse.json({ isAdmin: !!user });
+  return NextResponse.json({ isAdmin: !!user }, {
+    headers: { 'Cache-Control': 'private, max-age=300, stale-while-revalidate=600' },
+  });
 }

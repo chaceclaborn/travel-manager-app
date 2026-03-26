@@ -32,7 +32,8 @@ export function ClickTracker() {
   const flush = () => {
     if (queue.current.length === 0) return;
     const events = queue.current.splice(0);
-    navigator.sendBeacon('/api/events', JSON.stringify({ events }));
+    const blob = new Blob([JSON.stringify({ events })], { type: 'application/json' });
+    navigator.sendBeacon('/api/events', blob);
   };
 
   useEffect(() => {

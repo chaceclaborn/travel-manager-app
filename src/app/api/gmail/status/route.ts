@@ -12,7 +12,9 @@ export async function GET(request: NextRequest) {
     if (!user) return response;
 
     const connected = await isGmailConnected(user.id);
-    return NextResponse.json({ connected });
+    return NextResponse.json({ connected }, {
+      headers: { 'Cache-Control': 'private, max-age=60, stale-while-revalidate=120' },
+    });
   } catch {
     return NextResponse.json({ connected: false });
   }

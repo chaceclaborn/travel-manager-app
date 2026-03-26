@@ -17,7 +17,9 @@ export async function GET(request: NextRequest) {
       getRecentActivity(user.id, 5),
     ]);
 
-    return NextResponse.json({ stats, upcoming, recent });
+    return NextResponse.json({ stats, upcoming, recent }, {
+      headers: { 'Cache-Control': 'private, max-age=30, stale-while-revalidate=60' },
+    });
   } catch (error) {
     console.error('Error fetching dashboard data:', error instanceof Error ? error.message : error);
     return NextResponse.json({ error: 'Failed to fetch dashboard data' }, { status: 500 });

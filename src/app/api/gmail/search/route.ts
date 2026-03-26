@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/travelmanager/auth';
 import { rateLimit } from '@/lib/rate-limit';
 import { getGmailClient, searchEmails, getEmailContent } from '@/lib/travelmanager/gmail';
 import { parseBookingEmail } from '@/lib/travelmanager/email-parser';
+import { classifyEmailBatch } from '@/lib/travelmanager/email-classifier';
 import { sanitizeString } from '@/lib/sanitize';
 
 export async function GET(request: NextRequest) {
@@ -45,7 +46,27 @@ export async function GET(request: NextRequest) {
     );
 
     const results = await searchEmails(gmailClient, query, maxResults);
-    return NextResponse.json(results);
+
+    // Run AI classification on results (non-blocking — if it fails, frontend scoring handles it)
+    const useAI = request.nextUrl.searchParams.get('classify') !== 'false';
+    let classifications: Record<string, { category: string; confidence: number; reason: string }> = {};
+
+    if (useAI && results.length > 0) {
+      try {
+        const classMap = await classifyEmailBatch(results);
+        for (const [id, cls] of classMap) {
+          classifications[id] = {
+            category: cls.category,
+            confidence: cls.confidence,
+            reason: cls.reason,
+          };
+        }
+      } catch {
+        // AI classification failed — frontend scoring will handle categorization
+      }
+    }
+
+    return NextResponse.json({ results, classifications });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Gmail search failed';
     if (message.includes('invalid_grant') || message.includes('Token has been expired')) {
