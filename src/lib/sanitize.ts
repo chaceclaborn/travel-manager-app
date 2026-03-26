@@ -1,21 +1,34 @@
 // Input sanitization and validation utilities
 // Built from scratch — no external dependencies
 
+/** Default max length for short text fields (names, titles, codes). */
+const MAX_SHORT = 255;
+/** Default max length for long text fields (notes, descriptions, content). */
+const MAX_LONG = 5000;
+
+/** Fields that allow longer text (notes, descriptions, content, addresses). */
+const LONG_TEXT_FIELDS = new Set([
+  'notes', 'content', 'description', 'address', 'website',
+]);
+
 /**
  * Strip HTML tags and trim whitespace to prevent XSS via stored payloads.
  * Handles nested tags, self-closing tags, and HTML comments.
  */
-export function sanitizeString(input: string): string {
+export function sanitizeString(input: string, maxLength = MAX_SHORT): string {
   return input
     .replace(/<!--[\s\S]*?-->/g, '')   // Remove HTML comments
     .replace(/<[^>]*>/g, '')            // Remove HTML tags
     .replace(/\s+/g, ' ')              // Collapse whitespace
-    .trim();
+    .trim()
+    .slice(0, maxLength);
 }
 
 /**
  * Whitelist allowed fields on an object and sanitize all string values.
  * Non-string values are passed through unchanged. Fields not in allowedFields are dropped.
+ * String values are truncated: 5000 chars for notes/content/description/address/website,
+ * 255 chars for everything else.
  */
 export function sanitizeObject(
   obj: Record<string, unknown>,
@@ -26,7 +39,8 @@ export function sanitizeObject(
     if (!(field in obj)) continue;
     const value = obj[field];
     if (typeof value === 'string') {
-      result[field] = sanitizeString(value);
+      const maxLen = LONG_TEXT_FIELDS.has(field) ? MAX_LONG : MAX_SHORT;
+      result[field] = sanitizeString(value, maxLen);
     } else {
       result[field] = value;
     }
