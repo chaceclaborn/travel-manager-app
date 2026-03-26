@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, MapPin, Search, Loader2 } from 'lucide-react';
+import { Menu, X, MapPin, Search } from 'lucide-react';
 import { TMSidebar } from '@/components/travelmanager/TMSidebar';
 import { TMToastProvider } from '@/components/travelmanager/TMToast';
 import { TMCommandPalette } from '@/components/travelmanager/TMCommandPalette';
@@ -101,7 +101,7 @@ export default function TravelManagerLayout({
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50" role="status" aria-label="Loading application">
-        <Loader2 className="size-8 animate-spin text-amber-500" aria-hidden="true" />
+        <div className="size-8 animate-spin rounded-full border-4 border-amber-500/30 border-t-amber-500" aria-hidden="true" />
         <span className="sr-only">Loading...</span>
       </div>
     );
