@@ -100,8 +100,9 @@ export default function TravelManagerLayout({
   // Loading state
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50">
-        <Loader2 className="size-8 animate-spin text-amber-500" />
+      <div className="flex min-h-screen items-center justify-center bg-slate-50" role="status" aria-label="Loading application">
+        <Loader2 className="size-8 animate-spin text-amber-500" aria-hidden="true" />
+        <span className="sr-only">Loading...</span>
       </div>
     );
   }
@@ -173,6 +174,14 @@ export default function TravelManagerLayout({
       )}
 
       <TMToastProvider>
+        {/* Skip navigation — visible only on keyboard focus */}
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[300] focus:rounded-md focus:bg-amber-500 focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-white focus:shadow-lg focus:outline-none"
+        >
+          Skip to main content
+        </a>
+
         <div className="flex min-h-screen max-w-[100vw] overflow-x-hidden">
           {/* Desktop Sidebar */}
           <aside className="hidden md:flex w-64 flex-col fixed inset-y-0 left-0 bg-slate-900 z-40" role="navigation" aria-label="Main navigation">
@@ -220,7 +229,9 @@ export default function TravelManagerLayout({
                 <button
                   onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                   className="text-white min-w-11 min-h-11 p-2.5 flex items-center justify-center"
-                  aria-label="Toggle menu"
+                  aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+                  aria-expanded={mobileMenuOpen}
+                  aria-controls="mobile-nav"
                 >
                   {mobileMenuOpen ? <X className="size-6" /> : <Menu className="size-6" />}
                 </button>
@@ -239,6 +250,10 @@ export default function TravelManagerLayout({
                   transition={{ duration: 0.2 }}
                   className="md:hidden fixed inset-0 bg-black/50 z-[60]"
                   onClick={() => setMobileMenuOpen(false)}
+                  onKeyDown={(e) => { if (e.key === 'Escape') setMobileMenuOpen(false); }}
+                  role="button"
+                  tabIndex={-1}
+                  aria-label="Close navigation overlay"
                 />
                 <motion.aside
                   initial={{ x: '-100%' }}
@@ -246,6 +261,7 @@ export default function TravelManagerLayout({
                   exit={{ x: '-100%' }}
                   transition={{ duration: 0.3, ease: 'easeInOut' }}
                   className="md:hidden fixed inset-y-0 left-0 w-64 bg-slate-900 z-[60] flex flex-col"
+                  id="mobile-nav"
                   role="navigation"
                   aria-label="Main navigation"
                 >
@@ -271,7 +287,7 @@ export default function TravelManagerLayout({
           </AnimatePresence>
 
           {/* Main Content */}
-          <main className="flex-1 min-w-0 md:ml-64 mt-16 md:mt-0 overflow-x-hidden">
+          <main id="main-content" className="flex-1 min-w-0 md:ml-64 mt-16 md:mt-0 overflow-x-hidden">
             <div className="p-4 md:p-8 max-w-full">{children}</div>
           </main>
         </div>
