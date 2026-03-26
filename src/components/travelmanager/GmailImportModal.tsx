@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { formatDate } from '@/lib/date-utils';
+
 import type { ParsedBooking } from '@/lib/travelmanager/email-parser';
 
 interface EmailResult {
@@ -400,7 +400,11 @@ export function GmailImportModal({ open, onClose, onImport }: GmailImportModalPr
     onClose();
   };
 
-  const formatEmailDate = (dateStr: string) => formatDate(dateStr) ?? dateStr;
+  const formatEmailDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
 
   const formatFrom = (from: string) => {
     const match = from.match(/(?:"?([^"<]+)"?\s*)?<.*>/);
