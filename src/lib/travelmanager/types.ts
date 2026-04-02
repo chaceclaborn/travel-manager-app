@@ -138,6 +138,7 @@ export interface CreateBookingInput {
 
 export interface UpdateBookingInput extends Partial<Omit<CreateBookingInput, 'tripId'>> {
   tripId?: string | null;
+  cancelled?: boolean;
 }
 
 export interface CreateChecklistItemInput {

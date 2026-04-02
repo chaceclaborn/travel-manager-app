@@ -301,6 +301,7 @@ model Booking {
   endLocation     String?
   seat            String?
   notes           String?
+  cancelled       Boolean     @default(false)
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
   @@index([tripId])
