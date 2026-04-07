@@ -4,7 +4,8 @@ import { requireAuth } from '@/lib/travelmanager/auth';
 import { rateLimit } from '@/lib/rate-limit';
 import { sanitizeObject, validateUUID, validateEnum, validateDateString, BOOKING_TYPE_VALUES } from '@/lib/sanitize';
 
-const BOOKING_ALLOWED_FIELDS = ['tripId', 'type', 'provider', 'confirmationNum', 'startDateTime', 'endDateTime', 'location', 'endLocation', 'seat', 'notes'];
+const BOOKING_ALLOWED_FIELDS = ['tripId', 'type', 'status', 'provider', 'confirmationNum', 'startDateTime', 'endDateTime', 'location', 'endLocation', 'seat', 'notes'];
+const BOOKING_STATUS_VALUES = ['ACTIVE', 'CANCELLED'] as const;
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -46,6 +47,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: 'Invalid booking type' }, { status: 400 });
     }
 
+    if (sanitized.status && !validateEnum(sanitized.status as string, BOOKING_STATUS_VALUES)) {
+      return NextResponse.json({ error: 'Invalid booking status' }, { status: 400 });
+    }
+
     if (sanitized.startDateTime && !validateDateString(sanitized.startDateTime as string)) {
       return NextResponse.json({ error: 'Invalid start date format' }, { status: 400 });
     }
@@ -77,6 +82,22 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
     const body = await request.json();
     const sanitized = sanitizeObject(body, BOOKING_ALLOWED_FIELDS);
+
+    if (sanitized.type && !validateEnum(sanitized.type as string, BOOKING_TYPE_VALUES)) {
+      return NextResponse.json({ error: 'Invalid booking type' }, { status: 400 });
+    }
+
+    if (sanitized.status && !validateEnum(sanitized.status as string, BOOKING_STATUS_VALUES)) {
+      return NextResponse.json({ error: 'Invalid booking status' }, { status: 400 });
+    }
+
+    if (sanitized.startDateTime && !validateDateString(sanitized.startDateTime as string)) {
+      return NextResponse.json({ error: 'Invalid start date format' }, { status: 400 });
+    }
+
+    if (sanitized.endDateTime && !validateDateString(sanitized.endDateTime as string)) {
+      return NextResponse.json({ error: 'Invalid end date format' }, { status: 400 });
+    }
 
     if (sanitized.tripId) {
       if (!validateUUID(sanitized.tripId as string)) {

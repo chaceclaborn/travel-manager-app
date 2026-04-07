@@ -18,3 +18,18 @@ ALTER TABLE "Booking" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "ChecklistItem" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "TripNote" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "ClickEvent" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "Feedback" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "oauth_tokens" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "Meeting" ENABLE ROW LEVEL SECURITY;
+
+-- Defense-in-depth: explicit deny-all policies on oauth_tokens.
+-- These tokens are encrypted at rest, but we add belt-and-suspenders so
+-- that any future role (other than the postgres superuser bypass) cannot
+-- read, write, or delete them via the auto-generated PostgREST API.
+DROP POLICY IF EXISTS "oauth_tokens_deny_all" ON "oauth_tokens";
+CREATE POLICY "oauth_tokens_deny_all" ON "oauth_tokens"
+  AS RESTRICTIVE
+  FOR ALL
+  TO PUBLIC
+  USING (false)
+  WITH CHECK (false);

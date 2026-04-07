@@ -15,6 +15,18 @@ async function verifyTripOwnership(tripId: string, userId: string) {
   return trip;
 }
 
+async function verifyVendorOwnership(vendorId: string, userId: string) {
+  const vendor = await prisma.vendor.findFirst({ where: { id: vendorId, userId } });
+  if (!vendor) throw new Error('Vendor not found');
+  return vendor;
+}
+
+async function verifyClientOwnership(clientId: string, userId: string) {
+  const client = await prisma.client.findFirst({ where: { id: clientId, userId } });
+  if (!client) throw new Error('Client not found');
+  return client;
+}
+
 export async function getTrips(userId: string, mode: 'full' | 'minimal' = 'full') {
   if (mode === 'minimal') {
     return prisma.trip.findMany({
@@ -196,6 +208,8 @@ export async function getTripItinerary(tripId: string, userId: string) {
 
 export async function createItineraryItem(data: CreateItineraryItemInput, userId: string) {
   await verifyTripOwnership(data.tripId, userId);
+  if (data.vendorId) await verifyVendorOwnership(data.vendorId, userId);
+  if (data.clientId) await verifyClientOwnership(data.clientId, userId);
   return prisma.itineraryItem.create({
     data: {
       tripId: data.tripId,
@@ -221,6 +235,8 @@ export async function updateItineraryItem(id: string, data: UpdateItineraryItemI
   const item = await prisma.itineraryItem.findUnique({ where: { id }, select: { tripId: true } });
   if (!item) throw new Error('Itinerary item not found');
   await verifyTripOwnership(item.tripId, userId);
+  if (data.vendorId) await verifyVendorOwnership(data.vendorId, userId);
+  if (data.clientId) await verifyClientOwnership(data.clientId, userId);
 
   const updateData: Record<string, unknown> = { ...data };
   if (data.date) updateData.date = new Date(data.date);
@@ -245,14 +261,15 @@ export async function deleteItineraryItem(id: string, userId: string) {
 }
 
 export async function getDashboardStats(userId: string) {
-  const [totalTrips, upcomingTrips, totalVendors, totalClients] = await Promise.all([
+  const [totalTrips, upcomingTrips, totalVendors, totalClients, totalMeetings] = await Promise.all([
     prisma.trip.count({ where: { userId } }),
     prisma.trip.count({ where: { userId, startDate: { gte: new Date() }, status: { in: ['PLANNED', 'IN_PROGRESS'] } } }),
     prisma.vendor.count({ where: { userId } }),
     prisma.client.count({ where: { userId } }),
+    prisma.meeting.count({ where: { userId } }),
   ]);
 
-  return { totalTrips, upcomingTrips, totalVendors, totalClients };
+  return { totalTrips, upcomingTrips, totalVendors, totalClients, totalMeetings };
 }
 
 export async function getUpcomingTrips(userId: string, limit = 5) {

@@ -6,7 +6,7 @@ export async function requireAdmin() {
   if (!user) return { user: null, response };
 
   const adminEmail = process.env.ADMIN_EMAIL;
-  if (!adminEmail || user.email !== adminEmail) {
+  if (!adminEmail || user.email?.toLowerCase() !== adminEmail.toLowerCase()) {
     return {
       user: null,
       response: NextResponse.json({ error: 'Forbidden' }, { status: 403 }),
