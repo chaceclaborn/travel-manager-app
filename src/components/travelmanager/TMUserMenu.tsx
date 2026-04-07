@@ -1,10 +1,18 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Settings, Download, LogOut } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
 
 interface TMUserMenuProps {
   user: User;
@@ -12,8 +20,7 @@ interface TMUserMenuProps {
 }
 
 export function TMUserMenu({ user, onSignOut }: TMUserMenuProps) {
-  const [open, setOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const [imageError, setImageError] = useState(false);
 
   const avatarUrl = user.user_metadata?.avatar_url;
   const fullName = user.user_metadata?.full_name || 'User';
@@ -25,20 +32,7 @@ export function TMUserMenu({ user, onSignOut }: TMUserMenuProps) {
     .toUpperCase()
     .slice(0, 2);
 
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    }
-    if (open) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [open]);
-
   async function handleExport() {
-    setOpen(false);
     try {
       const res = await fetch('/api/user/export');
       if (!res.ok) throw new Error('Export failed');
@@ -55,67 +49,74 @@ export function TMUserMenu({ user, onSignOut }: TMUserMenuProps) {
   }
 
   return (
-    <div ref={menuRef} className="relative">
-      <button
-        onClick={() => setOpen(!open)}
-        className="rounded-full focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-slate-900"
-        aria-label="User menu"
-        aria-expanded={open}
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className="rounded-full focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-slate-900"
+          aria-label="User menu"
+        >
+          {avatarUrl && !imageError ? (
+            <Image
+              src={avatarUrl}
+              alt={fullName}
+              width={32}
+              height={32}
+              className="rounded-full"
+              onError={() => setImageError(true)}
+            />
+          ) : (
+            <div className="size-8 rounded-full bg-amber-500 flex items-center justify-center text-xs font-bold text-white">
+              {initials}
+            </div>
+          )}
+        </button>
+      </DropdownMenuTrigger>
+
+      <DropdownMenuContent
+        align="end"
+        sideOffset={8}
+        className="w-[calc(100vw-2rem)] sm:w-64 max-w-64 rounded-lg bg-slate-900 border border-white/10 shadow-xl text-slate-300 p-0 overflow-hidden"
       >
-        {avatarUrl ? (
-          <Image
-            src={avatarUrl}
-            alt={fullName}
-            width={32}
-            height={32}
-            className="rounded-full"
-          />
-        ) : (
-          <div className="size-8 rounded-full bg-amber-500 flex items-center justify-center text-xs font-bold text-white">
-            {initials}
-          </div>
-        )}
-      </button>
+        <DropdownMenuLabel className="px-4 py-3 border-b border-white/10 font-normal">
+          <p className="text-sm font-medium text-white truncate">{fullName}</p>
+          <p className="text-xs text-slate-400 truncate">{email}</p>
+        </DropdownMenuLabel>
 
-      {open && (
-        <div className="absolute right-0 top-full mt-2 sm:right-auto sm:left-0 w-[calc(100vw-2rem)] sm:w-64 max-w-64 rounded-lg bg-slate-900 border border-white/10 shadow-xl z-50 overflow-hidden">
-          <div className="px-4 py-3 border-b border-white/10">
-            <p className="text-sm font-medium text-white truncate">{fullName}</p>
-            <p className="text-xs text-slate-400 truncate">{email}</p>
-          </div>
-
-          <div className="py-1">
+        <div className="py-1">
+          <DropdownMenuItem
+            asChild
+            className="rounded-none focus:bg-white/5 focus:text-white"
+          >
             <Link
               href="/settings"
-              onClick={() => setOpen(false)}
-              className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-300 hover:bg-white/5 hover:text-white transition-colors"
+              className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-300"
             >
               <Settings className="size-4" />
               Settings
             </Link>
-            <button
-              onClick={handleExport}
-              className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-slate-300 hover:bg-white/5 hover:text-white transition-colors"
-            >
-              <Download className="size-4" />
-              Export Data
-            </button>
-          </div>
-
-          <div className="border-t border-white/10 py-1">
-            <button
-              onClick={() => {
-                setOpen(false);
-                onSignOut();
-              }}
-              className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-white/5 hover:text-red-300 transition-colors"
-            >
-              <LogOut className="size-4" />
-              Sign Out
-            </button>
-          </div>
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={handleExport}
+            className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-300 rounded-none focus:bg-white/5 focus:text-white"
+          >
+            <Download className="size-4" />
+            Export Data
+          </DropdownMenuItem>
         </div>
-      )}
-    </div>
+
+        <DropdownMenuSeparator className="bg-white/10 mx-0 my-0" />
+
+        <div className="py-1">
+          <DropdownMenuItem
+            onSelect={() => onSignOut()}
+            className="flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 rounded-none focus:bg-white/5 focus:text-red-300"
+          >
+            <LogOut className="size-4" />
+            Sign Out
+          </DropdownMenuItem>
+        </div>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

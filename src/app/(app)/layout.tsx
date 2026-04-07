@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, MapPin, Search } from 'lucide-react';
 import { TMSidebar } from '@/components/travelmanager/TMSidebar';
@@ -25,6 +25,7 @@ export default function TravelManagerLayout({
   const [isAdmin, setIsAdmin] = useState(false);
   const [isAdminChecked, setIsAdminChecked] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
   const { user, loading, signOut } = useAuth();
 
   const PUBLIC_PATHS = ['/tour', '/privacy'];
@@ -91,6 +92,54 @@ export default function TravelManagerLayout({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  useEffect(() => {
+    let firstKey: 'g' | null = null;
+    let firstKeyTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const shortcuts: Record<string, string> = {
+      'g+d': '/',
+      'g+t': '/trips',
+      'g+b': '/bookings',
+      'g+e': '/meetings',
+      'g+v': '/vendors',
+      'g+c': '/clients',
+      'g+a': '/analytics',
+      'g+m': '/map',
+      'g+s': '/settings',
+      'g+x': '/admin',
+    };
+
+    function handler(e: KeyboardEvent) {
+      // Skip if user is typing in an input
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+      if (firstKey === 'g') {
+        const route = shortcuts[`g+${e.key.toLowerCase()}`];
+        if (route) {
+          e.preventDefault();
+          router.push(route);
+        }
+        firstKey = null;
+        if (firstKeyTimer) clearTimeout(firstKeyTimer);
+        return;
+      }
+
+      if (e.key.toLowerCase() === 'g') {
+        firstKey = 'g';
+        if (firstKeyTimer) clearTimeout(firstKeyTimer);
+        firstKeyTimer = setTimeout(() => { firstKey = null; }, 1500);
+      }
+    }
+
+    window.addEventListener('keydown', handler);
+    return () => {
+      window.removeEventListener('keydown', handler);
+      if (firstKeyTimer) clearTimeout(firstKeyTimer);
+    };
+  }, [router]);
+
   // Public pages (tour, privacy) are outside this route group,
   // so this check is a fallback only
   if (isPublicPage) {
@@ -156,31 +205,33 @@ export default function TravelManagerLayout({
         }
       `}</style>
 
-      {/* Demo disclaimer — small floating pill */}
-      {!demoDismissed && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[200] bg-slate-800/90 backdrop-blur-sm text-white text-xs py-2 px-4 rounded-full shadow-lg flex items-center gap-3">
-          <span>Demo application — not a production tool</span>
-          <button
-            onClick={() => {
-              setDemoDismissed(true);
-              localStorage.setItem('tm-demo-dismissed', String(Date.now()));
-            }}
-            className="text-white/60 hover:text-white transition-colors"
-            aria-label="Dismiss"
-          >
-            &#x2715;
-          </button>
-        </div>
-      )}
-
       <TMToastProvider>
-        {/* Skip navigation — visible only on keyboard focus */}
+        {/* Skip navigation — visible only on keyboard focus.
+            MUST be the first focusable element on the page so Tab lands here first. */}
         <a
           href="#main-content"
           className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[300] focus:rounded-md focus:bg-amber-500 focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-white focus:shadow-lg focus:outline-none"
         >
           Skip to main content
         </a>
+
+        {/* Demo disclaimer — small floating pill.
+            Rendered AFTER the skip link in source order so the skip link is the first tab stop. */}
+        {!demoDismissed && (
+          <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[200] bg-slate-800/90 backdrop-blur-sm text-white text-xs py-2 px-4 rounded-full shadow-lg flex items-center gap-3">
+            <span>Demo application — not a production tool</span>
+            <button
+              onClick={() => {
+                setDemoDismissed(true);
+                localStorage.setItem('tm-demo-dismissed', String(Date.now()));
+              }}
+              className="text-white/60 hover:text-white transition-colors"
+              aria-label="Dismiss"
+            >
+              &#x2715;
+            </button>
+          </div>
+        )}
 
         <div className="flex min-h-screen max-w-[100vw] overflow-x-hidden">
           {/* Desktop Sidebar */}

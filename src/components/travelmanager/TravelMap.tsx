@@ -253,6 +253,7 @@ export function TravelMap({ trips, homeLocation }: TravelMapProps) {
             key={trip.id}
             position={[trip.latitude, trip.longitude]}
             icon={createMarkerIcon(color)}
+            keyboard={false}
           >
             <Popup>
               <div className="min-w-[180px]">
@@ -291,6 +292,7 @@ export function TravelMap({ trips, homeLocation }: TravelMapProps) {
         <Marker
           position={[homeLocation.latitude, homeLocation.longitude]}
           icon={createHomeIcon()}
+          keyboard={false}
         >
           <Popup>
             <div className="min-w-[120px]">

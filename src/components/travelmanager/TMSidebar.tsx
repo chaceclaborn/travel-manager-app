@@ -19,6 +19,7 @@ const navItems = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard, shortcut: 'G D', track: 'nav:dashboard' },
   { href: '/trips', label: 'Trips', icon: MapPin, shortcut: 'G T', track: 'nav:trips' },
   { href: '/bookings', label: 'Bookings', icon: Plane, shortcut: 'G B', track: 'nav:bookings' },
+  { href: '/meetings', label: 'Meetings', icon: Users, shortcut: 'G E', track: 'nav:meetings' },
   { href: '/vendors', label: 'Vendors', icon: Building2, shortcut: 'G V', track: 'nav:vendors' },
   { href: '/clients', label: 'Clients', icon: Users, shortcut: 'G C', track: 'nav:clients' },
   { href: '/analytics', label: 'Analytics', icon: BarChart3, shortcut: 'G A', track: 'nav:analytics' },
@@ -71,7 +72,7 @@ function NavItem({
       />
 
       <div
-        className={`relative flex w-full items-center gap-3 px-3 py-2 text-[13px] transition-colors duration-200 ${
+        className={`relative flex w-full items-center gap-3 px-3 py-2.5 min-h-11 sm:py-2 sm:min-h-0 text-[13px] transition-colors duration-200 ${
           isActive ? 'font-semibold text-amber-400' : 'font-medium text-slate-400 group-hover:text-slate-200'
         }`}
       >

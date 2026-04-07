@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect, useCallback, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Mail, Phone, Building2, Pencil, X } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, Building2, Pencil, X, AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -41,19 +41,36 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
 
   const [client, setClient] = useState<ClientData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+  const [error, setError] = useState(false);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  const fetchClient = useCallback(async () => {
+    setLoading(true);
+    setNotFound(false);
+    setError(false);
+    try {
+      const res = await fetch(`/api/clients/${id}`);
+      if (res.status === 404) {
+        setNotFound(true);
+        return;
+      }
+      if (!res.ok) {
+        setError(true);
+        return;
+      }
+      setClient(await res.json());
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
   useEffect(() => {
-    fetch(`/api/clients/${id}`)
-      .then((res) => {
-        if (!res.ok) throw new Error('Not found');
-        return res.json();
-      })
-      .then((data) => setClient(data))
-      .catch(() => showToast('Failed to load client', 'error'))
-      .finally(() => setLoading(false));
-  }, [id, showToast]);
+    fetchClient();
+  }, [fetchClient]);
 
   async function handleUpdate(data: {
     name: string;
@@ -91,7 +108,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
     );
   }
 
-  if (!client) {
+  if (notFound) {
     return (
       <div className="space-y-4">
         <Link
@@ -101,7 +118,33 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
           <ArrowLeft className="size-4" />
           Back to Clients
         </Link>
-        <p className="text-slate-500">Client not found.</p>
+        <p className="text-slate-500">Client not found. This client may have been deleted.</p>
+      </div>
+    );
+  }
+
+  if (error || !client) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <div className="relative mb-6">
+          <div className="size-20 rounded-full bg-red-50 flex items-center justify-center">
+            <AlertCircle className="size-10 text-red-400" />
+          </div>
+          <div className="absolute -bottom-1 -right-1 size-7 rounded-full bg-red-100 flex items-center justify-center">
+            <RefreshCw className="size-3.5 text-red-400" />
+          </div>
+        </div>
+        <h2 className="text-xl font-semibold text-slate-900">Couldn&apos;t load client</h2>
+        <p className="mt-2 text-sm text-slate-500 max-w-sm">
+          Something went wrong. Check your connection and try again.
+        </p>
+        <Button
+          onClick={fetchClient}
+          className="mt-6 bg-slate-900 hover:bg-slate-800 text-white shadow-sm"
+        >
+          <RefreshCw className="mr-2 size-4" />
+          Try again
+        </Button>
       </div>
     );
   }

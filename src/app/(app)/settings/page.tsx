@@ -85,6 +85,7 @@ export default function SettingsPage() {
   const [gmailConnected, setGmailConnected] = useState(false);
   const [gmailLoading, setGmailLoading] = useState(true);
   const [gmailDisconnecting, setGmailDisconnecting] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
   const {
     query: homeQuery,
     setQuery: setHomeQuery,
@@ -258,22 +259,23 @@ export default function SettingsPage() {
       <motion.div variants={item} className="rounded-xl bg-white p-6 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-800 mb-4">Account Information</h2>
         <div className="flex items-center gap-4">
-          {avatarUrl ? (
+          {avatarUrl && !avatarError ? (
             <Image
               src={avatarUrl}
               alt={fullName}
               width={64}
               height={64}
               className="rounded-full"
+              onError={() => setAvatarError(true)}
             />
           ) : (
-            <div className="size-16 rounded-full bg-amber-500 flex items-center justify-center text-lg font-bold text-white">
+            <div className="size-16 rounded-full bg-amber-500 flex items-center justify-center text-lg font-bold text-white shrink-0">
               {initials}
             </div>
           )}
-          <div>
-            <p className="text-base font-medium text-slate-800">{fullName}</p>
-            <p className="text-sm text-slate-500">{email}</p>
+          <div className="min-w-0 flex-1">
+            <p className="text-base font-medium text-slate-800 truncate">{fullName}</p>
+            <p className="text-sm text-slate-500 truncate">{email}</p>
             {userInfo?.createdAt && (
               <p className="text-xs text-slate-400 mt-1">
                 Member since {new Date(userInfo.createdAt).toLocaleDateString('en-US', {
@@ -305,6 +307,7 @@ export default function SettingsPage() {
                 placeholder="Search for your home city..."
                 className="pr-8"
                 autoComplete="off"
+                aria-label="Search home city"
               />
               <div className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400">
                 {isSearchingHome || isSavingHome ? (
@@ -315,7 +318,15 @@ export default function SettingsPage() {
               </div>
             </div>
             {userInfo?.homeCity && (
-              <Button variant="ghost" size="icon" onClick={handleClearHome} disabled={isSavingHome} title="Clear home location">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleClearHome}
+                disabled={isSavingHome}
+                title="Clear home location"
+                aria-label="Clear home location"
+                className="focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:outline-none"
+              >
                 <X className="size-4" />
               </Button>
             )}

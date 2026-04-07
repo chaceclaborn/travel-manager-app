@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect, useCallback, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -13,6 +13,8 @@ import {
   Globe,
   FileText,
   User,
+  AlertCircle,
+  RefreshCw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -42,19 +44,36 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
 
   const [vendor, setVendor] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
+  const fetchVendor = useCallback(async () => {
+    setIsLoading(true);
+    setNotFound(false);
+    setLoadError(false);
+    try {
+      const res = await fetch(`/api/vendors/${id}`);
+      if (res.status === 404) {
+        setNotFound(true);
+        return;
+      }
+      if (!res.ok) {
+        setLoadError(true);
+        return;
+      }
+      setVendor(await res.json());
+    } catch {
+      setLoadError(true);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [id]);
+
   useEffect(() => {
-    fetch(`/api/vendors/${id}`)
-      .then((res) => {
-        if (!res.ok) throw new Error('Not found');
-        return res.json();
-      })
-      .then(setVendor)
-      .catch(() => showToast('Failed to load vendor', 'error'))
-      .finally(() => setIsLoading(false));
-  }, [id, showToast]);
+    fetchVendor();
+  }, [fetchVendor]);
 
   const handleUpdate = async (data: any) => {
     setIsSaving(true);
@@ -87,7 +106,7 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
     );
   }
 
-  if (!vendor) {
+  if (notFound) {
     return (
       <TMEmptyState
         title="Vendor not found"
@@ -95,6 +114,32 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
         actionLabel="Back to Vendors"
         actionHref="/vendors"
       />
+    );
+  }
+
+  if (loadError || !vendor) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <div className="relative mb-6">
+          <div className="size-20 rounded-full bg-red-50 flex items-center justify-center">
+            <AlertCircle className="size-10 text-red-400" />
+          </div>
+          <div className="absolute -bottom-1 -right-1 size-7 rounded-full bg-red-100 flex items-center justify-center">
+            <RefreshCw className="size-3.5 text-red-400" />
+          </div>
+        </div>
+        <h2 className="text-xl font-semibold text-slate-900">Couldn&apos;t load vendor</h2>
+        <p className="mt-2 text-sm text-slate-500 max-w-sm">
+          Something went wrong. Check your connection and try again.
+        </p>
+        <Button
+          onClick={fetchVendor}
+          className="mt-6 bg-slate-900 hover:bg-slate-800 text-white shadow-sm"
+        >
+          <RefreshCw className="mr-2 size-4" />
+          Try again
+        </Button>
+      </div>
     );
   }
 

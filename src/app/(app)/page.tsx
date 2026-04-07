@@ -20,6 +20,7 @@ interface DashboardData {
     upcomingTrips: number;
     totalVendors: number;
     totalClients: number;
+    totalMeetings: number;
   };
   upcoming: TripWithRelations[];
   recent: TripWithRelations[];
@@ -82,8 +83,8 @@ function DashboardSkeleton() {
       </div>
 
       {/* Stats cards skeleton — mirrors TMStatsCard layout */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        {Array.from({ length: 5 }).map((_, i) => (
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
+        {Array.from({ length: 6 }).map((_, i) => (
           <div
             key={i}
             className="flex items-center gap-4 rounded-xl bg-white p-6 shadow-sm"
@@ -147,9 +148,17 @@ function DashboardSkeleton() {
   );
 }
 
+interface CalendarMeeting {
+  id: string;
+  title: string;
+  startDateTime: string;
+}
+
 export default function TravelManagerDashboard() {
   const { user } = useAuth();
   const [data, setData] = useState<DashboardData | null>(null);
+  const [meetings, setMeetings] = useState<CalendarMeeting[]>([]);
+  const [meetingsError, setMeetingsError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -180,6 +189,22 @@ export default function TravelManagerDashboard() {
     fetchDashboard();
     return () => abortRef.current?.abort();
   }, [fetchDashboard]);
+
+  const fetchMeetings = useCallback(async () => {
+    try {
+      const res = await fetch('/api/meetings');
+      if (!res.ok) throw new Error(`Server error (${res.status})`);
+      const d = await res.json();
+      setMeetings(Array.isArray(d) ? d : []);
+      setMeetingsError(false);
+    } catch {
+      setMeetingsError(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchMeetings();
+  }, [fetchMeetings]);
 
 
   if (loading) {
@@ -217,7 +242,7 @@ export default function TravelManagerDashboard() {
     );
   }
 
-  const stats = data?.stats ?? { totalTrips: 0, upcomingTrips: 0, totalVendors: 0, totalClients: 0 };
+  const stats = data?.stats ?? { totalTrips: 0, upcomingTrips: 0, totalVendors: 0, totalClients: 0, totalMeetings: 0 };
   const upcoming = data?.upcoming ?? [];
   const recent = data?.recent ?? [];
 
@@ -251,7 +276,7 @@ export default function TravelManagerDashboard() {
         variants={statsContainer}
         initial="hidden"
         animate="show"
-        className="grid grid-cols-2 lg:grid-cols-5 gap-4"
+        className="grid grid-cols-2 lg:grid-cols-6 gap-4"
       >
         <motion.div variants={statsItem}>
           <TMStatsCard title="Total Trips" value={stats.totalTrips} icon={MapPin} color="blue" href="/trips" />
@@ -265,6 +290,9 @@ export default function TravelManagerDashboard() {
         <motion.div variants={statsItem}>
           <TMStatsCard title="Clients" value={stats.totalClients} icon={Users} color="green" href="/clients" />
         </motion.div>
+        <motion.div variants={statsItem}>
+          <TMStatsCard title="Meetings" value={stats.totalMeetings} icon={Users} color="indigo" href="/meetings" />
+        </motion.div>
         {daysUntilNext !== null && (
           <motion.div variants={statsItem}>
             <TMStatsCard title="Days to Next Trip" value={daysUntilNext} icon={Plane} color="red" href={upcoming[0] ? `/trips/${upcoming[0].id}` : '/trips'} />
@@ -274,6 +302,20 @@ export default function TravelManagerDashboard() {
 
       {/* Calendar Preview */}
       <motion.div variants={item}>
+        {meetingsError && (
+          <div className="flex items-center gap-2 mb-2 text-xs text-amber-500">
+            <AlertCircle className="size-3" />
+            <span>Couldn&apos;t load meetings</span>
+            <button
+              type="button"
+              onClick={fetchMeetings}
+              aria-label="Retry loading meetings"
+              className="inline-flex items-center justify-center rounded p-0.5 hover:bg-amber-50"
+            >
+              <RefreshCw className="size-3" />
+            </button>
+          </div>
+        )}
         <TMCalendarPreview
           trips={calendarTrips
             .filter((t) => t.startDate && t.endDate)
@@ -285,6 +327,7 @@ export default function TravelManagerDashboard() {
               endDate: t.endDate as unknown as string,
               status: t.status,
             }))}
+          meetings={meetings}
         />
       </motion.div>
 
@@ -308,6 +351,18 @@ export default function TravelManagerDashboard() {
             <Link href="/clients/new">
               <Plus className="size-4 mr-2" />
               New Client
+            </Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/meetings">
+              <Plus className="size-4 mr-2" />
+              New Meeting
+            </Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/bookings">
+              <Plus className="size-4 mr-2" />
+              New Booking
             </Link>
           </Button>
         </div>

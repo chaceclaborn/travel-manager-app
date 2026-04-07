@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect, useCallback, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Pencil, X, MapPin, Clock, Hash, Armchair, Plane } from 'lucide-react';
+import { ArrowLeft, Pencil, X, MapPin, Clock, Hash, Armchair, Plane, AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -41,6 +41,8 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
 
   const [booking, setBooking] = useState<BookingData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+  const [error, setError] = useState(false);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -56,29 +58,43 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
     notes: '',
   });
 
+  const fetchBooking = useCallback(async () => {
+    setLoading(true);
+    setNotFound(false);
+    setError(false);
+    try {
+      const res = await fetch(`/api/bookings/${id}`);
+      if (res.status === 404) {
+        setNotFound(true);
+        return;
+      }
+      if (!res.ok) {
+        setError(true);
+        return;
+      }
+      const data: BookingData = await res.json();
+      setBooking(data);
+      setForm({
+        type: data.type,
+        provider: data.provider,
+        confirmationNum: data.confirmationNum || '',
+        startDateTime: data.startDateTime || '',
+        endDateTime: data.endDateTime || '',
+        location: data.location || '',
+        endLocation: data.endLocation || '',
+        seat: data.seat || '',
+        notes: data.notes || '',
+      });
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
   useEffect(() => {
-    fetch(`/api/bookings/${id}`)
-      .then((res) => {
-        if (!res.ok) throw new Error('Not found');
-        return res.json();
-      })
-      .then((data: BookingData) => {
-        setBooking(data);
-        setForm({
-          type: data.type,
-          provider: data.provider,
-          confirmationNum: data.confirmationNum || '',
-          startDateTime: data.startDateTime || '',
-          endDateTime: data.endDateTime || '',
-          location: data.location || '',
-          endLocation: data.endLocation || '',
-          seat: data.seat || '',
-          notes: data.notes || '',
-        });
-      })
-      .catch(() => showToast('Failed to load booking', 'error'))
-      .finally(() => setLoading(false));
-  }, [id, showToast]);
+    fetchBooking();
+  }, [fetchBooking]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -126,12 +142,39 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
     );
   }
 
-  if (!booking) {
+  if (notFound) {
     return (
       <div className="text-center py-12">
         <Plane className="mx-auto size-12 text-slate-300" />
         <p className="mt-4 text-lg text-slate-500">Booking not found</p>
-        <Link href="/bookings" className="mt-2 text-sm text-amber-600 hover:underline">Back to bookings</Link>
+        <p className="mt-1 text-sm text-slate-400">This booking may have been deleted.</p>
+        <Link href="/bookings" className="mt-3 inline-block text-sm text-amber-600 hover:underline">Back to bookings</Link>
+      </div>
+    );
+  }
+
+  if (error || !booking) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <div className="relative mb-6">
+          <div className="size-20 rounded-full bg-red-50 flex items-center justify-center">
+            <AlertCircle className="size-10 text-red-400" />
+          </div>
+          <div className="absolute -bottom-1 -right-1 size-7 rounded-full bg-red-100 flex items-center justify-center">
+            <RefreshCw className="size-3.5 text-red-400" />
+          </div>
+        </div>
+        <h2 className="text-xl font-semibold text-slate-900">Couldn&apos;t load booking</h2>
+        <p className="mt-2 text-sm text-slate-500 max-w-sm">
+          Something went wrong. Check your connection and try again.
+        </p>
+        <Button
+          onClick={fetchBooking}
+          className="mt-6 bg-slate-900 hover:bg-slate-800 text-white shadow-sm"
+        >
+          <RefreshCw className="mr-2 size-4" />
+          Try again
+        </Button>
       </div>
     );
   }

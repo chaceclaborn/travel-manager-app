@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, Square, X, Plus, ChevronDown, CheckCircle2, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useTMToast } from '@/components/travelmanager/TMToast';
 
 interface ChecklistItem {
   id: string;
@@ -38,6 +39,7 @@ const itemVariants = {
 };
 
 export function TripChecklist({ tripId }: TripChecklistProps) {
+  const { showToast } = useTMToast();
   const [items, setItems] = useState<ChecklistItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [newLabel, setNewLabel] = useState('');
@@ -83,15 +85,17 @@ export function TripChecklist({ tripId }: TripChecklistProps) {
       prev.map((i) => (i.id === item.id ? { ...i, checked: newChecked } : i))
     );
     try {
-      await fetch(`/api/checklists/${item.id}`, {
+      const res = await fetch(`/api/checklists/${item.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ checked: newChecked }),
       });
+      if (!res.ok) throw new Error('Failed to update');
     } catch {
       setItems((prev) =>
         prev.map((i) => (i.id === item.id ? { ...i, checked: !newChecked } : i))
       );
+      showToast('Failed to update checklist', 'error');
     }
   };
 

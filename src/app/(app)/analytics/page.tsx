@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { DollarSign, MapPin, Plane, TrendingUp } from 'lucide-react';
+import { AlertCircle, DollarSign, MapPin, Plane, RefreshCw, TrendingUp } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import {
   ResponsiveContainer,
   PieChart,
@@ -218,17 +219,38 @@ function ChartCard({
 export default function AnalyticsPage() {
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [period, setPeriod] = useState('all');
   const [activePieIndex, setActivePieIndex] = useState<number | undefined>(undefined);
+  const [isMobile, setIsMobile] = useState(false);
 
+  // Detect mobile viewport for responsive donut sizing
   useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 640);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
+  const fetchAnalytics = useCallback(() => {
     setLoading(true);
+    setError(false);
     fetch(`/api/analytics?period=${period}`)
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error('Request failed');
+        return res.json();
+      })
       .then((d) => setData(d))
-      .catch(() => setData(null))
+      .catch(() => {
+        setData(null);
+        setError(true);
+      })
       .finally(() => setLoading(false));
   }, [period]);
+
+  useEffect(() => {
+    fetchAnalytics();
+  }, [fetchAnalytics]);
 
   const onPieEnter = useCallback((_: unknown, index: number) => {
     setActivePieIndex(index);
@@ -242,13 +264,28 @@ export default function AnalyticsPage() {
     return <LoadingSkeleton />;
   }
 
-  if (!data) {
+  if (error || !data) {
     return (
-      <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-slate-800">Analytics</h1>
-        <div className="rounded-xl bg-white border border-slate-100 p-8 text-center">
-          <p className="text-slate-500">Failed to load analytics data.</p>
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <div className="relative mb-6">
+          <div className="size-20 rounded-full bg-red-50 flex items-center justify-center">
+            <AlertCircle className="size-10 text-red-400" />
+          </div>
+          <div className="absolute -bottom-1 -right-1 size-7 rounded-full bg-red-100 flex items-center justify-center">
+            <RefreshCw className="size-3.5 text-red-400" />
+          </div>
         </div>
+        <h2 className="text-xl font-semibold text-slate-900">Unable to load analytics</h2>
+        <p className="mt-2 text-sm text-slate-500 max-w-sm">
+          Something went wrong. Check your connection and try again.
+        </p>
+        <Button
+          onClick={fetchAnalytics}
+          className="mt-6 bg-slate-900 hover:bg-slate-800 text-white shadow-sm"
+        >
+          <RefreshCw className="mr-2 size-4" />
+          Try again
+        </Button>
       </div>
     );
   }
@@ -287,7 +324,7 @@ export default function AnalyticsPage() {
   return (
     <div className="space-y-6">
       {/* Header & Period Filter */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <motion.h1
           initial={{ opacity: 0, x: -10 }}
           animate={{ opacity: 1, x: 0 }}
@@ -308,7 +345,9 @@ export default function AnalyticsPage() {
             <button
               key={p.value}
               onClick={() => setPeriod(p.value)}
-              className={`relative z-10 rounded-full px-4 py-1.5 text-sm font-medium transition-colors duration-200 ${
+              aria-label={`Show ${p.label} period`}
+              aria-pressed={period === p.value}
+              className={`relative z-10 inline-flex items-center justify-center rounded-full px-4 py-2.5 min-h-11 sm:py-1.5 sm:min-h-0 text-sm font-medium transition-colors duration-200 ${
                 period === p.value
                   ? 'text-white'
                   : 'text-slate-500 hover:text-slate-700'
@@ -363,6 +402,7 @@ export default function AnalyticsPage() {
         {/* ── Spending by Category - Donut ── */}
         <ChartCard title="Spending by Category" index={0}>
           {data.spendingByCategory.length > 0 ? (
+            <div role="img" aria-label="Expenses by category donut chart" className="[&_svg]:focus:outline-none [&_.recharts-wrapper_svg]:outline-none">
             <ResponsiveContainer width="100%" height={280}>
               <PieChart>
                 <defs>
@@ -379,34 +419,38 @@ export default function AnalyticsPage() {
                   nameKey="category"
                   cx="50%"
                   cy="50%"
-                  innerRadius={55}
-                  outerRadius={100}
+                  innerRadius={isMobile ? 40 : 55}
+                  outerRadius={isMobile ? 70 : 100}
                   paddingAngle={2}
                   animationBegin={100}
                   animationDuration={900}
                   animationEasing="ease-out"
                   onMouseEnter={onPieEnter}
                   onMouseLeave={onPieLeave}
-                  label={({ name, percent, cx: labelCx, cy: labelCy, midAngle, outerRadius: or }) => {
-                    const RADIAN = Math.PI / 180;
-                    const radius = (or as number) + 20;
-                    const angle = (midAngle as number) ?? 0;
-                    const x = (labelCx as number) + radius * Math.cos(-angle * RADIAN);
-                    const y = (labelCy as number) + radius * Math.sin(-angle * RADIAN);
-                    return (
-                      <text
-                        x={x}
-                        y={y}
-                        fill="#64748b"
-                        textAnchor={x > (labelCx as number) ? 'start' : 'end'}
-                        dominantBaseline="central"
-                        fontSize={11}
-                        fontWeight={500}
-                      >
-                        {`${formatCategory(String(name ?? ''))} ${((percent ?? 0) * 100).toFixed(0)}%`}
-                      </text>
-                    );
-                  }}
+                  label={
+                    isMobile
+                      ? false
+                      : ({ name, percent, cx: labelCx, cy: labelCy, midAngle, outerRadius: or }) => {
+                          const RADIAN = Math.PI / 180;
+                          const radius = (or as number) + 20;
+                          const angle = (midAngle as number) ?? 0;
+                          const x = (labelCx as number) + radius * Math.cos(-angle * RADIAN);
+                          const y = (labelCy as number) + radius * Math.sin(-angle * RADIAN);
+                          return (
+                            <text
+                              x={x}
+                              y={y}
+                              fill="#64748b"
+                              textAnchor={x > (labelCx as number) ? 'start' : 'end'}
+                              dominantBaseline="central"
+                              fontSize={11}
+                              fontWeight={500}
+                            >
+                              {`${formatCategory(String(name ?? ''))} ${((percent ?? 0) * 100).toFixed(0)}%`}
+                            </text>
+                          );
+                        }
+                  }
                 >
                   {data.spendingByCategory.map((_, i) => (
                     <Cell
@@ -439,6 +483,7 @@ export default function AnalyticsPage() {
                 />
               </PieChart>
             </ResponsiveContainer>
+            </div>
           ) : (
             <div className="flex h-[280px] items-center justify-center text-sm text-slate-400">
               No expense data yet
@@ -449,6 +494,7 @@ export default function AnalyticsPage() {
         {/* ── Monthly Trip Count - Bar ── */}
         <ChartCard title="Monthly Trip Count" index={1}>
           {data.tripsByMonth.length > 0 ? (
+            <div role="img" aria-label="Trips per month bar chart" className="[&_svg]:focus:outline-none [&_.recharts-wrapper_svg]:outline-none">
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={data.tripsByMonth} barCategoryGap="20%">
                 <defs>
@@ -489,6 +535,7 @@ export default function AnalyticsPage() {
                 />
               </BarChart>
             </ResponsiveContainer>
+            </div>
           ) : (
             <div className="flex h-[280px] items-center justify-center text-sm text-slate-400">
               No trip data yet
@@ -499,6 +546,7 @@ export default function AnalyticsPage() {
         {/* ── Top Destinations - Horizontal Bar ── */}
         <ChartCard title="Top Destinations" index={2}>
           {data.topDestinations.length > 0 ? (
+            <div role="img" aria-label="Top destinations horizontal bar chart" className="[&_svg]:focus:outline-none [&_.recharts-wrapper_svg]:outline-none">
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={data.topDestinations} layout="vertical" barCategoryGap="25%">
                 <defs>
@@ -542,6 +590,7 @@ export default function AnalyticsPage() {
                 />
               </BarChart>
             </ResponsiveContainer>
+            </div>
           ) : (
             <div className="flex h-[280px] items-center justify-center text-sm text-slate-400">
               No destination data yet
@@ -552,6 +601,7 @@ export default function AnalyticsPage() {
         {/* ── Travel Days by Quarter - Area ── */}
         <ChartCard title="Travel Days by Quarter" index={3}>
           {data.travelDaysByQuarter.length > 0 ? (
+            <div role="img" aria-label="Travel days per quarter area chart" className="[&_svg]:focus:outline-none [&_.recharts-wrapper_svg]:outline-none">
             <ResponsiveContainer width="100%" height={280}>
               <AreaChart data={data.travelDaysByQuarter}>
                 <defs>
@@ -605,6 +655,7 @@ export default function AnalyticsPage() {
                 />
               </AreaChart>
             </ResponsiveContainer>
+            </div>
           ) : (
             <div className="flex h-[280px] items-center justify-center text-sm text-slate-400">
               No travel day data yet

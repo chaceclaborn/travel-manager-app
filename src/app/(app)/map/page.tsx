@@ -7,6 +7,7 @@ import { TMBreadcrumb } from '@/components/travelmanager/TMBreadcrumb';
 import { haversineDistance, KM_TO_MILES } from '@/lib/distance';
 import { useGeocodingSearch, formatGeoName } from '@/lib/travelmanager/useGeocodingSearch';
 import type { GeoResult } from '@/lib/travelmanager/useGeocodingSearch';
+import { useTMToast } from '@/components/travelmanager/TMToast';
 
 const TravelMap = dynamic(
   () => import('@/components/travelmanager/TravelMap').then(m => ({ default: m.TravelMap })),
@@ -102,6 +103,7 @@ function formatDistance(miles: number): string {
 }
 
 export default function MapPage() {
+  const { showToast } = useTMToast();
   const [trips, setTrips] = useState<MapTrip[]>([]);
   const [homeLocation, setHomeLocation] = useState<HomeLocation | null>(null);
   const [loading, setLoading] = useState(true);
@@ -180,8 +182,10 @@ export default function MapPage() {
       });
       if (!res.ok) throw new Error('Failed to save');
       setHomeLocation({ latitude: lat, longitude: lng, city });
+      showToast('Home location saved');
     } catch {
       setHomeQuery('');
+      showToast('Failed to save home location', 'error');
     } finally {
       setIsSavingHome(false);
     }

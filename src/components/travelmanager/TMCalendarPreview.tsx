@@ -14,6 +14,12 @@ interface CalendarTrip {
   status: string;
 }
 
+interface CalendarMeeting {
+  id: string;
+  title: string;
+  startDateTime: string;
+}
+
 interface TripDayInfo {
   trip: CalendarTrip;
   lane: number;
@@ -24,6 +30,7 @@ interface TripDayInfo {
 
 interface TMCalendarPreviewProps {
   trips: CalendarTrip[];
+  meetings?: CalendarMeeting[];
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -76,7 +83,7 @@ const monthVariants = {
   }),
 };
 
-export function TMCalendarPreview({ trips }: TMCalendarPreviewProps) {
+export function TMCalendarPreview({ trips, meetings = [] }: TMCalendarPreviewProps) {
   const [viewDate, setViewDate] = useState(() => new Date());
   const [direction, setDirection] = useState(0);
   const [popoverDay, setPopoverDay] = useState<string | null>(null);
@@ -184,6 +191,19 @@ export function TMCalendarPreview({ trips }: TMCalendarPreviewProps) {
     return map;
   }, [trips, month, year]);
 
+  const meetingsByDay = useMemo(() => {
+    const map = new Map<string, CalendarMeeting[]>();
+    for (const m of meetings) {
+      const d = new Date(m.startDateTime);
+      if (d.getFullYear() !== year || d.getMonth() !== month) continue;
+      const key = d.getDate().toString();
+      const existing = map.get(key) ?? [];
+      existing.push(m);
+      map.set(key, existing);
+    }
+    return map;
+  }, [meetings, month, year]);
+
   const prevMonth = useCallback(() => {
     setDirection(-1);
     setViewDate(new Date(year, month - 1, 1));
@@ -283,8 +303,10 @@ export function TMCalendarPreview({ trips }: TMCalendarPreviewProps) {
             const dayNum = day.getDate();
             const isToday = isSameDay(day, today);
             const dayTrips = tripsByDay.get(dayNum.toString()) ?? [];
+            const dayMeetings = meetingsByDay.get(dayNum.toString()) ?? [];
             const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
             const hasTrips = dayTrips.length > 0;
+            const hasMeetings = dayMeetings.length > 0;
             const isPopoverOpen = popoverDay === dateStr;
             const isHovered = hoveredDay === dateStr;
             const isLastRow = Math.floor(i / 7) === weeks.length - 1;
@@ -321,9 +343,20 @@ export function TMCalendarPreview({ trips }: TMCalendarPreviewProps) {
                       </span>
                     )}
                   </div>
-                  {!hasTrips && (
-                    <Plus className="size-3 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity duration-150" />
-                  )}
+                  <div className="flex items-center gap-1">
+                    {hasMeetings && (
+                      <span
+                        className="inline-flex items-center gap-0.5 text-[9px] font-semibold text-indigo-600"
+                        title={dayMeetings.map((m) => m.title).join(', ')}
+                      >
+                        <span className="size-1.5 rounded-full bg-indigo-500" />
+                        {dayMeetings.length > 1 ? dayMeetings.length : ''}
+                      </span>
+                    )}
+                    {!hasTrips && (
+                      <Plus className="size-3 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity duration-150" />
+                    )}
+                  </div>
                 </div>
 
                 {/* Trip range bars */}

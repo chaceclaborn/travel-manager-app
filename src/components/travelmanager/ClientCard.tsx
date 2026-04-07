@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
-import { Mail, Phone, Pencil, X, Trash2 } from 'lucide-react';
+import { motion, useReducedMotion } from 'framer-motion';
+import { Mail, Phone, Pencil, X, Trash2, Loader2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -37,6 +37,7 @@ export function ClientCard({ client, onSaved, onDeleted }: ClientCardProps) {
     notes: '',
   });
   const { showToast } = useTMToast();
+  const reducedMotion = useReducedMotion();
 
   const startEdit = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -80,7 +81,7 @@ export function ClientCard({ client, onSaved, onDeleted }: ClientCardProps) {
         <form onSubmit={handleSave} className="space-y-3">
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium text-slate-700">Edit Client</p>
-            <button type="button" onClick={() => setEditing(false)} className="rounded-md p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600" aria-label="Cancel editing"><X className="size-4" /></button>
+            <button type="button" onClick={() => setEditing(false)} className="rounded-md p-2.5 sm:p-2 min-w-11 min-h-11 sm:min-w-0 sm:min-h-0 inline-flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-600 focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:outline-none" aria-label="Cancel editing"><X className="size-4" /></button>
           </div>
           <div className="grid gap-3">
             <div><Label className="text-xs">Name *</Label><Input value={form.name} onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))} className="h-8 text-xs" /></div>
@@ -89,7 +90,7 @@ export function ClientCard({ client, onSaved, onDeleted }: ClientCardProps) {
             <div><Label className="text-xs">Phone</Label><Input value={form.phone} onChange={(e) => setForm(f => ({ ...f, phone: e.target.value }))} className="h-8 text-xs" /></div>
           </div>
           <div className="flex gap-2">
-            <Button type="submit" size="sm" disabled={saving} className="h-7 text-xs bg-amber-500 hover:bg-amber-600">{saving ? 'Saving...' : 'Save'}</Button>
+            <Button type="submit" size="sm" disabled={saving} className="h-7 text-xs bg-amber-500 hover:bg-amber-600">{saving ? <><Loader2 className="size-3.5 animate-spin" />Saving...</> : 'Save'}</Button>
             <Button type="button" size="sm" variant="outline" onClick={() => setEditing(false)} className="h-7 text-xs">Cancel</Button>
           </div>
         </form>
@@ -99,7 +100,7 @@ export function ClientCard({ client, onSaved, onDeleted }: ClientCardProps) {
 
   return (
     <>
-      <motion.div whileHover={{ y: -2 }} transition={{ duration: 0.2 }}>
+      <motion.div whileHover={reducedMotion ? undefined : { y: -2 }} whileTap={reducedMotion ? undefined : { scale: 0.98 }} transition={{ duration: 0.2 }}>
         <Card className="bg-white p-5 border border-slate-100 hover:shadow-md hover:border-slate-200 transition-all rounded-xl group">
           <div className="flex items-start justify-between">
             <Link href={`/clients/${client.id}`} className="min-w-0 flex-1">
@@ -107,8 +108,8 @@ export function ClientCard({ client, onSaved, onDeleted }: ClientCardProps) {
               {client.company && <p className="text-sm text-slate-500 mt-0.5">{client.company}</p>}
             </Link>
             <div className="flex items-center gap-1 shrink-0">
-              <button onClick={startEdit} className="rounded-md p-2 text-slate-400 transition-all duration-200 hover:bg-amber-50 hover:text-amber-500" title="Edit" aria-label="Edit client"><Pencil className="size-4" /></button>
-              <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteOpen(true); }} className="rounded-md p-2 text-slate-400 transition-all duration-200 hover:bg-red-50 hover:text-red-500" title="Delete" aria-label="Delete client"><Trash2 className="size-4" /></button>
+              <button onClick={startEdit} className="rounded-md p-2.5 sm:p-2 min-w-11 min-h-11 sm:min-w-0 sm:min-h-0 inline-flex items-center justify-center text-slate-400 transition-all duration-200 hover:bg-amber-50 hover:text-amber-500 focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:outline-none" title="Edit" aria-label="Edit client"><Pencil className="size-4" /></button>
+              <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteOpen(true); }} className="rounded-md p-2.5 sm:p-2 min-w-11 min-h-11 sm:min-w-0 sm:min-h-0 inline-flex items-center justify-center text-slate-400 transition-all duration-200 hover:bg-red-50 hover:text-red-500 focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:outline-none" title="Delete" aria-label="Delete client"><Trash2 className="size-4" /></button>
             </div>
           </div>
 

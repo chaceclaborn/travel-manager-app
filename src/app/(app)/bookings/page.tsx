@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plane, Trash2, Plus, X, MapPin,
-  Clock, Hash, Armchair, Search, Link2, Loader2, ExternalLink, Pencil, Mail,
+  Clock, Hash, Armchair, Search, Link2, Loader2, ExternalLink, Pencil, Mail, Ban, RotateCcw,
+  AlertCircle, RefreshCw,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,6 +24,7 @@ import { TMDeleteDialog } from '@/components/travelmanager/TMDeleteDialog';
 import { DatePicker } from '@/components/travelmanager/DatePicker';
 import { formatDate, formatDateTime } from '@/lib/date-utils';
 import { type BookingType, BOOKING_TYPES, typeConfig, typeLabels, emptyBookingForm, getBookingFormHelpers } from '@/lib/travelmanager/booking-config';
+import type { BookingStatus } from '@/lib/travelmanager/types';
 import { GmailImportModal } from '@/components/travelmanager/GmailImportModal';
 import type { ParsedBooking } from '@/lib/travelmanager/email-parser';
 
@@ -35,6 +37,7 @@ interface BookingTrip {
 interface Booking {
   id: string;
   type: BookingType;
+  status: BookingStatus;
   provider: string;
   confirmationNum: string | null;
   startDateTime: string | null;
@@ -139,16 +142,30 @@ function BookingCard({
   onDelete,
   onLinkTrip,
   onSaved,
+  onCancel,
   index,
 }: {
   booking: Booking;
   onDelete: (id: string) => void;
   onLinkTrip: (id: string) => void;
   onSaved: () => void;
+  onCancel: (id: string, nextStatus: BookingStatus) => Promise<void>;
   index: number;
 }) {
+  const isCancelled = booking.status === 'CANCELLED';
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
+
+  const handleCancelClick = async () => {
+    if (isCancelling) return;
+    setIsCancelling(true);
+    try {
+      await onCancel(booking.id, isCancelled ? 'ACTIVE' : 'CANCELLED');
+    } finally {
+      setIsCancelling(false);
+    }
+  };
   const [form, setForm] = useState({
     type: booking.type,
     provider: booking.provider,
@@ -221,7 +238,8 @@ function BookingCard({
       initial="hidden"
       animate="visible"
       layout
-      className={`rounded-lg border bg-white p-4 shadow-sm transition-all duration-200 ${editing ? 'border-amber-300 ring-1 ring-amber-200' : `border-slate-100 ${config.borderAccent} hover:-translate-y-0.5 hover:shadow-md`}`}
+      whileTap={{ scale: 0.98 }}
+      className={`rounded-lg border bg-white p-4 shadow-sm transition-all duration-200 ${editing ? 'border-amber-300 ring-1 ring-amber-200' : isCancelled ? 'border-slate-200 bg-slate-50/60 opacity-70' : `border-slate-100 ${config.borderAccent} hover:-translate-y-0.5 hover:shadow-md`}`}
     >
       <div className="mb-3 flex items-start justify-between">
         {editing ? (
@@ -233,17 +251,48 @@ function BookingCard({
           <Link href={`/bookings/${booking.id}`} className="flex items-center gap-2.5 min-w-0 flex-1">
             <span className={`flex items-center justify-center rounded-xl p-2.5 ring-2 ${config.iconBg}`}>{config.icon}</span>
             <div>
-              <p className="font-semibold text-slate-800 hover:text-amber-600 transition-colors">{booking.provider}</p>
-              <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${config.badgeColor}`}>{config.label}</span>
+              <p className={`font-semibold transition-colors ${isCancelled ? 'text-slate-500 line-through' : 'text-slate-800 hover:text-amber-600'}`}>{booking.provider}</p>
+              <div className="flex items-center gap-1.5">
+                <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${config.badgeColor}`}>{config.label}</span>
+                {isCancelled && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-200">
+                    <Ban className="size-2.5" />Cancelled
+                  </span>
+                )}
+              </div>
             </div>
           </Link>
         )}
         <div className="flex items-center gap-1">
           {!editing && (
             <>
-              <button onClick={startEdit} className="cursor-pointer rounded-md p-1.5 text-slate-300 transition-all duration-200 hover:bg-amber-50 hover:text-amber-500" title="Edit booking"><Pencil className="size-4" /></button>
-              {!booking.tripId && <button onClick={() => onLinkTrip(booking.id)} className="cursor-pointer rounded-md p-1.5 text-slate-300 transition-all duration-200 hover:bg-amber-50 hover:text-amber-500" title="Link to trip"><Link2 className="size-4" /></button>}
-              <button onClick={() => onDelete(booking.id)} className="cursor-pointer rounded-md p-1.5 text-slate-300 transition-all duration-200 hover:bg-red-50 hover:text-red-500" title="Delete booking"><Trash2 className="size-4" /></button>
+              <button onClick={startEdit} className="cursor-pointer inline-flex items-center justify-center rounded-md p-2 sm:p-1.5 min-w-11 min-h-11 sm:min-w-0 sm:min-h-0 text-slate-300 transition-all duration-200 hover:bg-amber-50 hover:text-amber-500 focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:outline-none" title="Edit booking" aria-label="Edit booking"><Pencil className="size-4" /></button>
+              {!booking.tripId && <button onClick={() => onLinkTrip(booking.id)} className="cursor-pointer inline-flex items-center justify-center rounded-md p-2 sm:p-1.5 min-w-11 min-h-11 sm:min-w-0 sm:min-h-0 text-slate-300 transition-all duration-200 hover:bg-amber-50 hover:text-amber-500 focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:outline-none" title="Link to trip" aria-label="Link to trip"><Link2 className="size-4" /></button>}
+              <button
+                onClick={handleCancelClick}
+                disabled={isCancelling}
+                className={`cursor-pointer inline-flex items-center justify-center rounded-md p-2 sm:p-1.5 min-w-11 min-h-11 sm:min-w-0 sm:min-h-0 text-slate-300 transition-all duration-200 focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 ${isCancelled ? 'hover:bg-emerald-50 hover:text-emerald-600' : 'hover:bg-orange-50 hover:text-orange-500'}`}
+                title={isCancelled ? 'Reactivate booking' : 'Mark as cancelled'}
+                aria-label={isCancelled ? 'Reactivate booking' : 'Mark as cancelled'}
+              >
+                {isCancelling ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <AnimatePresence mode="wait" initial={false}>
+                    <motion.span
+                      key={isCancelled ? 'cancelled' : 'active'}
+                      initial={{ opacity: 0, rotate: -90 }}
+                      animate={{ opacity: 1, rotate: 0 }}
+                      exit={{ opacity: 0, rotate: 90 }}
+                      transition={{ duration: 0.18 }}
+                      className="inline-flex"
+                    >
+                      {isCancelled ? <RotateCcw className="size-4" /> : <Ban className="size-4" />}
+                    </motion.span>
+                  </AnimatePresence>
+                )}
+              </button>
+              <button onClick={() => onDelete(booking.id)} className="cursor-pointer inline-flex items-center justify-center rounded-md p-2 sm:p-1.5 min-w-11 min-h-11 sm:min-w-0 sm:min-h-0 text-slate-300 transition-all duration-200 hover:bg-red-50 hover:text-red-500 focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:outline-none" title="Delete booking" aria-label="Delete booking"><Trash2 className="size-4" /></button>
             </>
           )}
           {editing && (
@@ -314,7 +363,7 @@ function BookingCard({
           </div>
           <div className="flex gap-2">
             <Button type="submit" size="sm" disabled={saving} className="h-7 text-xs bg-amber-500 hover:bg-amber-600">
-              {saving ? 'Saving...' : 'Save'}
+              {saving ? <><Loader2 className="size-3.5 animate-spin" />Saving...</> : 'Save'}
             </Button>
             <Button type="button" size="sm" variant="outline" onClick={() => setEditing(false)} className="h-7 text-xs">
               Cancel
@@ -351,9 +400,11 @@ export default function BookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('ALL');
   const [linkFilter, setLinkFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState('ACTIVE');
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState(emptyForm);
@@ -371,14 +422,14 @@ export default function BookingsPage() {
   const [showGmailModal, setShowGmailModal] = useState(false);
 
   const fetchBookings = useCallback(async () => {
+    setError(false);
     try {
       const res = await fetch('/api/bookings');
-      if (res.ok) {
-        const data = await res.json();
-        setBookings(Array.isArray(data) ? data : []);
-      }
+      if (!res.ok) throw new Error('Failed to fetch bookings');
+      const data = await res.json();
+      setBookings(Array.isArray(data) ? data : []);
     } catch {
-      // silent
+      setError(true);
     } finally {
       setLoading(false);
     }
@@ -408,9 +459,10 @@ export default function BookingsPage() {
         linkFilter === 'ALL' ||
         (linkFilter === 'LINKED' && b.tripId) ||
         (linkFilter === 'STANDALONE' && !b.tripId);
-      return matchesSearch && matchesType && matchesLink;
+      const matchesStatus = statusFilter === 'ALL' || b.status === statusFilter;
+      return matchesSearch && matchesType && matchesLink && matchesStatus;
     });
-  }, [bookings, search, typeFilter, linkFilter]);
+  }, [bookings, search, typeFilter, linkFilter, statusFilter]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -462,6 +514,21 @@ export default function BookingsPage() {
       showToast('Failed to delete booking', 'error');
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleCancel = async (id: string, nextStatus: BookingStatus) => {
+    try {
+      const res = await fetch(`/api/bookings/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: nextStatus }),
+      });
+      if (!res.ok) throw new Error();
+      showToast(nextStatus === 'CANCELLED' ? 'Booking cancelled' : 'Booking reactivated');
+      fetchBookings();
+    } catch {
+      showToast(nextStatus === 'CANCELLED' ? 'Failed to cancel booking' : 'Failed to reactivate booking', 'error');
     }
   };
 
@@ -572,16 +639,42 @@ export default function BookingsPage() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <div className="relative mb-6">
+          <div className="size-20 rounded-full bg-red-50 flex items-center justify-center">
+            <AlertCircle className="size-10 text-red-400" />
+          </div>
+          <div className="absolute -bottom-1 -right-1 size-7 rounded-full bg-red-100 flex items-center justify-center">
+            <RefreshCw className="size-3.5 text-red-400" />
+          </div>
+        </div>
+        <h2 className="text-xl font-semibold text-slate-900">Failed to load bookings</h2>
+        <p className="mt-2 text-sm text-slate-500 max-w-sm">
+          Something went wrong. Check your connection and try again.
+        </p>
+        <Button
+          onClick={fetchBookings}
+          className="mt-6 bg-slate-900 hover:bg-slate-800 text-white shadow-sm"
+        >
+          <RefreshCw className="mr-2 size-4" />
+          Try again
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-slate-800">Bookings</h1>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           {gmailConnected ? (
             <Button
               variant="outline"
               onClick={() => setShowGmailModal(true)}
-              className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+              className="w-full sm:w-auto text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
             >
               <Mail className="mr-2 size-4" />
               Import from Gmail
@@ -590,7 +683,7 @@ export default function BookingsPage() {
             <Button
               variant="outline"
               asChild
-              className="text-slate-500 hover:text-red-600 hover:bg-red-50 border-slate-200 hover:border-red-200"
+              className="w-full sm:w-auto text-slate-500 hover:text-red-600 hover:bg-red-50 border-slate-200 hover:border-red-200"
             >
               <Link href="/settings">
                 <Mail className="mr-2 size-4" />
@@ -600,7 +693,7 @@ export default function BookingsPage() {
           )}
           <Button
             onClick={() => setShowForm(true)}
-            className="bg-amber-500 hover:bg-amber-600 text-white"
+            className="w-full sm:w-auto bg-amber-500 hover:bg-amber-600 text-white"
           >
             <Plus className="mr-2 size-4" />
             New Booking
@@ -881,6 +974,16 @@ export default function BookingsPage() {
             <SelectItem value="STANDALONE">Standalone</SelectItem>
           </SelectContent>
         </Select>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-full sm:w-44" aria-label="Filter by status">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ACTIVE">Active only</SelectItem>
+            <SelectItem value="CANCELLED">Cancelled only</SelectItem>
+            <SelectItem value="ALL">All bookings</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {bookings.length > 0 && (
@@ -914,23 +1017,28 @@ export default function BookingsPage() {
             visible: { transition: { staggerChildren: 0.05 } },
           }}
         >
-          {filtered.map((booking, i) => (
-            <motion.div
-              key={booking.id}
-              variants={{
-                hidden: { opacity: 0, y: 10 },
-                visible: { opacity: 1, y: 0 },
-              }}
-            >
-              <BookingCard
-                booking={booking}
-                onDelete={setDeleteTarget}
-                onLinkTrip={setLinkTarget}
-                onSaved={fetchBookings}
-                index={i}
-              />
-            </motion.div>
-          ))}
+          <AnimatePresence mode="popLayout">
+            {filtered.map((booking, i) => (
+              <motion.div
+                key={booking.id}
+                layout
+                variants={{
+                  hidden: { opacity: 0, y: 10 },
+                  visible: { opacity: 1, y: 0 },
+                }}
+                exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
+              >
+                <BookingCard
+                  booking={booking}
+                  onDelete={setDeleteTarget}
+                  onLinkTrip={setLinkTarget}
+                  onSaved={fetchBookings}
+                  onCancel={handleCancel}
+                  index={i}
+                />
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </motion.div>
       )}
 

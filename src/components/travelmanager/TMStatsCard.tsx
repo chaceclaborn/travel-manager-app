@@ -19,6 +19,7 @@ const colorMap: Record<string, { bg: string; text: string; border: string }> = {
   purple: { bg: 'bg-purple-50', text: 'text-purple-600', border: 'bg-purple-500' },
   green: { bg: 'bg-green-50', text: 'text-green-600', border: 'bg-green-500' },
   red: { bg: 'bg-red-50', text: 'text-red-600', border: 'bg-red-500' },
+  indigo: { bg: 'bg-indigo-50', text: 'text-indigo-600', border: 'bg-indigo-500' },
   slate: { bg: 'bg-slate-50', text: 'text-slate-600', border: 'bg-slate-500' },
 };
 

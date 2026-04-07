@@ -23,6 +23,10 @@ import {
   BookOpen,
   CheckSquare,
   BookText,
+  Loader2,
+  MoreHorizontal,
+  AlertCircle,
+  RefreshCw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -77,6 +81,24 @@ const staggerItem = {
   animate: { opacity: 1, y: 0 },
 };
 
+function TabError({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-red-200 bg-red-50/50 p-6 text-center">
+      <AlertCircle className="size-6 text-red-500" />
+      <p className="text-sm text-red-700">Failed to load this section.</p>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onRetry}
+        className="gap-1.5 border-red-200 text-red-600 hover:bg-red-100 hover:text-red-700"
+      >
+        <RefreshCw className="size-3.5" />
+        Retry
+      </Button>
+    </div>
+  );
+}
+
 export default function TripDetailPage() {
   const router = useRouter();
   const params = useParams();
@@ -88,6 +110,7 @@ export default function TripDetailPage() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [duplicating, setDuplicating] = useState(false);
   const [activeTab, setActiveTab] = useState('itinerary');
 
   const [itinerary, setItinerary] = useState<any[]>([]);
@@ -97,6 +120,7 @@ export default function TripDetailPage() {
   const [allClients, setAllClients] = useState<any[]>([]);
   const [linkingVendor, setLinkingVendor] = useState(false);
   const [linkingClient, setLinkingClient] = useState(false);
+  const [tabErrors, setTabErrors] = useState<Record<string, boolean>>({});
 
   const fetchTrip = useCallback(async () => {
     try {
@@ -114,31 +138,37 @@ export default function TripDetailPage() {
   const fetchItinerary = useCallback(async () => {
     try {
       const res = await fetch(`/api/trips/${id}/itinerary`);
-      if (res.ok) {
-        const data = await res.json();
-        setItinerary(Array.isArray(data) ? data : []);
-      }
-    } catch {}
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setItinerary(Array.isArray(data) ? data : []);
+      setTabErrors((prev) => ({ ...prev, itinerary: false }));
+    } catch {
+      setTabErrors((prev) => ({ ...prev, itinerary: true }));
+    }
   }, [id]);
 
   const fetchTripVendors = useCallback(async () => {
     try {
       const res = await fetch(`/api/trips/${id}/vendors`);
-      if (res.ok) {
-        const data = await res.json();
-        setTripVendors(Array.isArray(data) ? data : []);
-      }
-    } catch {}
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setTripVendors(Array.isArray(data) ? data : []);
+      setTabErrors((prev) => ({ ...prev, vendors: false }));
+    } catch {
+      setTabErrors((prev) => ({ ...prev, vendors: true }));
+    }
   }, [id]);
 
   const fetchTripClients = useCallback(async () => {
     try {
       const res = await fetch(`/api/trips/${id}/clients`);
-      if (res.ok) {
-        const data = await res.json();
-        setTripClients(Array.isArray(data) ? data : []);
-      }
-    } catch {}
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setTripClients(Array.isArray(data) ? data : []);
+      setTabErrors((prev) => ({ ...prev, clients: false }));
+    } catch {
+      setTabErrors((prev) => ({ ...prev, clients: true }));
+    }
   }, [id]);
 
   const fetchAllVendors = useCallback(async () => {
@@ -486,7 +516,7 @@ export default function TripDetailPage() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-7 gap-1.5 px-2.5 text-xs text-slate-600 hover:bg-white hover:text-amber-600 hover:shadow-sm transition-all duration-200 group/btn"
+                    className="h-10 sm:h-7 gap-1.5 px-3 sm:px-2.5 text-sm sm:text-xs text-slate-600 hover:bg-white hover:text-amber-600 hover:shadow-sm transition-all duration-200 group/btn"
                     onClick={() => setEditing(true)}
                   >
                     <Pencil className="size-3.5 transition-transform duration-200 group-hover/btn:rotate-[-12deg]" />
@@ -495,8 +525,11 @@ export default function TripDetailPage() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-7 gap-1.5 px-2.5 text-xs text-slate-600 hover:bg-white hover:text-blue-600 hover:shadow-sm transition-all duration-200 group/btn"
+                    disabled={duplicating}
+                    className="h-10 sm:h-7 gap-1.5 px-3 sm:px-2.5 text-sm sm:text-xs text-slate-600 hover:bg-white hover:text-blue-600 hover:shadow-sm transition-all duration-200 group/btn"
                     onClick={async () => {
+                      if (duplicating) return;
+                      setDuplicating(true);
                       try {
                         const res = await fetch(`/api/trips/${id}/duplicate`, { method: 'POST' });
                         if (!res.ok) throw new Error();
@@ -505,15 +538,22 @@ export default function TripDetailPage() {
                         router.push(`/trips/${newTrip.id}`);
                       } catch {
                         showToast('Failed to duplicate trip', 'error');
+                      } finally {
+                        setDuplicating(false);
                       }
                     }}
                   >
-                    <Copy className="size-3.5 transition-transform duration-200 group-hover/btn:scale-110" />
+                    {duplicating ? (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    ) : (
+                      <Copy className="size-3.5 transition-transform duration-200 group-hover/btn:scale-110" />
+                    )}
                     Duplicate
                   </Button>
                 </div>
 
-                <div className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50/50 p-1">
+                {/* Desktop: Export / Report / Print as a button group */}
+                <div className="hidden sm:flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50/50 p-1">
                   <Button
                     variant="ghost"
                     size="sm"
@@ -543,10 +583,53 @@ export default function TripDetailPage() {
                   </Button>
                 </div>
 
+                {/* Mobile: collapse Export / Report / Print into a "More" menu */}
+                <details className="sm:hidden relative group/more">
+                  <summary className="list-none [&::-webkit-details-marker]:hidden cursor-pointer flex items-center justify-center gap-1.5 h-10 px-3 rounded-lg border border-slate-200 bg-slate-50/50 text-sm text-slate-600 hover:bg-white hover:text-slate-800 transition-all duration-200">
+                    <MoreHorizontal className="size-4" />
+                    More
+                  </summary>
+                  <div className="absolute right-0 z-20 mt-1 w-44 rounded-lg border border-slate-200 bg-white p-1 shadow-lg">
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-50 hover:text-emerald-600"
+                      onClick={(e) => {
+                        e.currentTarget.closest('details')?.removeAttribute('open');
+                        window.open(`/api/trips/${id}/ical`, '_blank');
+                      }}
+                    >
+                      <Download className="size-4" />
+                      Export
+                    </button>
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-50 hover:text-violet-600"
+                      onClick={(e) => {
+                        e.currentTarget.closest('details')?.removeAttribute('open');
+                        window.open(`/api/trips/${id}/report`, '_blank');
+                      }}
+                    >
+                      <FileDown className="size-4" />
+                      Report
+                    </button>
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+                      onClick={(e) => {
+                        e.currentTarget.closest('details')?.removeAttribute('open');
+                        window.print();
+                      }}
+                    >
+                      <Printer className="size-4" />
+                      Print
+                    </button>
+                  </div>
+                </details>
+
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-7 gap-1.5 rounded-lg border border-red-200 bg-red-50/50 px-2.5 text-xs text-red-500 hover:bg-red-100 hover:text-red-700 transition-all duration-200 group/btn"
+                  className="h-10 sm:h-7 gap-1.5 rounded-lg border border-red-200 bg-red-50/50 px-3 sm:px-2.5 text-sm sm:text-xs text-red-500 hover:bg-red-100 hover:text-red-700 transition-all duration-200 group/btn"
                   onClick={() => setDeleteOpen(true)}
                 >
                   <Trash2 className="size-3.5 transition-transform duration-200 group-hover/btn:scale-110" />
@@ -617,15 +700,18 @@ export default function TripDetailPage() {
       {/* Tabs section */}
       <motion.div variants={staggerItem} transition={{ duration: 0.4, delay: 0.1 }}>
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList variant="line" className="w-full justify-start gap-0 border-b border-slate-200 px-0">
+          <TabsList
+            variant="line"
+            className="flex w-full justify-start gap-1.5 sm:gap-1 border-b border-slate-200 px-0 h-auto sm:h-9 overflow-x-auto sm:overflow-visible -mx-1 px-1 sm:mx-0 sm:px-0"
+          >
             {tabConfig.map(({ value, label, icon: Icon }) => (
               <TabsTrigger
                 key={value}
                 value={value}
-                className="gap-1.5 px-3 py-2 text-sm data-[state=active]:text-amber-600 after:bg-amber-500"
+                className="flex-shrink-0 sm:flex-1 h-11 sm:h-9 gap-1.5 px-3 py-2 text-sm whitespace-nowrap data-[state=active]:text-amber-600 after:bg-amber-500"
               >
-                <Icon className="size-3.5" />
-                <span className="hidden sm:inline">{label}</span>
+                <Icon className="size-4" />
+                <span>{label}</span>
               </TabsTrigger>
             ))}
           </TabsList>
@@ -641,43 +727,55 @@ export default function TripDetailPage() {
             >
               <TabsContent value="itinerary" className="mt-5">
                 <div className="rounded-xl bg-white p-6 shadow-sm transition-shadow duration-300 hover:shadow-md">
-                  <ItineraryTimeline
-                    items={itinerary}
-                    tripId={id}
-                    onRefresh={fetchItinerary}
-                    tripStartDate={trip.startDate}
-                    tripEndDate={trip.endDate}
-                    vendors={allVendors}
-                    clients={allClients}
-                  />
+                  {tabErrors.itinerary ? (
+                    <TabError onRetry={fetchItinerary} />
+                  ) : (
+                    <ItineraryTimeline
+                      items={itinerary}
+                      tripId={id}
+                      onRefresh={fetchItinerary}
+                      tripStartDate={trip.startDate}
+                      tripEndDate={trip.endDate}
+                      vendors={allVendors}
+                      clients={allClients}
+                    />
+                  )}
                 </div>
               </TabsContent>
 
               <TabsContent value="vendors" className="mt-5">
                 <div className="rounded-xl bg-white p-6 shadow-sm transition-shadow duration-300 hover:shadow-md">
                   <h3 className="mb-4 text-lg font-semibold text-slate-800">Linked Vendors</h3>
-                  <LinkSelector
-                    items={allVendors.map((v: any) => ({ id: v.id, name: v.name }))}
-                    linkedIds={vendorLinkedIds}
-                    onLink={handleLinkVendor}
-                    onUnlink={handleUnlinkVendor}
-                    type="vendor"
-                    isLoading={linkingVendor}
-                  />
+                  {tabErrors.vendors ? (
+                    <TabError onRetry={fetchTripVendors} />
+                  ) : (
+                    <LinkSelector
+                      items={allVendors.map((v: any) => ({ id: v.id, name: v.name }))}
+                      linkedIds={vendorLinkedIds}
+                      onLink={handleLinkVendor}
+                      onUnlink={handleUnlinkVendor}
+                      type="vendor"
+                      isLoading={linkingVendor}
+                    />
+                  )}
                 </div>
               </TabsContent>
 
               <TabsContent value="clients" className="mt-5">
                 <div className="rounded-xl bg-white p-6 shadow-sm transition-shadow duration-300 hover:shadow-md">
                   <h3 className="mb-4 text-lg font-semibold text-slate-800">Linked Clients</h3>
-                  <LinkSelector
-                    items={allClients.map((c: any) => ({ id: c.id, name: c.name }))}
-                    linkedIds={clientLinkedIds}
-                    onLink={handleLinkClient}
-                    onUnlink={handleUnlinkClient}
-                    type="client"
-                    isLoading={linkingClient}
-                  />
+                  {tabErrors.clients ? (
+                    <TabError onRetry={fetchTripClients} />
+                  ) : (
+                    <LinkSelector
+                      items={allClients.map((c: any) => ({ id: c.id, name: c.name }))}
+                      linkedIds={clientLinkedIds}
+                      onLink={handleLinkClient}
+                      onUnlink={handleUnlinkClient}
+                      type="client"
+                      isLoading={linkingClient}
+                    />
+                  )}
                 </div>
               </TabsContent>
 
