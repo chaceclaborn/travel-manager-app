@@ -6,3 +6,5 @@ node_modules/
 next-env.d.ts
 src/lib/generated/
 /.claude
+!/.claude/agents
+!/.claude/agents/**

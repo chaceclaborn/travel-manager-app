@@ -144,6 +144,9 @@ model Trip {
   status      TripStatus      @default(DRAFT)
   notes       String?
   budget      Float?
+  shareToken      String?   @unique
+  shareEnabled    Boolean   @default(false)
+  shareExpiresAt  DateTime?
   vendors     TripVendor[]
   clients     TripClient[]
   itinerary   ItineraryItem[]
@@ -301,10 +304,15 @@ model Booking {
   confirmationNum String?
   startDateTime   String?
   endDateTime     String?
+  timezone        String?
   location        String?
   endLocation     String?
   seat            String?
   notes           String?
+  commissionAmount Float?
+  commissionRate   Float?
+  commissionPaid   Boolean @default(false)
+  commissionNotes  String?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   @@index([tripId])
@@ -327,6 +335,7 @@ model Meeting {
   title         String
   startDateTime String
   endDateTime   String?
+  timezone      String?
   location      String?
   notes         String?
   createdAt     DateTime  @default(now())
