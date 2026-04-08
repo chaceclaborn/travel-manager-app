@@ -34,11 +34,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid platform' }, { status: 400 });
     }
 
-    const record = await prisma.deviceToken.upsert({
+    // Look up first so we can reject token hijacks. If the token already
+    // exists under a different user, refuse — this prevents an authenticated
+    // attacker who happens to obtain another user's APNs token from taking
+    // over its push delivery. Same-owner re-registration is still idempotent.
+    const existing = await prisma.deviceToken.findUnique({
       where: { token },
-      create: { userId: user.id, token, platform },
-      update: { userId: user.id, platform },
+      select: { id: true, userId: true },
     });
+
+    if (existing && existing.userId !== user.id) {
+      return NextResponse.json({ error: 'Token already registered' }, { status: 409 });
+    }
+
+    const record = existing
+      ? await prisma.deviceToken.update({
+          where: { id: existing.id },
+          data: { platform },
+        })
+      : await prisma.deviceToken.create({
+          data: { userId: user.id, token, platform },
+        });
 
     return NextResponse.json({ ok: true, id: record.id });
   } catch (error) {

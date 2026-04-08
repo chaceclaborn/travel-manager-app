@@ -12,6 +12,7 @@ import { CookieBanner } from '@/components/travelmanager/CookieBanner';
 import { FeedbackWidget } from '@/components/travelmanager/FeedbackWidget';
 import { ClickTracker } from '@/components/travelmanager/ClickTracker';
 import { ServiceWorkerRegister } from '@/components/travelmanager/ServiceWorkerRegister';
+import { PushRegister } from '@/components/travelmanager/PushRegister';
 import { useAuth } from '@/lib/travelmanager/useAuth';
 
 export default function TravelManagerLayout({
@@ -350,6 +351,7 @@ export default function TravelManagerLayout({
       <FeedbackWidget />
       <CookieBanner />
       <ServiceWorkerRegister />
+      <PushRegister />
     </>
   );
 }

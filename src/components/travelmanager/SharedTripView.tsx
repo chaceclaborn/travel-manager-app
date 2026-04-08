@@ -1,8 +1,46 @@
-import type { Trip, ItineraryItem, Booking } from '@/lib/generated/prisma';
+import type { TripStatus, BookingType } from '@/lib/generated/prisma';
 
-type SharedTrip = Trip & {
-  itinerary: ItineraryItem[];
-  bookings: Booking[];
+// Narrow, public-safe subset of the trip returned by getPublicTripByToken.
+// This type MUST NOT include commission fields, expense details, private
+// notes on bookings, checklists, attachments, or any field not explicitly
+// whitelisted in the Prisma select. It matches the shape of the select
+// in src/lib/travelmanager/trips.ts::getPublicTripByToken.
+type SharedItineraryItem = {
+  id: string;
+  title: string;
+  date: Date;
+  endDate: Date | null;
+  startTime: string | null;
+  endTime: string | null;
+  location: string | null;
+  sortOrder: number;
+};
+
+type SharedBooking = {
+  id: string;
+  type: BookingType;
+  provider: string;
+  confirmationNum: string | null;
+  startDateTime: string | null;
+  endDateTime: string | null;
+  location: string | null;
+  endLocation: string | null;
+  seat: string | null;
+};
+
+type SharedTrip = {
+  id: string;
+  title: string;
+  destination: string | null;
+  startDate: Date | null;
+  endDate: Date | null;
+  status: TripStatus;
+  notes: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  shareExpiresAt: Date | null;
+  itinerary: SharedItineraryItem[];
+  bookings: SharedBooking[];
   user: { name: string | null; email: string } | null;
 };
 
@@ -54,8 +92,8 @@ function formatDateTimeString(raw: string | null): string | null {
   });
 }
 
-function groupItineraryByDate(items: ItineraryItem[]): Map<string, ItineraryItem[]> {
-  const groups = new Map<string, ItineraryItem[]>();
+function groupItineraryByDate(items: SharedItineraryItem[]): Map<string, SharedItineraryItem[]> {
+  const groups = new Map<string, SharedItineraryItem[]>();
   for (const item of items) {
     const key = new Date(item.date).toISOString().slice(0, 10);
     const bucket = groups.get(key) ?? [];
@@ -152,11 +190,6 @@ export default function SharedTripView({ trip }: SharedTripViewProps) {
                           </div>
                           {item.location && (
                             <p className="mt-1 text-sm text-stone-600">{item.location}</p>
-                          )}
-                          {item.notes && (
-                            <p className="mt-2 whitespace-pre-wrap text-sm text-stone-600">
-                              {item.notes}
-                            </p>
                           )}
                         </li>
                       ))}

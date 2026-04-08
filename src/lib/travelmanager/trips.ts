@@ -475,11 +475,51 @@ export async function updateTripShareExpiry(tripId: string, userId: string, expi
 }
 
 export async function getPublicTripByToken(token: string) {
+  // Explicit field whitelist — NEVER return the full row.
+  // Bookings MUST NOT include commission* or private notes (they'd be
+  // serialized into the RSC payload and visible to anyone with the link).
+  // Itinerary items MUST NOT include notes for the same reason.
   const trip = await prisma.trip.findFirst({
     where: { shareToken: token, shareEnabled: true },
-    include: {
-      itinerary: { orderBy: [{ date: 'asc' }, { sortOrder: 'asc' }] },
-      bookings: { where: { status: 'ACTIVE' }, orderBy: { startDateTime: 'asc' } },
+    select: {
+      id: true,
+      title: true,
+      destination: true,
+      startDate: true,
+      endDate: true,
+      status: true,
+      notes: true,
+      latitude: true,
+      longitude: true,
+      shareExpiresAt: true,
+      itinerary: {
+        orderBy: [{ date: 'asc' }, { sortOrder: 'asc' }],
+        select: {
+          id: true,
+          title: true,
+          date: true,
+          endDate: true,
+          startTime: true,
+          endTime: true,
+          location: true,
+          sortOrder: true,
+        },
+      },
+      bookings: {
+        where: { status: 'ACTIVE' },
+        orderBy: { startDateTime: 'asc' },
+        select: {
+          id: true,
+          type: true,
+          provider: true,
+          confirmationNum: true,
+          startDateTime: true,
+          endDateTime: true,
+          location: true,
+          endLocation: true,
+          seat: true,
+        },
+      },
       user: { select: { name: true, email: true } },
     },
   });

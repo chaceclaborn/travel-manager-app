@@ -57,6 +57,15 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Page extensions: web builds include `.web.tsx` (and .ts) files in addition
+  // to the default set, so pages suffixed `.web.tsx` are recognized. Mobile
+  // builds use the default set only, which makes `.web.tsx` files invisible
+  // to the router and skips them during static export. This is how we gate
+  // server-dynamic routes (like the public share page) out of the iOS bundle
+  // without deleting or restructuring the source tree.
+  pageExtensions: isMobileBuild
+    ? ['tsx', 'ts', 'jsx', 'js']
+    : ['web.tsx', 'web.ts', 'tsx', 'ts', 'jsx', 'js'],
   images: {
     // Static export cannot run the Vercel image optimizer at request time,
     // so when building for Capacitor we flip to unoptimized. Web builds keep
