@@ -52,11 +52,29 @@ function isApiRoute(file) {
   return rel.startsWith('app/api/') || /\/route\.(ts|tsx|js|jsx)$/.test(rel);
 }
 
+function isWebOnlyFile(file) {
+  // Files suffixed `.web.tsx` / `.web.ts` are gated out of the mobile build
+  // by `pageExtensions` in next.config.ts — mobile builds don't include
+  // `web.tsx` in the extensions array, so the router ignores them entirely.
+  // Safe to ignore in static-export audit.
+  return /\.(web\.tsx|web\.ts)$/.test(file);
+}
+
 function isPageOrLayout(file) {
   const rel = relative(SRC, file).split(sep).join('/');
   return /^app\/.*\/(page|layout|template|loading|error|not-found)\.(ts|tsx|js|jsx)$/.test(
     rel
   ) || /^app\/(page|layout|template|loading|error|not-found)\.(ts|tsx|js|jsx)$/.test(rel);
+}
+
+function isSrcLibFile(file) {
+  // Files under src/lib/** are utility modules. They only ship to the static
+  // export bundle if a page component imports them. Pattern-based audit can't
+  // trace the import graph, so we bucket them separately and rely on humans
+  // to verify (see docs/APPSTORE_PLAN.md section 9a "Potential blockers that
+  // are actually fine"). They do NOT count toward the mobile-page blocker total.
+  const rel = relative(SRC, file).split(sep).join('/');
+  return rel.startsWith('lib/');
 }
 
 // ---------- checks ----------
@@ -137,14 +155,22 @@ console.log(`${c.gray}so issues there are OK — they keep running on Vercel.${c
 let blockerCount = 0;
 let warnCount = 0;
 let apiOnlyCount = 0;
+let libOnlyCount = 0;
 
 for (const [key, list] of Object.entries(findings)) {
   const check = CHECKS[key];
   if (list.length === 0) continue;
 
-  // partition: API-route findings vs page findings
-  const inPages = list.filter((f) => !isApiRoute(f.file));
+  // partition (4-way): mobile-visible pages, API routes, web-only gated files,
+  // and src/lib helpers. Only `inPages` counts toward the blocker total — the
+  // others are either excluded from the static export bundle or unreachable
+  // from any page component (verified manually in APPSTORE_PLAN.md §9a).
   const inApi = list.filter((f) => isApiRoute(f.file));
+  const inWebOnly = list.filter((f) => isWebOnlyFile(f.file));
+  const inLib = list.filter((f) => isSrcLibFile(f.file) && !isApiRoute(f.file) && !isWebOnlyFile(f.file));
+  const inPages = list.filter(
+    (f) => !isApiRoute(f.file) && !isWebOnlyFile(f.file) && !isSrcLibFile(f.file)
+  );
 
   const isBlocker = check.severity === 'block';
   const color = isBlocker ? c.red : c.yellow;
@@ -165,6 +191,19 @@ for (const [key, list] of Object.entries(findings)) {
     apiOnlyCount += inApi.length;
     console.log(`${c.gray}[ok in api routes] ${check.label} — ${inApi.length} match(es) under src/app/api or route handlers${c.reset}`);
   }
+
+  if (inWebOnly.length > 0) {
+    console.log(`${c.gray}[ok in .web.tsx files] ${check.label} — ${inWebOnly.length} match(es) gated out of mobile build${c.reset}`);
+  }
+
+  if (inLib.length > 0) {
+    libOnlyCount += inLib.length;
+    console.log(`${c.gray}[review: src/lib] ${check.label} — ${inLib.length} match(es) in src/lib (only ship to mobile if a page imports them; see APPSTORE_PLAN.md §9a)${c.reset}`);
+    for (const f of inLib) {
+      const rel = relative(ROOT, f.file);
+      console.log(`  ${c.gray}  ${rel}:${f.line}${c.reset}`);
+    }
+  }
 }
 
 // special-case: generateMetadata that's only static/literal is fine; we flag anyway
@@ -172,9 +211,10 @@ for (const [key, list] of Object.entries(findings)) {
 
 console.log('');
 console.log(`${c.bold}Summary${c.reset}`);
-console.log(`  ${c.red}blockers (static export will fail / misbehave): ${blockerCount}${c.reset}`);
+console.log(`  ${c.red}blockers in mobile-visible pages: ${blockerCount}${c.reset}`);
 console.log(`  ${c.yellow}warnings (review manually): ${warnCount}${c.reset}`);
 console.log(`  ${c.gray}findings inside API routes (safe, ignored): ${apiOnlyCount}${c.reset}`);
+console.log(`  ${c.gray}findings inside src/lib (verified safe in §9a): ${libOnlyCount}${c.reset}`);
 
 if (blockerCount > 0) {
   console.log('');
