@@ -16,6 +16,28 @@ import {
 } from '@/components/ui/select';
 import { TripCard } from '@/components/travelmanager/TripCard';
 import { TMEmptyState } from '@/components/travelmanager/TMEmptyState';
+import { TMDeleteDialog } from '@/components/travelmanager/TMDeleteDialog';
+import { useTMToast } from '@/components/travelmanager/TMToast';
+
+function escapeCsv(v: unknown): string {
+  if (v == null) return '';
+  const s = String(v);
+  if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+    return `"${s.replace(/"/g, '""')}"`;
+  }
+  return s;
+}
+
+function downloadCsv(rows: string[][], filename: string) {
+  const csv = rows.map((r) => r.map(escapeCsv).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 const STATUS_FILTERS = [
   { value: 'ALL', label: 'All Statuses' },
@@ -83,6 +105,13 @@ function TripsPageContent() {
   });
   const [sortBy, setSortBy] = useState('date-nearest');
   const abortRef = useRef<AbortController | null>(null);
+  const { showToast } = useTMToast();
+
+  // Bulk selection state
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
   const fetchTrips = useCallback(async () => {
     if (abortRef.current) abortRef.current.abort();
@@ -110,6 +139,72 @@ function TripsPageContent() {
     fetchTrips();
     return () => abortRef.current?.abort();
   }, [fetchTrips]);
+
+  const toggleSelected = useCallback((id: string, checked: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }, []);
+
+  const exitSelectMode = useCallback(() => {
+    setSelectMode(false);
+    setSelectedIds(new Set());
+  }, []);
+
+  const handleBulkDeleteConfirm = async () => {
+    if (selectedIds.size === 0) return;
+    setIsBulkDeleting(true);
+    try {
+      const res = await fetch('/api/trips/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: Array.from(selectedIds) }),
+      });
+      if (!res.ok) throw new Error(`Server error (${res.status})`);
+      const count = selectedIds.size;
+      showToast(`Deleted ${count} ${count === 1 ? 'trip' : 'trips'}`);
+      setBulkDeleteOpen(false);
+      exitSelectMode();
+      fetchTrips();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to delete trips', 'error');
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
+  const handleBulkExportCsv = async () => {
+    if (selectedIds.size === 0) return;
+    try {
+      // Minimal list doesn't include `notes`, so fetch full trips for export.
+      const res = await fetch('/api/trips');
+      if (!res.ok) throw new Error(`Server error (${res.status})`);
+      const full = await res.json();
+      if (!Array.isArray(full)) throw new Error('Unexpected response');
+
+      const selected = full.filter((t: any) => selectedIds.has(t.id));
+      const header = ['Title', 'Destination', 'Start Date', 'End Date', 'Status', 'Budget', 'Notes'];
+      const rows: string[][] = [
+        header,
+        ...selected.map((t: any) => [
+          t.title ?? '',
+          t.destination ?? '',
+          t.startDate ? String(t.startDate).split('T')[0] : '',
+          t.endDate ? String(t.endDate).split('T')[0] : '',
+          t.status ?? '',
+          t.budget != null ? String(t.budget) : '',
+          t.notes ?? '',
+        ]),
+      ];
+      downloadCsv(rows, `trips-${new Date().toISOString().split('T')[0]}.csv`);
+      showToast(`Exported ${selected.length} ${selected.length === 1 ? 'trip' : 'trips'}`);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to export', 'error');
+    }
+  };
 
   const filtered = useMemo(() => {
     const result = trips.filter((trip) => {
@@ -176,12 +271,25 @@ function TripsPageContent() {
             </p>
           )}
         </div>
-        <Button asChild className="bg-amber-500 hover:bg-amber-600 shadow-sm">
-          <Link href="/trips/new">
-            <Plus className="mr-1.5 size-4" />
-            New Trip
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          {trips.length > 0 && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSelectMode((m) => !m);
+                setSelectedIds(new Set());
+              }}
+            >
+              {selectMode ? 'Cancel' : 'Select'}
+            </Button>
+          )}
+          <Button asChild className="bg-amber-500 hover:bg-amber-600 shadow-sm">
+            <Link href="/trips/new">
+              <Plus className="mr-1.5 size-4" />
+              New Trip
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* Search and filters */}
@@ -316,27 +424,91 @@ function TripsPageContent() {
           }}
         >
           <AnimatePresence mode="popLayout">
-            {filtered.map((trip) => (
-              <motion.div
-                key={trip.id}
-                layout
-                variants={{
-                  hidden: { opacity: 0, y: 20, scale: 0.97 },
-                  visible: {
-                    opacity: 1,
-                    y: 0,
-                    scale: 1,
-                    transition: { duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] },
-                  },
-                }}
-                exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
-              >
-                <TripCard trip={trip} onSaved={fetchTrips} onDeleted={fetchTrips} />
-              </motion.div>
-            ))}
+            {filtered.map((trip) => {
+              const isSelected = selectedIds.has(trip.id);
+              return (
+                <motion.div
+                  key={trip.id}
+                  layout
+                  variants={{
+                    hidden: { opacity: 0, y: 20, scale: 0.97 },
+                    visible: {
+                      opacity: 1,
+                      y: 0,
+                      scale: 1,
+                      transition: { duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] },
+                    },
+                  }}
+                  exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
+                >
+                  <div
+                    className={`relative rounded-xl transition-all ${
+                      selectMode && isSelected ? 'ring-2 ring-amber-500 ring-offset-2' : ''
+                    }`}
+                    onClick={(e) => {
+                      if (selectMode) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        toggleSelected(trip.id, !isSelected);
+                      }
+                    }}
+                  >
+                    {selectMode && (
+                      <label
+                        className="absolute top-2 left-2 z-10 flex items-center justify-center rounded bg-white/95 p-1.5 shadow-sm ring-1 ring-slate-200 cursor-pointer"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <input
+                          type="checkbox"
+                          className="size-4 cursor-pointer accent-amber-500"
+                          checked={isSelected}
+                          onChange={(e) => toggleSelected(trip.id, e.target.checked)}
+                          aria-label={`Select ${trip.title}`}
+                        />
+                      </label>
+                    )}
+                    <div className={selectMode ? 'pointer-events-none' : ''}>
+                      <TripCard trip={trip} onSaved={fetchTrips} onDeleted={fetchTrips} />
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
           </AnimatePresence>
         </motion.div>
       )}
+
+      {selectMode && selectedIds.size > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 md:left-64 z-40 border-t border-slate-200 bg-white p-3 shadow-lg">
+          <div className="mx-auto flex max-w-6xl items-center gap-3 flex-wrap">
+            <span className="font-semibold text-slate-800">
+              {selectedIds.size} selected
+            </span>
+            <Button variant="outline" size="sm" onClick={() => setSelectedIds(new Set())}>
+              Clear
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setBulkDeleteOpen(true)}
+            >
+              Delete
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleBulkExportCsv}>
+              Export CSV
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <TMDeleteDialog
+        open={bulkDeleteOpen}
+        onClose={() => setBulkDeleteOpen(false)}
+        onConfirm={handleBulkDeleteConfirm}
+        title={`Delete ${selectedIds.size} ${selectedIds.size === 1 ? 'trip' : 'trips'}?`}
+        description="This action cannot be undone. All itinerary items, vendor/client links, and expenses for these trips will also be removed."
+        isDeleting={isBulkDeleting}
+      />
     </div>
   );
 }

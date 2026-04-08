@@ -1,19 +1,40 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Search, MapPin, Building2, Users, X, Clock } from 'lucide-react';
+import {
+  Search,
+  MapPin,
+  Building2,
+  Users,
+  X,
+  Clock,
+  Plane,
+  CalendarDays,
+  Loader2,
+} from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+
+type EntityType = 'trip' | 'booking' | 'meeting' | 'vendor' | 'client' | 'itinerary';
 
 interface SearchResults {
   trips: Array<{ id: string; title: string; destination: string | null }>;
-  vendors: Array<{ id: string; name: string; city: string | null }>;
-  clients: Array<{ id: string; name: string; company: string | null }>;
+  bookings: Array<{ id: string; provider: string; type: string; location: string | null }>;
+  meetings: Array<{ id: string; title: string; location: string | null; startDateTime: string }>;
+  vendors: Array<{ id: string; name: string; category: string; contactName: string | null }>;
+  clients: Array<{ id: string; name: string; company: string | null; email: string | null }>;
+  itinerary: Array<{
+    id: string;
+    title: string;
+    location: string | null;
+    tripId: string;
+    trip: { title: string };
+  }>;
 }
 
 interface ResultItem {
-  type: 'trip' | 'vendor' | 'client';
+  type: EntityType;
   id: string;
   label: string;
   sublabel: string | null;
@@ -45,20 +66,93 @@ function saveRecentSearch(query: string) {
 
 function flattenResults(results: SearchResults): ResultItem[] {
   const items: ResultItem[] = [];
-  for (const trip of results.trips) {
-    items.push({ type: 'trip', id: trip.id, label: trip.title, sublabel: trip.destination, href: `/trips/${trip.id}` });
+
+  for (const t of results.trips) {
+    items.push({
+      type: 'trip',
+      id: t.id,
+      label: t.title,
+      sublabel: t.destination,
+      href: `/trips/${t.id}`,
+    });
   }
-  for (const vendor of results.vendors) {
-    items.push({ type: 'vendor', id: vendor.id, label: vendor.name, sublabel: vendor.city, href: `/vendors/${vendor.id}` });
+  for (const b of results.bookings) {
+    items.push({
+      type: 'booking',
+      id: b.id,
+      label: b.provider,
+      sublabel: b.location ?? b.type,
+      href: `/bookings/${b.id}`,
+    });
   }
-  for (const client of results.clients) {
-    items.push({ type: 'client', id: client.id, label: client.name, sublabel: client.company, href: `/clients/${client.id}` });
+  for (const m of results.meetings) {
+    items.push({
+      type: 'meeting',
+      id: m.id,
+      label: m.title,
+      sublabel: m.location,
+      href: `/meetings`,
+    });
+  }
+  for (const v of results.vendors) {
+    items.push({
+      type: 'vendor',
+      id: v.id,
+      label: v.name,
+      sublabel: v.contactName ?? v.category,
+      href: `/vendors/${v.id}`,
+    });
+  }
+  for (const c of results.clients) {
+    items.push({
+      type: 'client',
+      id: c.id,
+      label: c.name,
+      sublabel: c.company ?? c.email,
+      href: `/clients/${c.id}`,
+    });
+  }
+  for (const i of results.itinerary) {
+    items.push({
+      type: 'itinerary',
+      id: i.id,
+      label: i.title,
+      sublabel: i.location ?? i.trip.title,
+      href: `/trips/${i.tripId}`,
+    });
   }
   return items;
 }
 
-const sectionIcons = { trip: MapPin, vendor: Building2, client: Users } as const;
-const sectionLabels = { trip: 'Trips', vendor: 'Vendors', client: 'Clients' } as const;
+const sectionIcons: Record<EntityType, typeof MapPin> = {
+  trip: MapPin,
+  booking: Plane,
+  meeting: Users,
+  vendor: Building2,
+  client: Users,
+  itinerary: CalendarDays,
+};
+
+const sectionLabels: Record<EntityType, string> = {
+  trip: 'Trips',
+  booking: 'Bookings',
+  meeting: 'Meetings',
+  vendor: 'Vendors',
+  client: 'Clients',
+  itinerary: 'Itinerary',
+};
+
+function hasAnyResults(r: SearchResults | null): boolean {
+  if (!r) return false;
+  return (
+    r.trips.length > 0 ||
+    r.bookings.length > 0 ||
+    r.meetings.length > 0 ||
+    r.vendors.length > 0 ||
+    r.clients.length > 0 ||
+    r.itinerary.length > 0
+  );
+}
 
 export function TMCommandPalette({ open, onClose }: TMCommandPaletteProps) {
   const router = useRouter();
@@ -69,8 +163,12 @@ export function TMCommandPalette({ open, onClose }: TMCommandPaletteProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
 
-  const flatItems = results ? flattenResults(results) : [];
+  const flatItems = useMemo(
+    () => (results ? flattenResults(results) : []),
+    [results]
+  );
 
+  // Reset state when opening
   useEffect(() => {
     if (open) {
       setQuery('');
@@ -81,39 +179,47 @@ export function TMCommandPalette({ open, onClose }: TMCommandPaletteProps) {
     }
   }, [open]);
 
-  const fetchResults = useCallback(
-    (() => {
-      let timer: ReturnType<typeof setTimeout>;
-      return (q: string) => {
-        clearTimeout(timer);
-        if (q.length < 2) {
-          setResults(null);
-          setLoading(false);
-          return;
-        }
-        setLoading(true);
-        timer = setTimeout(async () => {
-          try {
-            const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
-            if (res.ok) {
-              const data = await res.json();
-              setResults(data);
-              setActiveIndex(0);
-            }
-          } catch {
-            // silently fail
-          } finally {
+  // Debounced search with AbortController — cancels stale requests
+  useEffect(() => {
+    const q = query.trim();
+
+    if (q.length < 2) {
+      setResults(null);
+      setLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    setLoading(true);
+
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`, {
+          signal: controller.signal,
+        });
+        if (res.ok) {
+          const data: SearchResults = await res.json();
+          if (!controller.signal.aborted) {
+            setResults(data);
+            setActiveIndex(0);
             setLoading(false);
           }
-        }, 300);
-      };
-    })(),
-    []
-  );
+        } else if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      } catch (err) {
+        // AbortError is expected on cancellation — ignore silently
+        if ((err as Error).name !== 'AbortError' && !controller.signal.aborted) {
+          setLoading(false);
+        }
+      }
+    }, 300);
 
-  useEffect(() => {
-    fetchResults(query);
-  }, [query, fetchResults]);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [query]);
 
   const navigateTo = useCallback(
     (href: string) => {
@@ -126,12 +232,13 @@ export function TMCommandPalette({ open, onClose }: TMCommandPaletteProps) {
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
+      if (flatItems.length === 0) return;
       if (e.key === 'ArrowDown') {
         e.preventDefault();
-        setActiveIndex((i) => (i + 1) % Math.max(flatItems.length, 1));
+        setActiveIndex((i) => (i + 1) % flatItems.length);
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
-        setActiveIndex((i) => (i - 1 + flatItems.length) % Math.max(flatItems.length, 1));
+        setActiveIndex((i) => (i - 1 + flatItems.length) % flatItems.length);
       } else if (e.key === 'Enter' && flatItems[activeIndex]) {
         e.preventDefault();
         navigateTo(flatItems[activeIndex].href);
@@ -140,7 +247,11 @@ export function TMCommandPalette({ open, onClose }: TMCommandPaletteProps) {
     [flatItems, activeIndex, navigateTo]
   );
 
-  let currentSection: string | null = null;
+  const showRecent = query.length < 2 && recentSearches.length > 0;
+  const showEmptyState =
+    !loading && query.trim().length >= 2 && results !== null && !hasAnyResults(results);
+
+  let currentSection: EntityType | null = null;
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -152,32 +263,36 @@ export function TMCommandPalette({ open, onClose }: TMCommandPaletteProps) {
       >
         <DialogTitle className="sr-only">Command palette</DialogTitle>
         <div className="flex items-center gap-3 border-b border-slate-200 px-4 py-3">
-          <Search className="size-5 text-slate-400" />
+          <Search className="size-5 shrink-0 text-slate-400" />
           <input
             ref={inputRef}
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search trips, vendors, clients..."
+            placeholder="Search trips, bookings, meetings, vendors, clients..."
+            aria-label="Search all entities"
             className="flex-1 bg-transparent text-sm text-slate-900 placeholder:text-slate-400 outline-none"
           />
-          {query && (
-            <button onClick={() => setQuery('')} className="text-slate-400 hover:text-slate-600">
+          {loading && <Loader2 className="size-4 shrink-0 animate-spin text-slate-400" />}
+          {query && !loading && (
+            <button
+              onClick={() => setQuery('')}
+              aria-label="Clear search"
+              className="text-slate-400 hover:text-slate-600"
+            >
               <X className="size-4" />
             </button>
           )}
         </div>
 
-        <div className="max-h-80 overflow-y-auto p-2">
-          {loading && (
-            <div className="px-3 py-6 text-center text-sm text-slate-400">Searching...</div>
+        <div className="max-h-96 overflow-y-auto p-2">
+          {showEmptyState && (
+            <div className="px-3 py-6 text-center text-sm text-slate-400">
+              No results for &quot;{query.trim()}&quot;
+            </div>
           )}
 
-          {!loading && query.length >= 2 && results && flatItems.length === 0 && (
-            <div className="px-3 py-6 text-center text-sm text-slate-400">No results found</div>
-          )}
-
-          {!loading && query.length < 2 && recentSearches.length > 0 && (
+          {showRecent && (
             <div>
               <div className="flex items-center gap-2 px-3 py-2 text-xs font-medium uppercase text-slate-400">
                 <Clock className="size-3.5" />
@@ -196,46 +311,52 @@ export function TMCommandPalette({ open, onClose }: TMCommandPaletteProps) {
             </div>
           )}
 
-          {!loading &&
-            flatItems.map((item, index) => {
-              const showHeader = item.type !== currentSection;
-              if (showHeader) currentSection = item.type;
-              const Icon = sectionIcons[item.type];
+          {flatItems.map((item, index) => {
+            const showHeader = item.type !== currentSection;
+            if (showHeader) currentSection = item.type;
+            const Icon = sectionIcons[item.type];
 
-              return (
-                <div key={`${item.type}-${item.id}`}>
-                  {showHeader && (
-                    <div className="flex items-center gap-2 px-3 py-2 text-xs font-medium uppercase text-slate-400">
-                      <Icon className="size-3.5" />
-                      {sectionLabels[item.type]}
-                    </div>
+            return (
+              <div key={`${item.type}-${item.id}`}>
+                {showHeader && (
+                  <div className="flex items-center gap-2 px-3 py-2 text-xs font-semibold uppercase text-slate-400">
+                    <Icon className="size-3.5" />
+                    {sectionLabels[item.type]}
+                  </div>
+                )}
+                <Link
+                  href={item.href}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigateTo(item.href);
+                  }}
+                  className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
+                    index === activeIndex
+                      ? 'bg-amber-50 text-amber-900'
+                      : 'text-slate-700 hover:bg-slate-100'
+                  }`}
+                >
+                  <Icon className="size-4 shrink-0 text-slate-400" />
+                  <span className="flex-1 truncate font-medium">{item.label}</span>
+                  {item.sublabel && (
+                    <span className="truncate text-xs text-slate-400">{item.sublabel}</span>
                   )}
-                  <Link
-                    href={item.href}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      navigateTo(item.href);
-                    }}
-                    className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
-                      index === activeIndex
-                        ? 'bg-amber-50 text-amber-900'
-                        : 'text-slate-700 hover:bg-slate-100'
-                    }`}
-                  >
-                    <span className="flex-1 truncate">{item.label}</span>
-                    {item.sublabel && (
-                      <span className="truncate text-xs text-slate-400">{item.sublabel}</span>
-                    )}
-                  </Link>
-                </div>
-              );
-            })}
+                </Link>
+              </div>
+            );
+          })}
         </div>
 
         <div className="border-t border-slate-200 px-4 py-2 text-xs text-slate-400">
-          <span className="mr-3"><kbd className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[10px]">↑↓</kbd> navigate</span>
-          <span className="mr-3"><kbd className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[10px]">↵</kbd> open</span>
-          <span><kbd className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[10px]">esc</kbd> close</span>
+          <span className="mr-3">
+            <kbd className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[10px]">↑↓</kbd> navigate
+          </span>
+          <span className="mr-3">
+            <kbd className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[10px]">↵</kbd> open
+          </span>
+          <span>
+            <kbd className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[10px]">esc</kbd> close
+          </span>
         </div>
       </DialogContent>
     </Dialog>

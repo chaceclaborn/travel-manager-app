@@ -16,6 +16,9 @@ import {
   RefreshCw,
   Building2,
   Pencil,
+  CheckSquare,
+  Square,
+  Download,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -50,6 +53,7 @@ interface Meeting {
   title: string;
   startDateTime: string;
   endDateTime: string | null;
+  timezone: string | null;
   location: string | null;
   notes: string | null;
   tripId: string | null;
@@ -71,12 +75,16 @@ interface ClientOption {
   company: string | null;
 }
 
+const defaultTimezone =
+  typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'UTC';
+
 const emptyForm = {
   title: '',
   date: '',
   startTime: '',
   endDate: '',
   endTime: '',
+  timezone: defaultTimezone,
   location: '',
   notes: '',
   tripId: '',
@@ -95,16 +103,44 @@ function splitDateTime(value: string | null | undefined): { date: string; time: 
   return { date: date || '', time };
 }
 
+function getTzAbbreviation(tz: string): string {
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz,
+      timeZoneName: 'short',
+    }).formatToParts(new Date());
+    return parts.find((p) => p.type === 'timeZoneName')?.value || tz;
+  } catch {
+    return tz;
+  }
+}
+
+function csvEscape(value: string | null | undefined): string {
+  const s = value == null ? '' : String(value);
+  if (/[",\n\r]/.test(s)) {
+    return `"${s.replace(/"/g, '""')}"`;
+  }
+  return s;
+}
+
 function MeetingCard({
   meeting,
   trips,
   clients,
+  timezones,
+  selectMode,
+  selected,
+  onToggleSelect,
   onDelete,
   onSaved,
 }: {
   meeting: Meeting;
   trips: TripOption[];
   clients: ClientOption[];
+  timezones: string[];
+  selectMode: boolean;
+  selected: boolean;
+  onToggleSelect: (id: string) => void;
   onDelete: (id: string) => void;
   onSaved: () => void;
 }) {
@@ -121,6 +157,7 @@ function MeetingCard({
       startTime: start.time,
       endDate: end.date,
       endTime: end.time,
+      timezone: meeting.timezone || defaultTimezone,
       location: meeting.location || '',
       notes: meeting.notes || '',
       tripId: meeting.tripId || '',
@@ -152,6 +189,7 @@ function MeetingCard({
           title: form.title.trim(),
           startDateTime: combineDateTime(form.date, form.startTime),
           endDateTime: form.endDate ? combineDateTime(form.endDate, form.endTime) : null,
+          timezone: form.timezone || null,
           location: form.location.trim() || null,
           notes: form.notes.trim() || null,
           tripId: form.tripId || null,
@@ -178,8 +216,19 @@ function MeetingCard({
       layout
       exit={{ opacity: 0, scale: 0.95 }}
       whileTap={{ scale: 0.98 }}
-      className={`rounded-lg border bg-white p-4 shadow-sm transition-all duration-200 ${editing ? 'border-amber-300 ring-1 ring-amber-200' : 'border-slate-100 hover:-translate-y-0.5 hover:shadow-md'}`}
+      className={`relative rounded-lg border bg-white p-4 shadow-sm transition-all duration-200 ${editing ? 'border-amber-300 ring-1 ring-amber-200' : selected ? 'border-amber-400 ring-2 ring-amber-300' : 'border-slate-100 hover:-translate-y-0.5 hover:shadow-md'}`}
     >
+      {selectMode && !editing && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onToggleSelect(meeting.id); }}
+          className="absolute left-2 top-2 z-10 inline-flex items-center justify-center rounded-md bg-white/90 p-1.5 text-slate-500 ring-1 ring-slate-200 backdrop-blur transition-colors hover:bg-amber-50 hover:text-amber-600"
+          aria-label={selected ? 'Deselect meeting' : 'Select meeting'}
+          aria-pressed={selected}
+        >
+          {selected ? <CheckSquare className="size-4 text-amber-500" /> : <Square className="size-4" />}
+        </button>
+      )}
       <div className="mb-3 flex items-start justify-between gap-2">
         {editing ? (
           <div className="flex items-center gap-2">
@@ -287,6 +336,17 @@ function MeetingCard({
                 />
               </div>
             </div>
+            <div className="sm:col-span-2">
+              <Label className="text-xs">Timezone</Label>
+              <Select value={form.timezone} onValueChange={(v) => updateForm('timezone', v)}>
+                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent className="max-h-64">
+                  {timezones.map((tz) => (
+                    <SelectItem key={tz} value={tz}>{tz}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div>
               <Label className="text-xs">Location</Label>
               <Input
@@ -381,6 +441,9 @@ function MeetingCard({
               <span>
                 {formatDateTime(meeting.startDateTime)}
                 {meeting.endDateTime ? ` - ${formatDateTime(meeting.endDateTime)}` : ''}
+                {meeting.timezone && (
+                  <span className="ml-1 text-xs text-slate-400">({getTzAbbreviation(meeting.timezone)})</span>
+                )}
               </span>
             </div>
             {meeting.location && (
@@ -414,6 +477,21 @@ export default function MeetingsPage() {
   const [form, setForm] = useState(emptyForm);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
+  const timezones = useMemo<string[]>(() => {
+    try {
+      type IntlWithTz = typeof Intl & { supportedValuesOf?: (key: string) => string[] };
+      const I = Intl as IntlWithTz;
+      if (typeof I.supportedValuesOf === 'function') {
+        return I.supportedValuesOf('timeZone');
+      }
+    } catch {}
+    return [defaultTimezone, 'UTC'];
+  }, []);
 
   const fetchMeetings = useCallback(async () => {
     setLoading(true);
@@ -479,6 +557,7 @@ export default function MeetingsPage() {
           title: form.title.trim(),
           startDateTime: combineDateTime(form.date, form.startTime),
           endDateTime: form.endDate ? combineDateTime(form.endDate, form.endTime) : undefined,
+          timezone: form.timezone || undefined,
           location: form.location.trim() || undefined,
           notes: form.notes.trim() || undefined,
           tripId: form.tripId || undefined,
@@ -511,6 +590,81 @@ export default function MeetingsPage() {
     } finally {
       setIsDeleting(false);
     }
+  };
+
+  const toggleSelected = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
+
+  const toggleSelectMode = () => {
+    setSelectMode((prev) => {
+      if (prev) setSelectedIds(new Set());
+      return !prev;
+    });
+  };
+
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    setBulkDeleting(true);
+    try {
+      const res = await fetch('/api/meetings/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids }),
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      showToast(`Deleted ${data.deleted ?? ids.length} meeting${(data.deleted ?? ids.length) === 1 ? '' : 's'}`);
+      setBulkDeleteOpen(false);
+      setSelectedIds(new Set());
+      setSelectMode(false);
+      fetchMeetings();
+    } catch {
+      showToast('Failed to delete meetings', 'error');
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
+  const handleExportCsv = () => {
+    const selected = meetings.filter((m) => selectedIds.has(m.id));
+    if (selected.length === 0) {
+      showToast('No meetings selected', 'error');
+      return;
+    }
+    const headers = ['Title', 'Start', 'End', 'Timezone', 'Location', 'Trip', 'Client', 'Notes'];
+    const rows = selected.map((m) => [
+      m.title,
+      m.startDateTime,
+      m.endDateTime || '',
+      m.timezone || '',
+      m.location || '',
+      m.trip?.title || '',
+      m.client?.name || '',
+      m.notes || '',
+    ]);
+    const csv = [headers, ...rows]
+      .map((row) => row.map((cell) => csvEscape(cell)).join(','))
+      .join('\r\n');
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const ts = new Date().toISOString().slice(0, 10);
+    link.href = url;
+    link.download = `meetings-${ts}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    showToast(`Exported ${selected.length} meeting${selected.length === 1 ? '' : 's'}`);
   };
 
   if (loading) {
@@ -568,13 +722,29 @@ export default function MeetingsPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-bold text-slate-800">Meetings</h1>
-        <Button
-          onClick={() => setShowForm(true)}
-          className="bg-amber-500 hover:bg-amber-600 text-white"
-        >
-          <Plus className="mr-2 size-4" />
-          New Meeting
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          {meetings.length > 0 && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={toggleSelectMode}
+              aria-pressed={selectMode}
+              aria-label={selectMode ? 'Exit select mode' : 'Enter select mode'}
+              className={selectMode ? 'border-amber-400 bg-amber-50 text-amber-700 hover:bg-amber-100' : ''}
+            >
+              <CheckSquare className="mr-2 size-4" />
+              {selectMode ? 'Done' : 'Select'}
+            </Button>
+          )}
+          <Button
+            onClick={() => setShowForm(true)}
+            className="bg-amber-500 hover:bg-amber-600 text-white"
+          >
+            <Plus className="mr-2 size-4" />
+            New Meeting
+          </Button>
+        </div>
       </div>
 
       {showForm && (
@@ -650,6 +820,23 @@ export default function MeetingsPage() {
                   aria-label="End time"
                 />
               </div>
+            </div>
+
+            <div className="sm:col-span-2">
+              <Label htmlFor="meeting-timezone">Timezone</Label>
+              <Select
+                value={form.timezone}
+                onValueChange={(v) => setForm((f) => ({ ...f, timezone: v }))}
+              >
+                <SelectTrigger id="meeting-timezone" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="max-h-64">
+                  {timezones.map((tz) => (
+                    <SelectItem key={tz} value={tz}>{tz}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
@@ -774,6 +961,10 @@ export default function MeetingsPage() {
                 meeting={meeting}
                 trips={trips}
                 clients={clients}
+                timezones={timezones}
+                selectMode={selectMode}
+                selected={selectedIds.has(meeting.id)}
+                onToggleSelect={toggleSelected}
                 onDelete={setDeleteTarget}
                 onSaved={fetchMeetings}
               />
@@ -790,6 +981,65 @@ export default function MeetingsPage() {
         description="Are you sure you want to delete this meeting? This action cannot be undone."
         isDeleting={isDeleting}
       />
+
+      <TMDeleteDialog
+        open={bulkDeleteOpen}
+        onClose={() => setBulkDeleteOpen(false)}
+        onConfirm={handleBulkDelete}
+        title={`Delete ${selectedIds.size} meeting${selectedIds.size === 1 ? '' : 's'}`}
+        description="Are you sure you want to delete the selected meetings? This action cannot be undone."
+        isDeleting={bulkDeleting}
+      />
+
+      <AnimatePresence>
+        {selectMode && selectedIds.size > 0 && (
+          <motion.div
+            initial={{ y: 80, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 80, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-x-0 bottom-4 z-40 mx-auto flex max-w-2xl items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white/95 px-4 py-3 shadow-lg backdrop-blur sm:bottom-6"
+          >
+            <div className="flex items-center gap-2 text-sm text-slate-700">
+              <CheckSquare className="size-4 text-amber-500" />
+              <span className="font-medium">
+                {selectedIds.size} selected
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={clearSelection}
+                aria-label="Clear selection"
+              >
+                Clear
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={handleExportCsv}
+                aria-label="Export selected meetings to CSV"
+              >
+                <Download className="mr-1.5 size-3.5" />
+                Export CSV
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setBulkDeleteOpen(true)}
+                className="bg-red-500 text-white hover:bg-red-600"
+                aria-label="Delete selected meetings"
+              >
+                <Trash2 className="mr-1.5 size-3.5" />
+                Delete
+              </Button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

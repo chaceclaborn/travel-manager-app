@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Plus, Search, Users, AlertCircle, RefreshCw } from 'lucide-react';
@@ -15,6 +15,8 @@ import {
 } from '@/components/ui/select';
 import { ClientCard } from '@/components/travelmanager/ClientCard';
 import { TMEmptyState } from '@/components/travelmanager/TMEmptyState';
+import { TMDeleteDialog } from '@/components/travelmanager/TMDeleteDialog';
+import { useTMToast } from '@/components/travelmanager/TMToast';
 
 interface Client {
   id: string;
@@ -22,7 +24,28 @@ interface Client {
   company: string | null;
   email: string | null;
   phone: string | null;
+  notes?: string | null;
   trips: unknown[];
+}
+
+function escapeCsv(v: unknown): string {
+  if (v == null) return '';
+  const s = String(v);
+  if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+    return `"${s.replace(/"/g, '""')}"`;
+  }
+  return s;
+}
+
+function downloadCsv(rows: string[][], filename: string) {
+  const csv = rows.map((r) => r.map(escapeCsv).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 export default function ClientsPage() {
@@ -31,6 +54,27 @@ export default function ClientsPage() {
   const [sortBy, setSortBy] = useState('name-az');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const { showToast } = useTMToast();
+
+  // Bulk selection state
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+
+  const toggleSelected = useCallback((id: string, checked: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }, []);
+
+  const exitSelectMode = useCallback(() => {
+    setSelectMode(false);
+    setSelectedIds(new Set());
+  }, []);
 
   const fetchClients = () => {
     setLoading(true);
@@ -45,6 +89,46 @@ export default function ClientsPage() {
   useEffect(() => {
     fetchClients();
   }, []);
+
+  const handleBulkDeleteConfirm = async () => {
+    if (selectedIds.size === 0) return;
+    setIsBulkDeleting(true);
+    try {
+      const res = await fetch('/api/clients/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: Array.from(selectedIds) }),
+      });
+      if (!res.ok) throw new Error(`Server error (${res.status})`);
+      const count = selectedIds.size;
+      showToast(`Deleted ${count} ${count === 1 ? 'client' : 'clients'}`);
+      setBulkDeleteOpen(false);
+      exitSelectMode();
+      fetchClients();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to delete clients', 'error');
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
+  const handleBulkExportCsv = () => {
+    if (selectedIds.size === 0) return;
+    const selected = clients.filter((c) => selectedIds.has(c.id));
+    const header = ['Name', 'Company', 'Email', 'Phone', 'Notes'];
+    const rows: string[][] = [
+      header,
+      ...selected.map((c) => [
+        c.name ?? '',
+        c.company ?? '',
+        c.email ?? '',
+        c.phone ?? '',
+        c.notes ?? '',
+      ]),
+    ];
+    downloadCsv(rows, `clients-${new Date().toISOString().split('T')[0]}.csv`);
+    showToast(`Exported ${selected.length} ${selected.length === 1 ? 'client' : 'clients'}`);
+  };
 
   const filtered = useMemo(() => {
     const result = search.trim()
@@ -126,12 +210,25 @@ export default function ClientsPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-slate-800">Clients</h1>
-        <Button asChild className="bg-amber-500 hover:bg-amber-600 text-white">
-          <Link href="/clients/new">
-            <Plus className="mr-2 size-4" />
-            New Client
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          {clients.length > 0 && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSelectMode((m) => !m);
+                setSelectedIds(new Set());
+              }}
+            >
+              {selectMode ? 'Cancel' : 'Select'}
+            </Button>
+          )}
+          <Button asChild className="bg-amber-500 hover:bg-amber-600 text-white">
+            <Link href="/clients/new">
+              <Plus className="mr-2 size-4" />
+              New Client
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row">
@@ -183,19 +280,83 @@ export default function ClientsPage() {
             visible: { transition: { staggerChildren: 0.06 } },
           }}
         >
-          {filtered.map((client) => (
-            <motion.div
-              key={client.id}
-              variants={{
-                hidden: { opacity: 0, y: 12 },
-                visible: { opacity: 1, y: 0 },
-              }}
-            >
-              <ClientCard client={client} onSaved={fetchClients} onDeleted={fetchClients} />
-            </motion.div>
-          ))}
+          {filtered.map((client) => {
+            const isSelected = selectedIds.has(client.id);
+            return (
+              <motion.div
+                key={client.id}
+                variants={{
+                  hidden: { opacity: 0, y: 12 },
+                  visible: { opacity: 1, y: 0 },
+                }}
+              >
+                <div
+                  className={`relative rounded-xl transition-all ${
+                    selectMode && isSelected ? 'ring-2 ring-amber-500 ring-offset-2' : ''
+                  }`}
+                  onClick={(e) => {
+                    if (selectMode) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      toggleSelected(client.id, !isSelected);
+                    }
+                  }}
+                >
+                  {selectMode && (
+                    <label
+                      className="absolute top-2 left-2 z-10 flex items-center justify-center rounded bg-white/95 p-1.5 shadow-sm ring-1 ring-slate-200 cursor-pointer"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <input
+                        type="checkbox"
+                        className="size-4 cursor-pointer accent-amber-500"
+                        checked={isSelected}
+                        onChange={(e) => toggleSelected(client.id, e.target.checked)}
+                        aria-label={`Select ${client.name}`}
+                      />
+                    </label>
+                  )}
+                  <div className={selectMode ? 'pointer-events-none' : ''}>
+                    <ClientCard client={client} onSaved={fetchClients} onDeleted={fetchClients} />
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })}
         </motion.div>
       )}
+
+      {selectMode && selectedIds.size > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 md:left-64 z-40 border-t border-slate-200 bg-white p-3 shadow-lg">
+          <div className="mx-auto flex max-w-6xl items-center gap-3 flex-wrap">
+            <span className="font-semibold text-slate-800">
+              {selectedIds.size} selected
+            </span>
+            <Button variant="outline" size="sm" onClick={() => setSelectedIds(new Set())}>
+              Clear
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setBulkDeleteOpen(true)}
+            >
+              Delete
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleBulkExportCsv}>
+              Export CSV
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <TMDeleteDialog
+        open={bulkDeleteOpen}
+        onClose={() => setBulkDeleteOpen(false)}
+        onConfirm={handleBulkDeleteConfirm}
+        title={`Delete ${selectedIds.size} ${selectedIds.size === 1 ? 'client' : 'clients'}?`}
+        description="This action cannot be undone. Trip associations will also be removed."
+        isDeleting={isBulkDeleting}
+      />
     </div>
   );
 }

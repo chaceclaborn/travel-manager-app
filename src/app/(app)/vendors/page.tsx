@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Plus, Search, AlertCircle, RefreshCw } from 'lucide-react';
@@ -15,6 +15,28 @@ import {
 } from '@/components/ui/select';
 import { VendorCard } from '@/components/travelmanager/VendorCard';
 import { TMEmptyState } from '@/components/travelmanager/TMEmptyState';
+import { TMDeleteDialog } from '@/components/travelmanager/TMDeleteDialog';
+import { useTMToast } from '@/components/travelmanager/TMToast';
+
+function escapeCsv(v: unknown): string {
+  if (v == null) return '';
+  const s = String(v);
+  if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+    return `"${s.replace(/"/g, '""')}"`;
+  }
+  return s;
+}
+
+function downloadCsv(rows: string[][], filename: string) {
+  const csv = rows.map((r) => r.map(escapeCsv).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 const CATEGORIES = ['ALL', 'SUPPLIER', 'HOTEL', 'TRANSPORT', 'RESTAURANT', 'OTHER'] as const;
 
@@ -25,6 +47,27 @@ export default function VendorsPage() {
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [sortBy, setSortBy] = useState('name-az');
+  const { showToast } = useTMToast();
+
+  // Bulk selection state
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+
+  const toggleSelected = useCallback((id: string, checked: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }, []);
+
+  const exitSelectMode = useCallback(() => {
+    setSelectMode(false);
+    setSelectedIds(new Set());
+  }, []);
 
   const fetchVendors = () => {
     setIsLoading(true);
@@ -39,6 +82,50 @@ export default function VendorsPage() {
   useEffect(() => {
     fetchVendors();
   }, []);
+
+  const handleBulkDeleteConfirm = async () => {
+    if (selectedIds.size === 0) return;
+    setIsBulkDeleting(true);
+    try {
+      const res = await fetch('/api/vendors/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: Array.from(selectedIds) }),
+      });
+      if (!res.ok) throw new Error(`Server error (${res.status})`);
+      const count = selectedIds.size;
+      showToast(`Deleted ${count} ${count === 1 ? 'vendor' : 'vendors'}`);
+      setBulkDeleteOpen(false);
+      exitSelectMode();
+      fetchVendors();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to delete vendors', 'error');
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
+  const handleBulkExportCsv = () => {
+    if (selectedIds.size === 0) return;
+    const selected = vendors.filter((v) => selectedIds.has(v.id));
+    const header = ['Name', 'Category', 'Contact Name', 'Email', 'Phone', 'Address', 'City', 'State', 'Notes'];
+    const rows: string[][] = [
+      header,
+      ...selected.map((v) => [
+        v.name ?? '',
+        v.category ?? '',
+        v.contactName ?? '',
+        v.email ?? '',
+        v.phone ?? '',
+        v.address ?? '',
+        v.city ?? '',
+        v.state ?? '',
+        v.notes ?? '',
+      ]),
+    ];
+    downloadCsv(rows, `vendors-${new Date().toISOString().split('T')[0]}.csv`);
+    showToast(`Exported ${selected.length} ${selected.length === 1 ? 'vendor' : 'vendors'}`);
+  };
 
   const filtered = useMemo(() => {
     const result = vendors.filter((v) => {
@@ -119,12 +206,25 @@ export default function VendorsPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-slate-800">Vendors</h1>
-        <Button asChild className="bg-amber-500 hover:bg-amber-600 text-white">
-          <Link href="/vendors/new">
-            <Plus className="mr-2 size-4" />
-            New Vendor
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          {vendors.length > 0 && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSelectMode((m) => !m);
+                setSelectedIds(new Set());
+              }}
+            >
+              {selectMode ? 'Cancel' : 'Select'}
+            </Button>
+          )}
+          <Button asChild className="bg-amber-500 hover:bg-amber-600 text-white">
+            <Link href="/vendors/new">
+              <Plus className="mr-2 size-4" />
+              New Vendor
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row">
@@ -189,19 +289,83 @@ export default function VendorsPage() {
             visible: { transition: { staggerChildren: 0.05 } },
           }}
         >
-          {filtered.map((vendor) => (
-            <motion.div
-              key={vendor.id}
-              variants={{
-                hidden: { opacity: 0, y: 10 },
-                visible: { opacity: 1, y: 0 },
-              }}
-            >
-              <VendorCard vendor={vendor} onSaved={fetchVendors} onDeleted={fetchVendors} />
-            </motion.div>
-          ))}
+          {filtered.map((vendor) => {
+            const isSelected = selectedIds.has(vendor.id);
+            return (
+              <motion.div
+                key={vendor.id}
+                variants={{
+                  hidden: { opacity: 0, y: 10 },
+                  visible: { opacity: 1, y: 0 },
+                }}
+              >
+                <div
+                  className={`relative rounded-xl transition-all ${
+                    selectMode && isSelected ? 'ring-2 ring-amber-500 ring-offset-2' : ''
+                  }`}
+                  onClick={(e) => {
+                    if (selectMode) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      toggleSelected(vendor.id, !isSelected);
+                    }
+                  }}
+                >
+                  {selectMode && (
+                    <label
+                      className="absolute top-2 left-2 z-10 flex items-center justify-center rounded bg-white/95 p-1.5 shadow-sm ring-1 ring-slate-200 cursor-pointer"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <input
+                        type="checkbox"
+                        className="size-4 cursor-pointer accent-amber-500"
+                        checked={isSelected}
+                        onChange={(e) => toggleSelected(vendor.id, e.target.checked)}
+                        aria-label={`Select ${vendor.name}`}
+                      />
+                    </label>
+                  )}
+                  <div className={selectMode ? 'pointer-events-none' : ''}>
+                    <VendorCard vendor={vendor} onSaved={fetchVendors} onDeleted={fetchVendors} />
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })}
         </motion.div>
       )}
+
+      {selectMode && selectedIds.size > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 md:left-64 z-40 border-t border-slate-200 bg-white p-3 shadow-lg">
+          <div className="mx-auto flex max-w-6xl items-center gap-3 flex-wrap">
+            <span className="font-semibold text-slate-800">
+              {selectedIds.size} selected
+            </span>
+            <Button variant="outline" size="sm" onClick={() => setSelectedIds(new Set())}>
+              Clear
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setBulkDeleteOpen(true)}
+            >
+              Delete
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleBulkExportCsv}>
+              Export CSV
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <TMDeleteDialog
+        open={bulkDeleteOpen}
+        onClose={() => setBulkDeleteOpen(false)}
+        onConfirm={handleBulkDeleteConfirm}
+        title={`Delete ${selectedIds.size} ${selectedIds.size === 1 ? 'vendor' : 'vendors'}?`}
+        description="This action cannot be undone. Trip associations will also be removed."
+        isDeleting={isBulkDeleting}
+      />
     </div>
   );
 }

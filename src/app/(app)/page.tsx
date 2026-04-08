@@ -9,6 +9,8 @@ import { TMStatsCard } from '@/components/travelmanager/TMStatsCard';
 import { TMStatusBadge } from '@/components/travelmanager/TMStatusBadge';
 import { TMEmptyState } from '@/components/travelmanager/TMEmptyState';
 import { TMCalendarPreview } from '@/components/travelmanager/TMCalendarPreview';
+import { TripTemplateCard } from '@/components/travelmanager/TripTemplateCard';
+import { TRIP_TEMPLATES } from '@/lib/travelmanager/templates';
 import { formatDate } from '@/lib/date-utils';
 
 import { useAuth } from '@/lib/travelmanager/useAuth';
@@ -270,6 +272,33 @@ export default function TravelManagerDashboard() {
         </div>
         <p className="text-sm text-slate-500 mt-1">{dateStr}</p>
       </motion.div>
+
+      {/* Onboarding: starter templates — only shown when user has zero trips */}
+      {data?.stats.totalTrips === 0 && (
+        <motion.section
+          variants={item}
+          className="rounded-xl border border-amber-200 bg-gradient-to-br from-amber-50 via-white to-indigo-50 p-6"
+        >
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold text-slate-800">Get started with a template</h2>
+            <p className="mt-1 text-sm text-slate-600">
+              Pick a template to instantly create a sample trip with itinerary and checklists.
+            </p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-3">
+            {TRIP_TEMPLATES.map((template) => (
+              <TripTemplateCard key={template.id} template={template} />
+            ))}
+          </div>
+          <p className="mt-4 text-center text-xs text-slate-500">
+            Or{' '}
+            <Link href="/trips/new" className="text-amber-600 hover:text-amber-700 underline">
+              create an empty trip
+            </Link>{' '}
+            &rarr;
+          </p>
+        </motion.section>
+      )}
 
       {/* Stats Grid — staggered card entrance */}
       <motion.div

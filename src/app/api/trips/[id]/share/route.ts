@@ -51,10 +51,10 @@ function serialize(
 
 function parseExpiresAt(raw: unknown): { ok: true; value: Date | null } | { ok: false; error: string } {
   if (raw === null || raw === undefined) return { ok: true, value: null };
-  if (typeof raw !== 'string') return { ok: false, error: 'expiresAt must be a string or null' };
-  if (!validateDateString(raw)) return { ok: false, error: 'Invalid expiresAt date format' };
+  if (typeof raw !== 'string') return { ok: false, error: 'shareExpiresAt must be a string or null' };
+  if (!validateDateString(raw)) return { ok: false, error: 'Invalid shareExpiresAt date format' };
   const parsed = new Date(raw);
-  if (isNaN(parsed.getTime())) return { ok: false, error: 'Invalid expiresAt date' };
+  if (isNaN(parsed.getTime())) return { ok: false, error: 'Invalid shareExpiresAt date' };
   return { ok: true, value: parsed };
 }
 
@@ -96,11 +96,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     // Body is optional — POST with no body simply enables sharing with no expiry.
+    // If a body IS present, we accept shareExpiresAt to match the PUT contract.
     let expiresAt: Date | null = null;
     try {
       const body = await request.json();
-      if (body && 'expiresAt' in body) {
-        const parsed = parseExpiresAt(body.expiresAt);
+      if (body && 'shareExpiresAt' in body) {
+        const parsed = parseExpiresAt(body.shareExpiresAt);
         if (!parsed.ok) {
           return NextResponse.json({ error: parsed.error }, { status: 400 });
         }
@@ -135,11 +136,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     const body = await request.json().catch(() => null);
-    if (!body || !('expiresAt' in body)) {
-      return NextResponse.json({ error: 'expiresAt is required' }, { status: 400 });
+    if (!body || !('shareExpiresAt' in body)) {
+      return NextResponse.json({ error: 'shareExpiresAt is required' }, { status: 400 });
     }
 
-    const parsed = parseExpiresAt(body.expiresAt);
+    const parsed = parseExpiresAt(body.shareExpiresAt);
     if (!parsed.ok) {
       return NextResponse.json({ error: parsed.error }, { status: 400 });
     }
