@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 
@@ -38,12 +39,12 @@ export default function GlobalError({
             <RefreshCw className="size-4" />
             Try again
           </button>
-          <a
+          <Link
             href="/"
             className="inline-flex items-center rounded-lg border border-slate-200 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
           >
             Go home
-          </a>
+          </Link>
         </div>
         {error.digest && (
           <p className="mt-6 text-xs text-slate-400">Error ID: {error.digest}</p>

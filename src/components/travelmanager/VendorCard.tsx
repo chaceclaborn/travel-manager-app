@@ -26,11 +26,12 @@ interface VendorCardProps {
     id: string;
     name: string;
     category: string;
+    contactName?: string | null;
     city?: string | null;
     state?: string | null;
     email?: string | null;
     phone?: string | null;
-    trips?: any[];
+    trips?: unknown[];
   };
   onSaved?: () => void;
   onDeleted?: () => void;
@@ -43,7 +44,7 @@ export function VendorCard({ vendor, onSaved, onDeleted }: VendorCardProps) {
   const [deleting, setDeleting] = useState(false);
   const [form, setForm] = useState({
     name: vendor.name,
-    contactName: (vendor as any).contactName || '',
+    contactName: vendor.contactName || '',
     category: vendor.category,
     email: vendor.email || '',
     phone: vendor.phone || '',
@@ -61,7 +62,7 @@ export function VendorCard({ vendor, onSaved, onDeleted }: VendorCardProps) {
   const startEdit = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setForm({ name: vendor.name, contactName: (vendor as any).contactName || '', category: vendor.category, email: vendor.email || '', phone: vendor.phone || '', city: vendor.city || '', state: vendor.state || '' });
+    setForm({ name: vendor.name, contactName: vendor.contactName || '', category: vendor.category, email: vendor.email || '', phone: vendor.phone || '', city: vendor.city || '', state: vendor.state || '' });
     setEditing(true);
   };
 

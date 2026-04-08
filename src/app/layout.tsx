@@ -13,8 +13,12 @@ const geistMono = Geist_Mono({
 });
 
 export const viewport: Viewport = {
-  width: 'device-width',
+  themeColor: "#f59e0b",
+  width: "device-width",
   initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover", // enables iOS env(safe-area-inset-*) values
 };
 
 export const metadata: Metadata = {
@@ -26,12 +30,21 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "default",
     title: "Travel Manager",
+    statusBarStyle: "black-translucent",
+  },
+  formatDetection: {
+    telephone: false,
   },
   icons: {
     icon: "/icons/icon-192.png",
-    apple: "/apple-touch-icon.png",
+    apple: "/icons/icon-180.png",
+  },
+  // Tell Dark Reader (and similar dark-mode extensions) to leave the app
+  // alone — we have our own theme system and the extension's DOM mutations
+  // cause noisy hydration warnings on every page load.
+  other: {
+    "darkreader-lock": "",
   },
 };
 
@@ -42,10 +55,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        <meta name="theme-color" content="#f59e0b" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-      </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen`} suppressHydrationWarning>
         {children}
       </body>

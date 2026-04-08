@@ -36,6 +36,7 @@ model User {
   feedbacks       Feedback[]
   oauthTokens     OAuthToken[]
   meetings        Meeting[]
+  deviceTokens    DeviceToken[]
 }
 
 model OAuthToken {
@@ -403,5 +404,21 @@ model ClickEvent {
 
   @@index([userId, type])
   @@index([userId, createdAt])
+}
+
+// ─── Push Notifications ───
+// Stores APNs / Web Push device tokens for a user. One user can have many
+// tokens (e.g. iPhone + iPad + desktop web). Tokens are unique globally so
+// we can upsert on the token value when a device re-registers.
+model DeviceToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  platform  String   // "ios" | "web"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
 }
 

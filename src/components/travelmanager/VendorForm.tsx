@@ -15,9 +15,22 @@ import {
 
 const VENDOR_CATEGORIES = ['SUPPLIER', 'HOTEL', 'TRANSPORT', 'RESTAURANT', 'OTHER'] as const;
 
+interface VendorFormInitialData {
+  name?: string | null;
+  contactName?: string | null;
+  category?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  website?: string | null;
+  notes?: string | null;
+}
+
 interface VendorFormProps {
-  initialData?: any;
-  onSubmit: (data: any) => void;
+  initialData?: VendorFormInitialData;
+  onSubmit: (data: Record<string, unknown>) => void;
   isLoading?: boolean;
 }
 

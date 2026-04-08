@@ -93,9 +93,23 @@ export default function TripsPage() {
   );
 }
 
+interface TripListItem {
+  id: string;
+  title: string;
+  destination?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  status: string;
+  budget?: number | null;
+  notes?: string | null;
+  vendors?: unknown[];
+  clients?: unknown[];
+  _count?: { vendors: number; clients: number };
+}
+
 function TripsPageContent() {
   const searchParams = useSearchParams();
-  const [trips, setTrips] = useState<any[]>([]);
+  const [trips, setTrips] = useState<TripListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
@@ -185,11 +199,11 @@ function TripsPageContent() {
       const full = await res.json();
       if (!Array.isArray(full)) throw new Error('Unexpected response');
 
-      const selected = full.filter((t: any) => selectedIds.has(t.id));
+      const selected = (full as TripListItem[]).filter((t) => selectedIds.has(t.id));
       const header = ['Title', 'Destination', 'Start Date', 'End Date', 'Status', 'Budget', 'Notes'];
       const rows: string[][] = [
         header,
-        ...selected.map((t: any) => [
+        ...selected.map((t) => [
           t.title ?? '',
           t.destination ?? '',
           t.startDate ? String(t.startDate).split('T')[0] : '',
@@ -215,7 +229,7 @@ function TripsPageContent() {
       const matchesStatus =
         statusFilter === 'ALL' ||
         (statusFilter === 'UPCOMING'
-          ? ['PLANNED', 'IN_PROGRESS'].includes(trip.status) && new Date(trip.startDate) >= new Date()
+          ? ['PLANNED', 'IN_PROGRESS'].includes(trip.status) && !!trip.startDate && new Date(trip.startDate) >= new Date()
           : trip.status === statusFilter);
       return matchesSearch && matchesStatus;
     });

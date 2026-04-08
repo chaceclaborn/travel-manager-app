@@ -11,6 +11,7 @@ import { TMUserMenu } from '@/components/travelmanager/TMUserMenu';
 import { CookieBanner } from '@/components/travelmanager/CookieBanner';
 import { FeedbackWidget } from '@/components/travelmanager/FeedbackWidget';
 import { ClickTracker } from '@/components/travelmanager/ClickTracker';
+import { ServiceWorkerRegister } from '@/components/travelmanager/ServiceWorkerRegister';
 import { useAuth } from '@/lib/travelmanager/useAuth';
 
 export default function TravelManagerLayout({
@@ -348,6 +349,7 @@ export default function TravelManagerLayout({
       <ClickTracker />
       <FeedbackWidget />
       <CookieBanner />
+      <ServiceWorkerRegister />
     </>
   );
 }

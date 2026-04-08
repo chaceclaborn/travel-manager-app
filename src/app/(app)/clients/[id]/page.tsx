@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback, use } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Mail, Phone, Building2, Pencil, X, AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -35,7 +34,6 @@ interface ClientData {
 
 export default function ClientDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const router = useRouter();
   const { showToast } = useTMToast();
   const { deleteOpen, setDeleteOpen, deleting, handleDelete } = useDeleteEntity(`/api/clients/${id}`, '/clients', 'Client');
 

@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const sanitized = sanitizeObject(body, ['title', 'destination', 'startDate', 'endDate', 'status', 'notes', 'budget', 'transportMode', 'departureAirportCode', 'departureAirportName', 'departureAirportLat', 'departureAirportLng', 'arrivalAirportCode', 'arrivalAirportName', 'arrivalAirportLat', 'arrivalAirportLng']);
-    const { title, destination, startDate, endDate, status, notes, budget, transportMode, departureAirportCode, departureAirportLat, departureAirportLng, arrivalAirportCode, arrivalAirportLat, arrivalAirportLng } = sanitized;
+    const { title, destination, startDate, endDate, status, budget, transportMode, departureAirportCode, departureAirportLat, departureAirportLng, arrivalAirportCode, arrivalAirportLat, arrivalAirportLng } = sanitized;
 
     if (!title || typeof title !== 'string') {
       return NextResponse.json({ error: 'Title is required' }, { status: 400 });

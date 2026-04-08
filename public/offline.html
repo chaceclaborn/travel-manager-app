@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Offline — Travel Manager</title>
+    <style>
+      :root {
+        color-scheme: light;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: #f8fafc;
+        color: #1e293b;
+      }
+      main {
+        min-height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem 1.5rem;
+        text-align: center;
+      }
+      .icon {
+        width: 64px;
+        height: 64px;
+        border-radius: 16px;
+        background: #fef3c7;
+        color: #f59e0b;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 32px;
+        margin-bottom: 1.5rem;
+      }
+      h1 {
+        font-size: 1.375rem;
+        font-weight: 700;
+        margin: 0 0 0.5rem;
+      }
+      p {
+        font-size: 0.9375rem;
+        color: #64748b;
+        max-width: 22rem;
+        margin: 0 0 1.5rem;
+        line-height: 1.55;
+      }
+      button {
+        font: inherit;
+        font-weight: 600;
+        font-size: 0.9375rem;
+        background: #f59e0b;
+        color: #ffffff;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 0.625rem;
+        cursor: pointer;
+        box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);
+      }
+      button:active {
+        transform: translateY(1px);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="icon" aria-hidden="true">&#x2708;</div>
+      <h1>You're offline</h1>
+      <p>
+        Travel Manager can't reach the network right now. Check your connection
+        and try again — your cached trips are still available when you reconnect.
+      </p>
+      <button type="button" onclick="window.location.reload()">Try again</button>
+    </main>
+  </body>
+</html>

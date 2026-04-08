@@ -2,7 +2,6 @@
 
 import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
 import { TripForm } from '@/components/travelmanager/TripForm';
 import { TMBreadcrumb } from '@/components/travelmanager/TMBreadcrumb';
 import { useTMToast } from '@/components/travelmanager/TMToast';
@@ -22,7 +21,7 @@ function NewTripPageContent() {
   const [isLoading, setIsLoading] = useState(false);
   const prefillStartDate = searchParams.get('startDate');
 
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: Record<string, unknown> & { clientIds?: string[] }) => {
     setIsLoading(true);
     try {
       const { clientIds, ...tripData } = data;
@@ -39,7 +38,7 @@ function NewTripPageContent() {
 
       const trip = await res.json();
 
-      if (clientIds?.length > 0) {
+      if (clientIds && clientIds.length > 0) {
         await Promise.allSettled(
           clientIds.map((clientId: string) =>
             fetch(`/api/trips/${trip.id}/clients`, {
@@ -53,8 +52,8 @@ function NewTripPageContent() {
 
       showToast('Trip created successfully');
       router.push(`/trips/${trip.id}`);
-    } catch (err: any) {
-      showToast(err.message || 'Failed to create trip', 'error');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to create trip', 'error');
     } finally {
       setIsLoading(false);
     }

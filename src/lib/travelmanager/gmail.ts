@@ -175,8 +175,14 @@ export async function searchEmails(
   return results;
 }
 
+interface GmailPart {
+  mimeType?: string | null;
+  body?: { data?: string | null } | null;
+  parts?: GmailPart[] | null;
+}
+
 function findBodyPart(
-  payload: { mimeType?: string | null; body?: { data?: string | null } | null; parts?: any[] | null } | null | undefined,
+  payload: GmailPart | null | undefined,
   mimeType: string
 ): string | null {
   if (!payload) return null;
