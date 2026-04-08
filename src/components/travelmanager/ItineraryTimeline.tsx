@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { MapPin, X, Plus, Clock, Pencil, Users, Building2, ArrowRight } from 'lucide-react';
+import { MapPin, X, Plus, Clock, Pencil, Users, Building2, ArrowRight, GripVertical } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -34,6 +34,7 @@ interface ItineraryItem {
   endTime?: string | null;
   location?: string | null;
   notes?: string | null;
+  sortOrder?: number;
   vendorId?: string | null;
   clientId?: string | null;
   vendor?: ItineraryVendor | null;
@@ -60,6 +61,18 @@ function groupByDate(items: ItineraryItem[]) {
     const key = new Date(item.date).toISOString().split('T')[0];
     if (!groups[key]) groups[key] = [];
     groups[key].push(item);
+  }
+  // Sort within each day by sortOrder (then startTime, then id for stable order)
+  for (const key of Object.keys(groups)) {
+    groups[key].sort((a, b) => {
+      const ao = a.sortOrder ?? 0;
+      const bo = b.sortOrder ?? 0;
+      if (ao !== bo) return ao - bo;
+      const at = a.startTime || '';
+      const bt = b.startTime || '';
+      if (at !== bt) return at.localeCompare(bt);
+      return a.id.localeCompare(b.id);
+    });
   }
   return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
 }
@@ -103,7 +116,97 @@ export function ItineraryTimeline({ items, tripId, onRefresh, tripStartDate, tri
   const [isDeleting, setIsDeleting] = useState(false);
   const [form, setForm] = useState({ ...emptyForm });
 
-  const grouped = groupByDate(items);
+  // Drag-and-drop state. `localItems` is an optimistic override of the props
+  // `items` array — set as soon as a drop happens so the UI reorders before
+  // the server responds, then cleared by the parent refetch.
+  // TODO(a11y): HTML5 drag-and-drop is not keyboard-accessible. Follow-up
+  // should add Space-to-grab + arrow-key move handlers (or up/down buttons).
+  const [localItems, setLocalItems] = useState<ItineraryItem[] | null>(null);
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+
+  const effectiveItems = localItems ?? items;
+  const grouped = groupByDate(effectiveItems);
+
+  // Persist a new order to the bulk reorder endpoint. Optimistically updates
+  // `localItems` first; on failure, rolls back and shows a toast.
+  const persistReorder = async (dateKey: string, newOrder: ItineraryItem[]) => {
+    // Rebuild the full items array with the reordered group spliced back in
+    const prevItems = effectiveItems;
+    const rebuilt: ItineraryItem[] = [];
+    let injected = false;
+    for (const it of prevItems) {
+      const itKey = new Date(it.date).toISOString().split('T')[0];
+      if (itKey === dateKey) {
+        if (!injected) {
+          // Assign new sortOrder values so the UI sort stays correct
+          newOrder.forEach((n, i) => rebuilt.push({ ...n, sortOrder: i }));
+          injected = true;
+        }
+      } else {
+        rebuilt.push(it);
+      }
+    }
+    setLocalItems(rebuilt);
+
+    try {
+      const res = await fetch('/api/itinerary/reorder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tripId, orderedIds: newOrder.map((n) => n.id) }),
+      });
+      if (!res.ok) throw new Error();
+      onRefresh();
+      // Keep localItems until the parent refetch arrives; clearing here would
+      // cause a flicker back to the old order. The next props update will
+      // implicitly supersede localItems via effectiveItems.
+      setLocalItems(null);
+    } catch {
+      setLocalItems(null); // rollback to props
+      showToast('Failed to reorder items', 'error');
+    }
+  };
+
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, id: string) => {
+    setDraggedId(id);
+    // Required for Firefox to actually initiate the drag
+    e.dataTransfer.effectAllowed = 'move';
+    try { e.dataTransfer.setData('text/plain', id); } catch { /* some browsers throw during dragstart */ }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>, overId: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (overId !== dragOverId) setDragOverId(overId);
+  };
+
+  const handleDragLeave = (overId: string) => {
+    if (dragOverId === overId) setDragOverId(null);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>, dropId: string, dateKey: string, dateItems: ItineraryItem[]) => {
+    e.preventDefault();
+    const fromId = draggedId;
+    setDraggedId(null);
+    setDragOverId(null);
+    if (!fromId || fromId === dropId) return;
+
+    const fromIdx = dateItems.findIndex((d) => d.id === fromId);
+    const toIdx = dateItems.findIndex((d) => d.id === dropId);
+    // Only allow reordering within the same date group — cross-day drags are
+    // ignored (would also require changing item.date, out of scope for v1)
+    if (fromIdx === -1 || toIdx === -1) return;
+
+    const next = [...dateItems];
+    const [moved] = next.splice(fromIdx, 1);
+    next.splice(toIdx, 0, moved);
+    persistReorder(dateKey, next);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedId(null);
+    setDragOverId(null);
+  };
 
   // When opening the add form, default the date
   const handleOpenForm = () => {
@@ -421,15 +524,56 @@ export function ItineraryTimeline({ items, tripId, onRefresh, tripStartDate, tri
               <h4 className="mb-3 text-sm font-semibold text-slate-600">
                 {formatDateHeading(date)}
               </h4>
-              <div className="relative ml-3 border-l-2 border-amber-200 pl-6 space-y-4">
-                {dateItems.map((item) => (
+              <div
+                className="relative ml-3 border-l-2 border-amber-200 pl-6 space-y-4"
+                role="listbox"
+                aria-label={`Itinerary items for ${formatDateHeading(date)}`}
+              >
+                {dateItems.map((item) => {
+                  const isDragging = draggedId === item.id;
+                  const isDragOver = dragOverId === item.id && draggedId !== item.id;
+                  const isEditing = editingId === item.id;
+                  return (
                   <motion.div
                     key={item.id}
+                    layout
                     initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="relative rounded-lg bg-white p-3 shadow-sm"
+                    animate={{
+                      opacity: isDragging ? 0.4 : 1,
+                      x: 0,
+                      scale: isDragging ? 0.98 : 1,
+                      rotate: isDragging ? -1 : 0,
+                    }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                   >
-                    <div className="absolute -left-[31px] top-4 size-2.5 rounded-full bg-amber-400" />
+                    {/*
+                      Nested plain <div> owns the HTML5 drag events — framer-motion's
+                      motion.div reserves onDragStart/onDrag/onDragEnd for its own
+                      pointer gesture system, so native drag handlers must live on a
+                      non-motion element.
+                    */}
+                    <div
+                      role="option"
+                      aria-selected={isEditing}
+                      aria-grabbed={isDragging}
+                      draggable={!isEditing}
+                      onDragStart={(e) => handleDragStart(e, item.id)}
+                      onDragOver={(e) => handleDragOver(e, item.id)}
+                      onDragLeave={() => handleDragLeave(item.id)}
+                      onDrop={(e) => handleDrop(e, item.id, date, dateItems)}
+                      onDragEnd={handleDragEnd}
+                      className={`group relative rounded-lg bg-white p-3 shadow-sm transition-colors ${
+                        isEditing ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'
+                      } ${isDragOver ? 'border-t-2 border-amber-500' : 'border-t-2 border-transparent'}`}
+                    >
+                      <div className="absolute -left-[31px] top-4 size-2.5 rounded-full bg-amber-400" />
+
+                      {!isEditing && (
+                        <GripVertical
+                          className="absolute left-1 top-1/2 size-4 -translate-y-1/2 text-slate-300 opacity-0 transition-opacity group-hover:opacity-100"
+                          aria-hidden="true"
+                        />
+                      )}
 
                     {editingId === item.id ? (
                       <form onSubmit={handleUpdate} className="space-y-3">
@@ -487,8 +631,10 @@ export function ItineraryTimeline({ items, tripId, onRefresh, tripStartDate, tri
                         </div>
                       </div>
                     )}
+                    </div>
                   </motion.div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           ))}

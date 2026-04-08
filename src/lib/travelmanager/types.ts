@@ -28,6 +28,7 @@ export interface CreateMeetingInput {
   title: string;
   startDateTime: string;
   endDateTime?: string | null;
+  timezone?: string | null;
   location?: string | null;
   notes?: string | null;
   tripId?: string | null;
@@ -71,6 +72,9 @@ export interface CreateTripInput {
   arrivalAirportName?: string | null;
   arrivalAirportLat?: number | null;
   arrivalAirportLng?: number | null;
+  shareToken?: string | null;
+  shareEnabled?: boolean;
+  shareExpiresAt?: string | null;
 }
 
 export interface UpdateTripInput extends Partial<CreateTripInput> {}
@@ -144,10 +148,15 @@ export interface CreateBookingInput {
   confirmationNum?: string;
   startDateTime?: string;
   endDateTime?: string;
+  timezone?: string | null;
   location?: string;
   endLocation?: string;
   seat?: string;
   notes?: string;
+  commissionAmount?: number | null;
+  commissionRate?: number | null;
+  commissionPaid?: boolean;
+  commissionNotes?: string | null;
 }
 
 export interface UpdateBookingInput extends Partial<Omit<CreateBookingInput, 'tripId'>> {

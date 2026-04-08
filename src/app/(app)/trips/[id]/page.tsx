@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -27,9 +28,35 @@ import {
   MoreHorizontal,
   AlertCircle,
   RefreshCw,
+  Share2,
+  Check,
+  X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { TripWeatherWidget } from '@/components/travelmanager/TripWeatherWidget';
+
+// Leaflet touches `window`, so the mini-map must be client-only.
+const TripMiniMap = dynamic(
+  () =>
+    import('@/components/travelmanager/TripMiniMap').then((m) => ({
+      default: m.TripMiniMap,
+    })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full min-h-[280px] animate-pulse rounded-xl border border-slate-200 bg-slate-50" />
+    ),
+  }
+);
 import { TMStatusBadge } from '@/components/travelmanager/TMStatusBadge';
 import { TMDeleteDialog } from '@/components/travelmanager/TMDeleteDialog';
 import { TripForm } from '@/components/travelmanager/TripForm';
@@ -121,6 +148,12 @@ export default function TripDetailPage() {
   const [linkingVendor, setLinkingVendor] = useState(false);
   const [linkingClient, setLinkingClient] = useState(false);
   const [tabErrors, setTabErrors] = useState<Record<string, boolean>>({});
+
+  // Share dialog state. The backend is being built by a parallel agent —
+  // this wires up the UI against the agreed contract.
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
 
   const fetchTrip = useCallback(async () => {
     try {
@@ -300,6 +333,66 @@ export default function TripDetailPage() {
       showToast('Failed to unlink client', 'error');
     } finally {
       setLinkingClient(false);
+    }
+  };
+
+  // Enable/disable the public share link. The other agent's API contract:
+  //   POST   /api/trips/[id]/share  → { shareToken, shareUrl, shareEnabled, shareExpiresAt }
+  //   DELETE /api/trips/[id]/share  → { success: true }
+  //   PUT    /api/trips/[id]/share  → updates expiresAt
+  const handleToggleShare = async (enable: boolean) => {
+    setShareLoading(true);
+    try {
+      const res = await fetch(`/api/trips/${id}/share`, {
+        method: enable ? 'POST' : 'DELETE',
+      });
+      if (!res.ok) throw new Error();
+      // Refetch trip so `shareToken` / `shareEnabled` / `shareExpiresAt`
+      // on the trip object stay the source of truth.
+      await fetchTrip();
+      showToast(enable ? 'Share link enabled' : 'Share link disabled');
+    } catch {
+      showToast(
+        enable ? 'Failed to enable share link' : 'Failed to disable share link',
+        'error'
+      );
+    } finally {
+      setShareLoading(false);
+    }
+  };
+
+  const handleUpdateShareExpires = async (expiresAt: string | null) => {
+    setShareLoading(true);
+    try {
+      const res = await fetch(`/api/trips/${id}/share`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ shareExpiresAt: expiresAt }),
+      });
+      if (!res.ok) throw new Error();
+      await fetchTrip();
+      showToast('Expiration updated');
+    } catch {
+      showToast('Failed to update expiration', 'error');
+    } finally {
+      setShareLoading(false);
+    }
+  };
+
+  const shareUrl = useMemo(() => {
+    if (!trip?.shareToken) return '';
+    if (typeof window === 'undefined') return `/share/${trip.shareToken}`;
+    return `${window.location.origin}/share/${trip.shareToken}`;
+  }, [trip?.shareToken]);
+
+  const handleCopyShareUrl = async () => {
+    if (!shareUrl) return;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2000);
+    } catch {
+      showToast('Failed to copy link', 'error');
     }
   };
 
@@ -552,6 +645,17 @@ export default function TripDetailPage() {
                   </Button>
                 </div>
 
+                {/* Share button (standalone chip) */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-10 sm:h-7 gap-1.5 rounded-lg border border-slate-200 bg-slate-50/50 px-3 sm:px-2.5 text-sm sm:text-xs text-slate-600 hover:bg-white hover:text-sky-600 hover:shadow-sm transition-all duration-200 group/btn"
+                  onClick={() => setShareOpen(true)}
+                >
+                  <Share2 className="size-3.5 transition-transform duration-200 group-hover/btn:scale-110" />
+                  Share
+                </Button>
+
                 {/* Desktop: Export / Report / Print as a button group */}
                 <div className="hidden sm:flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50/50 p-1">
                   <Button
@@ -697,6 +801,32 @@ export default function TripDetailPage() {
         )}
       </AnimatePresence>
 
+      {/* Trip overview: weather + mini-map, side-by-side on desktop */}
+      {!editing && (
+        <motion.div
+          variants={staggerItem}
+          transition={{ duration: 0.4, delay: 0.05 }}
+        >
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Trip Overview
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <TripWeatherWidget
+              latitude={trip.latitude}
+              longitude={trip.longitude}
+              destination={trip.destination}
+            />
+            <TripMiniMap
+              latitude={trip.latitude}
+              longitude={trip.longitude}
+              destination={trip.destination}
+            />
+          </div>
+        </motion.div>
+      )}
+
       {/* Tabs section */}
       <motion.div variants={staggerItem} transition={{ duration: 0.4, delay: 0.1 }}>
         <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -821,6 +951,152 @@ export default function TripDetailPage() {
         description="Are you sure you want to delete this trip? This action cannot be undone. All itinerary items and linked vendors/clients will be removed."
         isDeleting={deleting}
       />
+
+      {/* Share dialog */}
+      <Dialog open={shareOpen} onOpenChange={setShareOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Share2 className="size-4 text-sky-600" />
+              Share trip
+            </DialogTitle>
+            <DialogDescription>
+              Create a public link that lets anyone view this trip&apos;s
+              itinerary without signing in.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Enable toggle */}
+            <div className="flex items-center justify-between rounded-lg border border-slate-200 p-3">
+              <div className="min-w-0">
+                <div className="text-sm font-medium text-slate-800">
+                  Public link
+                </div>
+                <div className="text-xs text-slate-500">
+                  {trip.shareEnabled
+                    ? 'Anyone with the link can view'
+                    : 'Only you can view this trip'}
+                </div>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={!!trip.shareEnabled}
+                disabled={shareLoading}
+                onClick={() => handleToggleShare(!trip.shareEnabled)}
+                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${
+                  trip.shareEnabled ? 'bg-sky-500' : 'bg-slate-300'
+                }`}
+              >
+                <span
+                  className={`inline-block size-5 transform rounded-full bg-white shadow transition-transform ${
+                    trip.shareEnabled ? 'translate-x-5' : 'translate-x-0.5'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* URL + copy */}
+            {trip.shareEnabled && trip.shareToken && (
+              <>
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-slate-500">
+                    Share URL
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      readOnly
+                      value={shareUrl}
+                      onFocus={(e) => e.currentTarget.select()}
+                      className="flex-1 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                      aria-label="Public share URL"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCopyShareUrl}
+                      className="gap-1.5"
+                    >
+                      {shareCopied ? (
+                        <>
+                          <Check className="size-3.5 text-emerald-600" />
+                          Copied
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="size-3.5" />
+                          Copy
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Optional expiration */}
+                <div>
+                  <label
+                    htmlFor="share-expires"
+                    className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-slate-500"
+                  >
+                    Expires <span className="text-slate-400">(optional)</span>
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      id="share-expires"
+                      type="datetime-local"
+                      disabled={shareLoading}
+                      defaultValue={
+                        trip.shareExpiresAt
+                          ? new Date(trip.shareExpiresAt)
+                              .toISOString()
+                              .slice(0, 16)
+                          : ''
+                      }
+                      onBlur={(e) => {
+                        const value = e.currentTarget.value;
+                        const iso = value
+                          ? new Date(value).toISOString()
+                          : null;
+                        const currentIso = trip.shareExpiresAt ?? null;
+                        if (iso !== currentIso) {
+                          handleUpdateShareExpires(iso);
+                        }
+                      }}
+                      className="flex-1 rounded-md border border-slate-200 px-3 py-2 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    />
+                    {trip.shareExpiresAt && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={shareLoading}
+                        onClick={() => handleUpdateShareExpires(null)}
+                        className="gap-1.5 text-slate-600"
+                        aria-label="Clear expiration"
+                      >
+                        <X className="size-3.5" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShareOpen(false)}
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 }

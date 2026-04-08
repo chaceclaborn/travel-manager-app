@@ -3,8 +3,9 @@ import { getMyMeetings, createMeeting } from '@/lib/travelmanager/meetings';
 import { requireAuth } from '@/lib/travelmanager/auth';
 import { rateLimit } from '@/lib/rate-limit';
 import { sanitizeObject, validateUUID, validateDateString } from '@/lib/sanitize';
+import prisma from '@/lib/prisma';
 
-const MEETING_ALLOWED_FIELDS = ['title', 'startDateTime', 'endDateTime', 'location', 'notes', 'tripId', 'clientId'];
+const MEETING_ALLOWED_FIELDS = ['title', 'startDateTime', 'endDateTime', 'timezone', 'location', 'notes', 'tripId', 'clientId'];
 
 export async function GET(request: NextRequest) {
   try {

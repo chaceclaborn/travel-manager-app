@@ -1,3 +1,4 @@
+import { randomBytes } from 'crypto';
 import prisma from '@/lib/prisma';
 import type { Prisma } from '@/lib/generated/prisma';
 import type { CreateTripInput, UpdateTripInput, TripWithRelations, CreateItineraryItemInput, UpdateItineraryItemInput, CreateTripAttachmentInput } from './types';
@@ -414,4 +415,77 @@ export async function deleteAllUserData(userId: string) {
   } catch {
     // Best-effort revocation — continue with deletion
   }
+}
+
+// ─── Public Share Links ───
+
+function generateShareToken(): string {
+  // 16 random bytes → 22-char URL-safe base64 string
+  return randomBytes(16).toString('base64url');
+}
+
+export async function getTripShareInfo(tripId: string, userId: string) {
+  await verifyTripOwnership(tripId, userId);
+  const trip = await prisma.trip.findUnique({
+    where: { id: tripId },
+    select: { shareToken: true, shareEnabled: true, shareExpiresAt: true },
+  });
+  if (!trip) throw new Error('Trip not found');
+  return trip;
+}
+
+export async function enableTripShare(tripId: string, userId: string, expiresAt: Date | null) {
+  await verifyTripOwnership(tripId, userId);
+  const existing = await prisma.trip.findUnique({
+    where: { id: tripId },
+    select: { shareToken: true },
+  });
+
+  // Reuse an existing token if one exists — re-enabling yields the same URL.
+  const shareToken = existing?.shareToken ?? generateShareToken();
+
+  return prisma.trip.update({
+    where: { id: tripId },
+    data: {
+      shareToken,
+      shareEnabled: true,
+      shareExpiresAt: expiresAt,
+    },
+    select: { shareToken: true, shareEnabled: true, shareExpiresAt: true },
+  });
+}
+
+export async function disableTripShare(tripId: string, userId: string) {
+  await verifyTripOwnership(tripId, userId);
+  // Keep the token dormant so re-enabling gives the same URL.
+  return prisma.trip.update({
+    where: { id: tripId },
+    data: { shareEnabled: false },
+    select: { shareToken: true, shareEnabled: true, shareExpiresAt: true },
+  });
+}
+
+export async function updateTripShareExpiry(tripId: string, userId: string, expiresAt: Date | null) {
+  await verifyTripOwnership(tripId, userId);
+  return prisma.trip.update({
+    where: { id: tripId },
+    data: { shareExpiresAt: expiresAt },
+    select: { shareToken: true, shareEnabled: true, shareExpiresAt: true },
+  });
+}
+
+export async function getPublicTripByToken(token: string) {
+  const trip = await prisma.trip.findFirst({
+    where: { shareToken: token, shareEnabled: true },
+    include: {
+      itinerary: { orderBy: [{ date: 'asc' }, { sortOrder: 'asc' }] },
+      bookings: { where: { status: 'ACTIVE' }, orderBy: { startDateTime: 'asc' } },
+      user: { select: { name: true, email: true } },
+    },
+  });
+
+  if (!trip) return null;
+  if (trip.shareExpiresAt && trip.shareExpiresAt.getTime() < Date.now()) return null;
+
+  return trip;
 }
