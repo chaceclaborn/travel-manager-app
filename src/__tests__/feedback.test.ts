@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { escapeForDisplay, sanitizeObject } from '@/lib/sanitize';
+import { escapeForDisplay } from '@/lib/sanitize';
 
 describe('feedback message sanitization', () => {
   it('escapes HTML entities in feedback messages', () => {

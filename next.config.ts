@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 
 const isDev = process.env.NODE_ENV === 'development';
+// Gate for mobile (Capacitor) builds. When NEXT_STATIC_EXPORT=1 is set,
+// Next.js emits a fully static `out/` directory that Capacitor packages
+// inside the iOS app. The normal web build and `yarn dev` are unaffected.
+const isMobileBuild = process.env.NEXT_STATIC_EXPORT === '1';
 
 const ContentSecurityPolicy = `
   default-src 'self';
@@ -54,6 +58,10 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   images: {
+    // Static export cannot run the Vercel image optimizer at request time,
+    // so when building for Capacitor we flip to unoptimized. Web builds keep
+    // the optimizer and remote patterns.
+    ...(isMobileBuild ? { unoptimized: true } : {}),
     remotePatterns: [
       {
         protocol: 'https',
@@ -61,26 +69,43 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  async headers() {
-    return [
-      {
-        source: '/(.*)',
-        headers: securityHeaders,
-      },
-      {
-        source: '/api/:path*',
-        headers: [
-          { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate, private' },
-        ],
-      },
-      {
-        source: '/manifest.json',
-        headers: [
-          { key: 'Cache-Control', value: 'no-cache, must-revalidate' },
-        ],
-      },
-    ];
-  },
+  // Mobile-only overrides. `output: 'export'` + `trailingSlash: true` produce
+  // a static `out/` directory with index.html per route, which WKWebView can
+  // load from file://. API routes are not included in the export bundle and
+  // continue to run on Vercel — the mobile client calls them over HTTPS.
+  ...(isMobileBuild
+    ? {
+        output: 'export' as const,
+        trailingSlash: true,
+      }
+    : {}),
+  // `headers()` only runs in the Next.js server. Static export has no server,
+  // so we skip it entirely for the mobile build (the headers would be a
+  // no-op and Next 16 warns about incompatible config).
+  ...(isMobileBuild
+    ? {}
+    : {
+        async headers() {
+          return [
+            {
+              source: '/(.*)',
+              headers: securityHeaders,
+            },
+            {
+              source: '/api/:path*',
+              headers: [
+                { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate, private' },
+              ],
+            },
+            {
+              source: '/manifest.json',
+              headers: [
+                { key: 'Cache-Control', value: 'no-cache, must-revalidate' },
+              ],
+            },
+          ];
+        },
+      }),
 };
 
 export default nextConfig;

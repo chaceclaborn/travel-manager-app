@@ -126,6 +126,25 @@ function TabError({ onRetry }: { onRetry: () => void }) {
   );
 }
 
+interface TripDetail {
+  id: string;
+  title: string;
+  destination?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  status: string;
+  budget?: number | null;
+  notes?: string | null;
+  transportMode?: string | null;
+  departureAirportCode?: string | null;
+  arrivalAirportCode?: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  shareEnabled?: boolean | null;
+  shareToken?: string | null;
+  shareExpiresAt?: string | null;
+}
+
 export default function TripDetailPage() {
   const router = useRouter();
   const params = useParams();
@@ -133,18 +152,32 @@ export default function TripDetailPage() {
   const { showToast } = useTMToast();
   const { deleteOpen, setDeleteOpen, deleting, handleDelete } = useDeleteEntity(`/api/trips/${id}`, '/trips', 'Trip');
 
-  const [trip, setTrip] = useState<any>(null);
+  const [trip, setTrip] = useState<TripDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [duplicating, setDuplicating] = useState(false);
   const [activeTab, setActiveTab] = useState('itinerary');
 
-  const [itinerary, setItinerary] = useState<any[]>([]);
-  const [tripVendors, setTripVendors] = useState<any[]>([]);
-  const [tripClients, setTripClients] = useState<any[]>([]);
-  const [allVendors, setAllVendors] = useState<any[]>([]);
-  const [allClients, setAllClients] = useState<any[]>([]);
+  const [itinerary, setItinerary] = useState<Array<{
+    id: string;
+    title: string;
+    date: string;
+    endDate?: string | null;
+    startTime?: string | null;
+    endTime?: string | null;
+    location?: string | null;
+    notes?: string | null;
+    sortOrder?: number;
+    vendorId?: string | null;
+    clientId?: string | null;
+    vendor?: { id: string; name: string; category?: string } | null;
+    client?: { id: string; name: string; company?: string | null } | null;
+  }>>([]);
+  const [tripVendors, setTripVendors] = useState<Array<{ vendor: { id: string; name: string; category?: string | null; [key: string]: unknown } }>>([]);
+  const [tripClients, setTripClients] = useState<Array<{ client: { id: string; name: string; company?: string | null; [key: string]: unknown } }>>([]);
+  const [allVendors, setAllVendors] = useState<Array<{ id: string; name: string; category?: string }>>([]);
+  const [allClients, setAllClients] = useState<Array<{ id: string; name: string; company?: string | null }>>([]);
   const [linkingVendor, setLinkingVendor] = useState(false);
   const [linkingClient, setLinkingClient] = useState(false);
   const [tabErrors, setTabErrors] = useState<Record<string, boolean>>({});
@@ -244,7 +277,7 @@ export default function TripDetailPage() {
     }
   }, [loading, trip, id]);
 
-  const handleUpdate = async (data: any) => {
+  const handleUpdate = async (data: Record<string, unknown>) => {
     setSaving(true);
     try {
       const res = await fetch(`/api/trips/${id}`, {
@@ -485,8 +518,8 @@ export default function TripDetailPage() {
     );
   }
 
-  const vendorLinkedIds = tripVendors.map((tv: any) => tv.vendor.id);
-  const clientLinkedIds = tripClients.map((tc: any) => tc.client.id);
+  const vendorLinkedIds = tripVendors.map((tv) => tv.vendor.id);
+  const clientLinkedIds = tripClients.map((tc) => tc.client.id);
   const isCancelled = trip.status === 'CANCELLED';
 
   return (
@@ -880,7 +913,7 @@ export default function TripDetailPage() {
                     <TabError onRetry={fetchTripVendors} />
                   ) : (
                     <LinkSelector
-                      items={allVendors.map((v: any) => ({ id: v.id, name: v.name }))}
+                      items={allVendors.map((v) => ({ id: v.id, name: v.name }))}
                       linkedIds={vendorLinkedIds}
                       onLink={handleLinkVendor}
                       onUnlink={handleUnlinkVendor}
@@ -898,7 +931,7 @@ export default function TripDetailPage() {
                     <TabError onRetry={fetchTripClients} />
                   ) : (
                     <LinkSelector
-                      items={allClients.map((c: any) => ({ id: c.id, name: c.name }))}
+                      items={allClients.map((c) => ({ id: c.id, name: c.name }))}
                       linkedIds={clientLinkedIds}
                       onLink={handleLinkClient}
                       onUnlink={handleUnlinkClient}

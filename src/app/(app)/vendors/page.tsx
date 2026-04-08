@@ -40,8 +40,22 @@ function downloadCsv(rows: string[][], filename: string) {
 
 const CATEGORIES = ['ALL', 'SUPPLIER', 'HOTEL', 'TRANSPORT', 'RESTAURANT', 'OTHER'] as const;
 
+interface VendorListItem {
+  id: string;
+  name: string;
+  category: string;
+  contactName?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  notes?: string | null;
+  trips?: unknown[];
+}
+
 export default function VendorsPage() {
-  const [vendors, setVendors] = useState<any[]>([]);
+  const [vendors, setVendors] = useState<VendorListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
   const [search, setSearch] = useState('');

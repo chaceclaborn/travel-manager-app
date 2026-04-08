@@ -25,8 +25,8 @@ interface TripCardProps {
     status: string;
     budget?: number | null;
     notes?: string | null;
-    vendors?: any[];
-    clients?: any[];
+    vendors?: unknown[];
+    clients?: unknown[];
     _count?: { vendors: number; clients: number };
   };
   onSaved?: () => void;

@@ -23,9 +23,29 @@ interface SimpleClient {
   company?: string | null;
 }
 
+interface TripFormInitialData {
+  title?: string | null;
+  destination?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  status?: string | null;
+  budget?: number | string | null;
+  notes?: string | null;
+  transportMode?: string | null;
+  departureAirportCode?: string | null;
+  departureAirportName?: string | null;
+  departureAirportLat?: number | null;
+  departureAirportLng?: number | null;
+  arrivalAirportCode?: string | null;
+  arrivalAirportName?: string | null;
+  arrivalAirportLat?: number | null;
+  arrivalAirportLng?: number | null;
+  clientIds?: string[];
+}
+
 interface TripFormProps {
-  initialData?: any;
-  onSubmit: (data: any) => void;
+  initialData?: TripFormInitialData;
+  onSubmit: (data: Record<string, unknown>) => void;
   isLoading?: boolean;
 }
 
@@ -179,7 +199,7 @@ function DestinationInput({ value, onChange, error, required }: DestinationInput
   );
 }
 
-function formatDateForInput(date: string | undefined) {
+function formatDateForInput(date: string | null | undefined) {
   if (!date) return '';
   // Extract YYYY-MM-DD directly to avoid timezone shift
   const match = date.match(/^(\d{4}-\d{2}-\d{2})/);

@@ -1,10 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback, use } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
-  ArrowLeft,
   Pencil,
   Trash2,
   Mail,
@@ -19,7 +17,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
 import { VendorForm } from '@/components/travelmanager/VendorForm';
 import { TMDeleteDialog } from '@/components/travelmanager/TMDeleteDialog';
 import { TMStatusBadge } from '@/components/travelmanager/TMStatusBadge';
@@ -36,13 +33,36 @@ const categoryColors: Record<string, string> = {
   OTHER: 'bg-slate-100 text-slate-700',
 };
 
+interface VendorTrip {
+  id: string;
+  title: string;
+  destination: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  status: string;
+}
+
+interface VendorData {
+  id: string;
+  name: string;
+  category: string;
+  contactName: string | null;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  website: string | null;
+  notes: string | null;
+  trips?: { trip: VendorTrip }[];
+}
+
 export default function VendorDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const router = useRouter();
   const { showToast } = useTMToast();
   const { deleteOpen: showDelete, setDeleteOpen: setShowDelete, deleting: isDeleting, handleDelete } = useDeleteEntity(`/api/vendors/${id}`, '/vendors', 'Vendor');
 
-  const [vendor, setVendor] = useState<any>(null);
+  const [vendor, setVendor] = useState<VendorData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [loadError, setLoadError] = useState(false);
@@ -75,7 +95,7 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
     fetchVendor();
   }, [fetchVendor]);
 
-  const handleUpdate = async (data: any) => {
+  const handleUpdate = async (data: Partial<VendorData>) => {
     setIsSaving(true);
     try {
       const res = await fetch(`/api/vendors/${id}`, {
@@ -146,7 +166,7 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
   const location = [vendor.address, vendor.city, vendor.state].filter(Boolean).join(', ');
   const colorClass = categoryColors[vendor.category] || categoryColors.OTHER;
   const categoryLabel = vendor.category.charAt(0) + vendor.category.slice(1).toLowerCase();
-  const associatedTrips = vendor.trips?.map((tv: any) => tv.trip) || [];
+  const associatedTrips = vendor.trips?.map((tv) => tv.trip) || [];
 
   return (
     <div className="space-y-6">
@@ -260,7 +280,7 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
               <p className="text-sm text-slate-400">No trips associated with this vendor.</p>
             ) : (
               <div className="space-y-3">
-                {associatedTrips.map((trip: any) => (
+                {associatedTrips.map((trip) => (
                   <Link key={trip.id} href={`/trips/${trip.id}`}>
                     <Card className="bg-white p-4 hover:shadow-md transition-shadow cursor-pointer">
                       <div className="flex items-center justify-between">

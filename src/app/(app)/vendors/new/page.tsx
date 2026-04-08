@@ -2,9 +2,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { VendorForm } from '@/components/travelmanager/VendorForm';
 import { TMBreadcrumb } from '@/components/travelmanager/TMBreadcrumb';
 import { useTMToast } from '@/components/travelmanager/TMToast';
@@ -14,7 +11,7 @@ export default function NewVendorPage() {
   const { showToast } = useTMToast();
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: Record<string, unknown>) => {
     setIsLoading(true);
     try {
       const res = await fetch('/api/vendors', {
@@ -31,8 +28,8 @@ export default function NewVendorPage() {
       const vendor = await res.json();
       showToast('Vendor created successfully');
       router.push(`/vendors/${vendor.id}`);
-    } catch (error: any) {
-      showToast(error.message || 'Failed to create vendor', 'error');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Failed to create vendor', 'error');
     } finally {
       setIsLoading(false);
     }

@@ -85,7 +85,7 @@ const cardVariants = {
   }),
 };
 
-function BookingCardView({ booking, config }: { booking: Booking; config: typeof typeConfig[BookingType] }) {
+function BookingCardView({ booking }: { booking: Booking }) {
   const tzSuffix = booking.timezone ? ` (${getTzAbbreviation(booking.timezone)})` : '';
   return (
     <div className="space-y-1.5 text-sm">
@@ -491,7 +491,7 @@ function BookingCard({
               Standalone booking
             </div>
           )}
-          <BookingCardView booking={booking} config={config} />
+          <BookingCardView booking={booking} />
         </>
       )}
     </motion.div>

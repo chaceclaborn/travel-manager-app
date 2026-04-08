@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
 
     // Run AI classification on results (non-blocking — if it fails, frontend scoring handles it)
     const useAI = request.nextUrl.searchParams.get('classify') !== 'false';
-    let classifications: Record<string, { category: string; confidence: number; reason: string }> = {};
+    const classifications: Record<string, { category: string; confidence: number; reason: string }> = {};
 
     if (useAI && results.length > 0) {
       try {

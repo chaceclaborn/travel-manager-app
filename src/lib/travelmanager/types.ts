@@ -35,7 +35,7 @@ export interface CreateMeetingInput {
   clientId?: string | null;
 }
 
-export interface UpdateMeetingInput extends Partial<CreateMeetingInput> {}
+export type UpdateMeetingInput = Partial<CreateMeetingInput>;
 
 export type TripWithRelations = Trip & {
   vendors: (TripVendor & { vendor: Vendor })[];
@@ -77,7 +77,7 @@ export interface CreateTripInput {
   shareExpiresAt?: string | null;
 }
 
-export interface UpdateTripInput extends Partial<CreateTripInput> {}
+export type UpdateTripInput = Partial<CreateTripInput>;
 
 export interface CreateVendorInput {
   name: string;
@@ -92,7 +92,7 @@ export interface CreateVendorInput {
   notes?: string;
 }
 
-export interface UpdateVendorInput extends Partial<CreateVendorInput> {}
+export type UpdateVendorInput = Partial<CreateVendorInput>;
 
 export interface CreateClientInput {
   name: string;
@@ -102,7 +102,7 @@ export interface CreateClientInput {
   notes?: string;
 }
 
-export interface UpdateClientInput extends Partial<CreateClientInput> {}
+export type UpdateClientInput = Partial<CreateClientInput>;
 
 export interface CreateItineraryItemInput {
   tripId: string;
@@ -118,7 +118,7 @@ export interface CreateItineraryItemInput {
   clientId?: string;
 }
 
-export interface UpdateItineraryItemInput extends Partial<Omit<CreateItineraryItemInput, 'tripId'>> {}
+export type UpdateItineraryItemInput = Partial<Omit<CreateItineraryItemInput, 'tripId'>>;
 
 export interface CreateTripAttachmentInput {
   tripId: string;
@@ -139,7 +139,7 @@ export interface CreateExpenseInput {
   receiptPath?: string;
 }
 
-export interface UpdateExpenseInput extends Partial<Omit<CreateExpenseInput, 'tripId'>> {}
+export type UpdateExpenseInput = Partial<Omit<CreateExpenseInput, 'tripId'>>;
 
 export interface CreateBookingInput {
   tripId?: string;

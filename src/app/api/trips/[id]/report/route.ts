@@ -133,7 +133,7 @@ export async function GET(
         ...tableStyles,
       });
 
-      currentY = (doc as any).lastAutoTable.finalY + 12;
+      currentY = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 12;
     }
 
     // ─── Expense Breakdown ───
@@ -147,7 +147,7 @@ export async function GET(
         categoryTotals.set(cat, (categoryTotals.get(cat) ?? 0) + exp.amount);
       }
 
-      const expenseRows: (string | { content: string; styles: Record<string, any> })[][] = [];
+      const expenseRows: (string | { content: string; styles: Record<string, unknown> })[][] = [];
 
       for (const exp of trip.expenses) {
         expenseRows.push([
@@ -186,7 +186,7 @@ export async function GET(
         ...tableStyles,
       });
 
-      currentY = (doc as any).lastAutoTable.finalY + 12;
+      currentY = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 12;
     }
 
     // ─── Booking References ───
@@ -209,7 +209,7 @@ export async function GET(
         ...tableStyles,
       });
 
-      currentY = (doc as any).lastAutoTable.finalY + 12;
+      currentY = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 12;
     }
 
     // ─── Vendor Contacts ───
