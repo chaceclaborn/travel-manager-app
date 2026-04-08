@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { Shield, Download, FileText, Trash2, Loader2, Monitor, MapPin, X, Mail, CheckCircle2, Unlink } from 'lucide-react';
+import { Shield, Download, FileText, Trash2, Loader2, Monitor, MapPin, X, Mail, CheckCircle2, Unlink, Wrench } from 'lucide-react';
 import { useGeocodingSearch, formatGeoName } from '@/lib/travelmanager/useGeocodingSearch';
 import type { GeoResult } from '@/lib/travelmanager/useGeocodingSearch';
 import { Input } from '@/components/ui/input';
@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/dialog';
 import { TMBreadcrumb } from '@/components/travelmanager/TMBreadcrumb';
 import { useTMToast } from '@/components/travelmanager/TMToast';
+import { CurrencyConverter } from '@/components/travelmanager/CurrencyConverter';
 import { useAuth } from '@/lib/travelmanager/useAuth';
 
 interface Session {
@@ -355,6 +356,18 @@ export default function SettingsPage() {
             Home set to: {userInfo.homeCity}
           </p>
         )}
+      </motion.div>
+
+      {/* Tools */}
+      <motion.div variants={item}>
+        <div className="mb-3 flex items-center gap-2 px-1">
+          <Wrench className="size-5 text-amber-600" />
+          <h2 className="text-lg font-semibold text-slate-800">Tools</h2>
+        </div>
+        <p className="mb-3 px-1 text-xs text-slate-500">
+          Handy utilities for trip planning.
+        </p>
+        <CurrencyConverter />
       </motion.div>
 
       {/* Connected Accounts */}

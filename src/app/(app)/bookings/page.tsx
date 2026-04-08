@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plane, Trash2, Plus, X, MapPin,
   Clock, Hash, Armchair, Search, Link2, Loader2, ExternalLink, Pencil, Mail, Ban, RotateCcw,
-  AlertCircle, RefreshCw,
+  AlertCircle, RefreshCw, Check, Download, CheckSquare,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -42,13 +42,32 @@ interface Booking {
   confirmationNum: string | null;
   startDateTime: string | null;
   endDateTime: string | null;
+  timezone: string | null;
   location: string | null;
   endLocation: string | null;
   seat: string | null;
   notes: string | null;
+  commissionAmount: number | null;
+  commissionRate: number | null;
+  commissionPaid: boolean;
+  commissionNotes: string | null;
   tripId: string | null;
   trip: BookingTrip | null;
   createdAt: string;
+}
+
+// Helper: get short timezone abbreviation for display (e.g. "EDT", "PST").
+// Uses Intl to format a date in the given tz and extract the tz name part.
+function getTzAbbreviation(tz: string): string {
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz,
+      timeZoneName: 'short',
+    }).formatToParts(new Date());
+    return parts.find((p) => p.type === 'timeZoneName')?.value || tz;
+  } catch {
+    return tz;
+  }
 }
 
 interface Trip {
@@ -67,6 +86,7 @@ const cardVariants = {
 };
 
 function BookingCardView({ booking, config }: { booking: Booking; config: typeof typeConfig[BookingType] }) {
+  const tzSuffix = booking.timezone ? ` (${getTzAbbreviation(booking.timezone)})` : '';
   return (
     <div className="space-y-1.5 text-sm">
       {booking.type === 'FLIGHT' && (
@@ -80,13 +100,13 @@ function BookingCardView({ booking, config }: { booking: Booking; config: typeof
           {booking.startDateTime && (
             <div className="flex items-center gap-2 text-slate-600">
               <Clock className="size-3.5 shrink-0 text-blue-400" />
-              <span>Depart: {formatDateTime(booking.startDateTime)}</span>
+              <span>Depart: {formatDateTime(booking.startDateTime)}{tzSuffix}</span>
             </div>
           )}
           {booking.endDateTime && (
             <div className="flex items-center gap-2 text-slate-600">
               <Clock className="size-3.5 shrink-0 text-blue-400" />
-              <span>Arrive: {formatDateTime(booking.endDateTime)}</span>
+              <span>Arrive: {formatDateTime(booking.endDateTime)}{tzSuffix}</span>
             </div>
           )}
           {booking.seat && (
@@ -106,23 +126,23 @@ function BookingCardView({ booking, config }: { booking: Booking; config: typeof
       )}
       {booking.type === 'CAR_RENTAL' && (
         <>
-          {booking.startDateTime && <div className="flex items-center gap-2 text-slate-600"><Clock className="size-3.5 shrink-0 text-green-400" /><span>Pickup: {formatDateTime(booking.startDateTime)}</span></div>}
+          {booking.startDateTime && <div className="flex items-center gap-2 text-slate-600"><Clock className="size-3.5 shrink-0 text-green-400" /><span>Pickup: {formatDateTime(booking.startDateTime)}{tzSuffix}</span></div>}
           {booking.location && <div className="flex items-center gap-2 text-slate-600"><MapPin className="size-3.5 shrink-0 text-green-400" /><span>Pickup: {booking.location}</span></div>}
-          {booking.endDateTime && <div className="flex items-center gap-2 text-slate-600"><Clock className="size-3.5 shrink-0 text-green-400" /><span>Dropoff: {formatDateTime(booking.endDateTime)}</span></div>}
+          {booking.endDateTime && <div className="flex items-center gap-2 text-slate-600"><Clock className="size-3.5 shrink-0 text-green-400" /><span>Dropoff: {formatDateTime(booking.endDateTime)}{tzSuffix}</span></div>}
           {booking.endLocation && <div className="flex items-center gap-2 text-slate-600"><MapPin className="size-3.5 shrink-0 text-green-400" /><span>Dropoff: {booking.endLocation}</span></div>}
         </>
       )}
       {(booking.type === 'TRAIN' || booking.type === 'BUS') && (
         <>
           {(booking.location || booking.endLocation) && <div className="flex items-center gap-2 text-slate-600"><MapPin className="size-3.5 shrink-0 text-slate-400" /><span>{booking.location || '...'} &rarr; {booking.endLocation || '...'}</span></div>}
-          {booking.startDateTime && <div className="flex items-center gap-2 text-slate-600"><Clock className="size-3.5 shrink-0 text-slate-400" /><span>Depart: {formatDateTime(booking.startDateTime)}</span></div>}
-          {booking.endDateTime && <div className="flex items-center gap-2 text-slate-600"><Clock className="size-3.5 shrink-0 text-slate-400" /><span>Arrive: {formatDateTime(booking.endDateTime)}</span></div>}
+          {booking.startDateTime && <div className="flex items-center gap-2 text-slate-600"><Clock className="size-3.5 shrink-0 text-slate-400" /><span>Depart: {formatDateTime(booking.startDateTime)}{tzSuffix}</span></div>}
+          {booking.endDateTime && <div className="flex items-center gap-2 text-slate-600"><Clock className="size-3.5 shrink-0 text-slate-400" /><span>Arrive: {formatDateTime(booking.endDateTime)}{tzSuffix}</span></div>}
           {booking.seat && <div className="flex items-center gap-2 text-slate-600"><Armchair className="size-3.5 shrink-0 text-slate-400" /><span>Seat: {booking.seat}</span></div>}
         </>
       )}
       {booking.type === 'OTHER' && (
         <>
-          {booking.startDateTime && <div className="flex items-center gap-2 text-slate-600"><Clock className="size-3.5 shrink-0 text-slate-400" /><span>{formatDateTime(booking.startDateTime)}{booking.endDateTime ? ` - ${formatDateTime(booking.endDateTime)}` : ''}</span></div>}
+          {booking.startDateTime && <div className="flex items-center gap-2 text-slate-600"><Clock className="size-3.5 shrink-0 text-slate-400" /><span>{formatDateTime(booking.startDateTime)}{booking.endDateTime ? ` - ${formatDateTime(booking.endDateTime)}` : ''}{tzSuffix}</span></div>}
           {booking.location && <div className="flex items-center gap-2 text-slate-600"><MapPin className="size-3.5 shrink-0 text-slate-400" /><span>{booking.location}</span></div>}
         </>
       )}
@@ -144,6 +164,10 @@ function BookingCard({
   onSaved,
   onCancel,
   index,
+  selectMode,
+  selected,
+  onToggleSelect,
+  timezones,
 }: {
   booking: Booking;
   onDelete: (id: string) => void;
@@ -151,6 +175,10 @@ function BookingCard({
   onSaved: () => void;
   onCancel: (id: string, nextStatus: BookingStatus) => Promise<void>;
   index: number;
+  selectMode: boolean;
+  selected: boolean;
+  onToggleSelect: (id: string) => void;
+  timezones: string[];
 }) {
   const isCancelled = booking.status === 'CANCELLED';
   const [editing, setEditing] = useState(false);
@@ -172,10 +200,15 @@ function BookingCard({
     confirmationNum: booking.confirmationNum || '',
     startDateTime: booking.startDateTime || '',
     endDateTime: booking.endDateTime || '',
+    timezone: booking.timezone || '',
     location: booking.location || '',
     endLocation: booking.endLocation || '',
     seat: booking.seat || '',
     notes: booking.notes || '',
+    commissionAmount: booking.commissionAmount != null ? String(booking.commissionAmount) : '',
+    commissionRate: booking.commissionRate != null ? String(booking.commissionRate) : '',
+    commissionPaid: booking.commissionPaid || false,
+    commissionNotes: booking.commissionNotes || '',
   });
 
   const config = typeConfig[booking.type];
@@ -190,10 +223,15 @@ function BookingCard({
       confirmationNum: booking.confirmationNum || '',
       startDateTime: booking.startDateTime || '',
       endDateTime: booking.endDateTime || '',
+      timezone: booking.timezone || '',
       location: booking.location || '',
       endLocation: booking.endLocation || '',
       seat: booking.seat || '',
       notes: booking.notes || '',
+      commissionAmount: booking.commissionAmount != null ? String(booking.commissionAmount) : '',
+      commissionRate: booking.commissionRate != null ? String(booking.commissionRate) : '',
+      commissionPaid: booking.commissionPaid || false,
+      commissionNotes: booking.commissionNotes || '',
     });
     setEditing(true);
   };
@@ -212,10 +250,15 @@ function BookingCard({
           confirmationNum: form.confirmationNum.trim() || undefined,
           startDateTime: form.startDateTime || undefined,
           endDateTime: form.endDateTime || undefined,
+          timezone: form.timezone || undefined,
           location: form.location.trim() || undefined,
           endLocation: form.endLocation.trim() || undefined,
           seat: form.seat.trim() || undefined,
           notes: form.notes.trim() || undefined,
+          commissionAmount: form.commissionAmount ? Number(form.commissionAmount) : undefined,
+          commissionRate: form.commissionRate ? Number(form.commissionRate) : undefined,
+          commissionPaid: form.commissionPaid,
+          commissionNotes: form.commissionNotes.trim() || undefined,
         }),
       });
       if (!res.ok) throw new Error();
@@ -229,7 +272,7 @@ function BookingCard({
     }
   };
 
-  const updateForm = (field: string, value: string) => setForm((prev) => ({ ...prev, [field]: value }));
+  const updateForm = (field: string, value: string | boolean) => setForm((prev) => ({ ...prev, [field]: value }));
 
   return (
     <motion.div
@@ -239,9 +282,20 @@ function BookingCard({
       animate="visible"
       layout
       whileTap={{ scale: 0.98 }}
-      className={`rounded-lg border bg-white p-4 shadow-sm transition-all duration-200 ${editing ? 'border-amber-300 ring-1 ring-amber-200' : isCancelled ? 'border-slate-200 bg-slate-50/60 opacity-70' : `border-slate-100 ${config.borderAccent} hover:-translate-y-0.5 hover:shadow-md`}`}
+      className={`relative rounded-lg border bg-white p-4 shadow-sm transition-all duration-200 ${editing ? 'border-amber-300 ring-1 ring-amber-200' : selected ? 'border-amber-400 ring-2 ring-amber-300' : isCancelled ? 'border-slate-200 bg-slate-50/60 opacity-70' : `border-slate-100 ${config.borderAccent} hover:-translate-y-0.5 hover:shadow-md`}`}
     >
-      <div className="mb-3 flex items-start justify-between">
+      {selectMode && !editing && (
+        <label className="absolute left-2 top-2 z-10 inline-flex items-center justify-center rounded-md bg-white/90 p-1.5 shadow-sm ring-1 ring-slate-200 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={() => onToggleSelect(booking.id)}
+            aria-label={`Select booking ${booking.provider}`}
+            className="size-4 cursor-pointer accent-amber-500"
+          />
+        </label>
+      )}
+      <div className={`mb-3 flex items-start justify-between ${selectMode && !editing ? 'pl-8' : ''}`}>
         {editing ? (
           <div className="flex items-center gap-2">
             <span className={`flex items-center justify-center rounded-lg p-1.5 ring-1 ${editConfig.iconBg}`}>{editConfig.icon}</span>
@@ -252,11 +306,17 @@ function BookingCard({
             <span className={`flex items-center justify-center rounded-xl p-2.5 ring-2 ${config.iconBg}`}>{config.icon}</span>
             <div>
               <p className={`font-semibold transition-colors ${isCancelled ? 'text-slate-500 line-through' : 'text-slate-800 hover:text-amber-600'}`}>{booking.provider}</p>
-              <div className="flex items-center gap-1.5">
+              <div className="flex flex-wrap items-center gap-1.5">
                 <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${config.badgeColor}`}>{config.label}</span>
                 {isCancelled && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-200">
                     <Ban className="size-2.5" />Cancelled
+                  </span>
+                )}
+                {(booking.commissionAmount || booking.commissionRate) && (
+                  <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${booking.commissionPaid ? 'bg-emerald-100 text-emerald-800 ring-1 ring-emerald-200' : 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100'}`}>
+                    💰 {booking.commissionAmount ? `$${booking.commissionAmount.toFixed(2)}` : `${booking.commissionRate}%`}
+                    {booking.commissionPaid && <Check className="size-3" />}
                   </span>
                 )}
               </div>
@@ -357,9 +417,58 @@ function BookingCard({
               </div>
             )}
             <div className="sm:col-span-2">
+              <Label className="text-xs">Timezone</Label>
+              <Select value={form.timezone} onValueChange={(v) => updateForm('timezone', v)}>
+                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select timezone..." /></SelectTrigger>
+                <SelectContent className="max-h-64">
+                  {timezones.map((tz) => (
+                    <SelectItem key={tz} value={tz}>{tz}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="sm:col-span-2">
               <Label className="text-xs">Notes</Label>
               <Input value={form.notes} onChange={(e) => updateForm('notes', e.target.value)} className="h-8 text-xs" />
             </div>
+            <details className="sm:col-span-2 rounded-md border border-slate-200 p-2">
+              <summary className="cursor-pointer text-xs font-medium text-slate-600">
+                💰 Commission (optional)
+              </summary>
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="$ amount"
+                  value={form.commissionAmount}
+                  onChange={(e) => updateForm('commissionAmount', e.target.value)}
+                  className="h-8 text-xs"
+                />
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="% rate"
+                  value={form.commissionRate}
+                  onChange={(e) => updateForm('commissionRate', e.target.value)}
+                  className="h-8 text-xs"
+                />
+                <label className="flex items-center gap-2 text-xs">
+                  <input
+                    type="checkbox"
+                    checked={form.commissionPaid}
+                    onChange={(e) => updateForm('commissionPaid', e.target.checked)}
+                    className="size-4 cursor-pointer accent-emerald-500"
+                  />
+                  Paid
+                </label>
+                <Input
+                  placeholder="Notes"
+                  value={form.commissionNotes}
+                  onChange={(e) => updateForm('commissionNotes', e.target.value)}
+                  className="h-8 text-xs"
+                />
+              </div>
+            </details>
           </div>
           <div className="flex gap-2">
             <Button type="submit" size="sm" disabled={saving} className="h-7 text-xs bg-amber-500 hover:bg-amber-600">
@@ -392,10 +501,27 @@ function BookingCard({
 const emptyForm = {
   ...emptyBookingForm,
   tripId: '',
+  timezone: '',
+  commissionAmount: '',
+  commissionRate: '',
+  commissionPaid: false,
+  commissionNotes: '',
 };
 
 export default function BookingsPage() {
   const { showToast } = useTMToast();
+
+  // Intl.supportedValuesOf is widely available, but guard just in case.
+  const timezones = useMemo<string[]>(() => {
+    try {
+      return (Intl as unknown as { supportedValuesOf?: (k: string) => string[] }).supportedValuesOf?.('timeZone') ?? [];
+    } catch {
+      return [];
+    }
+  }, []);
+  const browserTz = useMemo(() => {
+    try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch { return ''; }
+  }, []);
 
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [trips, setTrips] = useState<Trip[]>([]);
@@ -407,7 +533,7 @@ export default function BookingsPage() {
   const [statusFilter, setStatusFilter] = useState('ACTIVE');
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState(emptyForm);
+  const [form, setForm] = useState({ ...emptyForm, timezone: browserTz });
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [linkTarget, setLinkTarget] = useState<string | null>(null);
@@ -420,6 +546,10 @@ export default function BookingsPage() {
   const [lookupFallbackUrl, setLookupFallbackUrl] = useState('');
   const [gmailConnected, setGmailConnected] = useState(false);
   const [showGmailModal, setShowGmailModal] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
   const fetchBookings = useCallback(async () => {
     setError(false);
@@ -464,6 +594,91 @@ export default function BookingsPage() {
     });
   }, [bookings, search, typeFilter, linkFilter, statusFilter]);
 
+  // Sum commissionAmount for paid commissions where startDateTime falls in
+  // the current calendar month. Unpaid doesn't count as "earned" yet.
+  const totalCommissionThisMonth = useMemo(() => {
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    return bookings.reduce((sum, b) => {
+      if (!b.commissionPaid || !b.commissionAmount || !b.startDateTime) return sum;
+      const d = new Date(b.startDateTime);
+      if (isNaN(d.getTime())) return sum;
+      if (d >= monthStart && d < nextMonthStart) return sum + b.commissionAmount;
+      return sum;
+    }, 0);
+  }, [bookings]);
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    setIsBulkDeleting(true);
+    try {
+      const res = await fetch('/api/bookings/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: Array.from(selectedIds) }),
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      showToast(`Deleted ${data.deleted ?? selectedIds.size} bookings`);
+      setSelectedIds(new Set());
+      setSelectMode(false);
+      setBulkDeleteOpen(false);
+      fetchBookings();
+    } catch {
+      showToast('Failed to delete bookings', 'error');
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
+  const handleBulkExportCsv = () => {
+    const selected = bookings.filter((b) => selectedIds.has(b.id));
+    if (selected.length === 0) {
+      showToast('No bookings selected', 'error');
+      return;
+    }
+    // CSV escape: wrap in quotes, double embedded quotes.
+    const escape = (v: unknown): string => {
+      if (v == null) return '';
+      const s = String(v);
+      return `"${s.replace(/"/g, '""')}"`;
+    };
+    const headers = ['Type', 'Provider', 'Confirmation', 'Start', 'End', 'Location', 'Notes', 'Status', 'Commission Amount', 'Commission Rate'];
+    const rows = selected.map((b) => [
+      b.type,
+      b.provider,
+      b.confirmationNum ?? '',
+      b.startDateTime ?? '',
+      b.endDateTime ?? '',
+      b.location ?? '',
+      b.notes ?? '',
+      b.status,
+      b.commissionAmount ?? '',
+      b.commissionRate ?? '',
+    ].map(escape).join(','));
+    const csv = [headers.map(escape).join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `bookings-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast(`Exported ${selected.length} bookings`);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.provider.trim()) {
@@ -482,16 +697,21 @@ export default function BookingsPage() {
           confirmationNum: form.confirmationNum.trim() || undefined,
           startDateTime: form.startDateTime || undefined,
           endDateTime: form.endDateTime || undefined,
+          timezone: form.timezone || undefined,
           location: form.location.trim() || undefined,
           endLocation: form.endLocation.trim() || undefined,
           seat: form.seat.trim() || undefined,
           notes: form.notes.trim() || undefined,
           tripId: form.tripId || undefined,
+          commissionAmount: form.commissionAmount ? Number(form.commissionAmount) : undefined,
+          commissionRate: form.commissionRate ? Number(form.commissionRate) : undefined,
+          commissionPaid: form.commissionPaid,
+          commissionNotes: form.commissionNotes.trim() || undefined,
         }),
       });
       if (!res.ok) throw new Error();
       showToast('Booking created');
-      setForm(emptyForm);
+      setForm({ ...emptyForm, timezone: browserTz });
       setShowForm(false);
       fetchBookings();
     } catch {
@@ -553,7 +773,7 @@ export default function BookingsPage() {
     }
   };
 
-  const updateForm = (field: string, value: string) => {
+  const updateForm = (field: string, value: string | boolean) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -667,9 +887,24 @@ export default function BookingsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold text-slate-800">Bookings</h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">Bookings</h1>
+          {bookings.length > 0 && (
+            <p className="text-xs text-slate-500">
+              💰 ${totalCommissionThisMonth.toFixed(2)} earned this month
+            </p>
+          )}
+        </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <Button
+            variant="outline"
+            onClick={() => { setSelectMode(!selectMode); setSelectedIds(new Set()); }}
+            className="w-full sm:w-auto"
+          >
+            <CheckSquare className="mr-2 size-4" />
+            {selectMode ? 'Cancel' : 'Select'}
+          </Button>
           {gmailConnected ? (
             <Button
               variant="outline"
@@ -718,7 +953,7 @@ export default function BookingsPage() {
             </div>
             <button
               type="button"
-              onClick={() => { setShowForm(false); setForm(emptyForm); }}
+              onClick={() => { setShowForm(false); setForm({ ...emptyForm, timezone: browserTz }); }}
               className="cursor-pointer rounded-md p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
             >
               <X className="size-4" />
@@ -885,6 +1120,20 @@ export default function BookingsPage() {
               </div>
             </div>
 
+            <div className="sm:col-span-2">
+              <Label htmlFor="booking-timezone">Timezone</Label>
+              <Select value={form.timezone} onValueChange={(v) => updateForm('timezone', v)}>
+                <SelectTrigger id="booking-timezone" className="w-full">
+                  <SelectValue placeholder="Select timezone..." />
+                </SelectTrigger>
+                <SelectContent position="popper" sideOffset={4} className="max-h-64">
+                  {timezones.map((tz) => (
+                    <SelectItem key={tz} value={tz}>{tz}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             {showSeat && (
               <div>
                 <Label htmlFor="booking-seat">Seat</Label>
@@ -923,6 +1172,42 @@ export default function BookingsPage() {
                 placeholder="Additional details..."
               />
             </div>
+
+            <details className="sm:col-span-2 rounded-md border border-slate-200 p-2">
+              <summary className="cursor-pointer text-xs font-medium text-slate-600">
+                💰 Commission (optional)
+              </summary>
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="$ amount"
+                  value={form.commissionAmount}
+                  onChange={(e) => updateForm('commissionAmount', e.target.value)}
+                />
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="% rate"
+                  value={form.commissionRate}
+                  onChange={(e) => updateForm('commissionRate', e.target.value)}
+                />
+                <label className="flex items-center gap-2 text-xs">
+                  <input
+                    type="checkbox"
+                    checked={form.commissionPaid}
+                    onChange={(e) => updateForm('commissionPaid', e.target.checked)}
+                    className="size-4 cursor-pointer accent-emerald-500"
+                  />
+                  Paid
+                </label>
+                <Input
+                  placeholder="Notes"
+                  value={form.commissionNotes}
+                  onChange={(e) => updateForm('commissionNotes', e.target.value)}
+                />
+              </div>
+            </details>
           </div>
 
           <div className="flex gap-2">
@@ -933,7 +1218,7 @@ export default function BookingsPage() {
               type="button"
               size="sm"
               variant="outline"
-              onClick={() => { setShowForm(false); setForm(emptyForm); }}
+              onClick={() => { setShowForm(false); setForm({ ...emptyForm, timezone: browserTz }); }}
             >
               Cancel
             </Button>
@@ -1035,11 +1320,32 @@ export default function BookingsPage() {
                   onSaved={fetchBookings}
                   onCancel={handleCancel}
                   index={i}
+                  selectMode={selectMode}
+                  selected={selectedIds.has(booking.id)}
+                  onToggleSelect={toggleSelect}
+                  timezones={timezones}
                 />
               </motion.div>
             ))}
           </AnimatePresence>
         </motion.div>
+      )}
+
+      {selectMode && selectedIds.size > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 md:left-64 z-40 bg-white border-t shadow-lg p-3 flex flex-wrap items-center gap-3">
+          <span className="font-semibold text-sm text-slate-700">{selectedIds.size} selected</span>
+          <Button variant="outline" size="sm" onClick={() => setSelectedIds(new Set())}>
+            Clear
+          </Button>
+          <Button variant="destructive" size="sm" onClick={() => setBulkDeleteOpen(true)}>
+            <Trash2 className="mr-2 size-4" />
+            Delete
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleBulkExportCsv}>
+            <Download className="mr-2 size-4" />
+            Export CSV
+          </Button>
+        </div>
       )}
 
       <TMDeleteDialog
@@ -1049,6 +1355,15 @@ export default function BookingsPage() {
         title="Delete Booking"
         description="Are you sure you want to delete this booking? This action cannot be undone."
         isDeleting={isDeleting}
+      />
+
+      <TMDeleteDialog
+        open={bulkDeleteOpen}
+        onClose={() => setBulkDeleteOpen(false)}
+        onConfirm={handleBulkDelete}
+        title={`Delete ${selectedIds.size} bookings?`}
+        description="This will permanently delete the selected bookings. This action cannot be undone."
+        isDeleting={isBulkDeleting}
       />
 
       {linkTarget && (

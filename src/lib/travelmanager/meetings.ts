@@ -45,6 +45,7 @@ export async function createMeeting(data: CreateMeetingInput, userId: string) {
       title: data.title,
       startDateTime: data.startDateTime,
       endDateTime: data.endDateTime ?? null,
+      timezone: data.timezone ?? null,
       location: data.location ?? null,
       notes: data.notes ?? null,
       ...(data.tripId ? { trip: { connect: { id: data.tripId } } } : {}),
@@ -65,6 +66,7 @@ export async function updateMeeting(id: string, data: UpdateMeetingInput, userId
   if (data.title !== undefined) updateData.title = data.title;
   if (data.startDateTime !== undefined) updateData.startDateTime = data.startDateTime;
   if (data.endDateTime !== undefined) updateData.endDateTime = data.endDateTime || null;
+  if (data.timezone !== undefined) updateData.timezone = data.timezone || null;
   if (data.location !== undefined) updateData.location = data.location;
   if (data.notes !== undefined) updateData.notes = data.notes;
   if (data.tripId !== undefined) updateData.tripId = data.tripId || null;
