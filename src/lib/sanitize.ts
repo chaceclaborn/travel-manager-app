@@ -80,6 +80,25 @@ export function validateDateString(date: string): boolean {
 }
 
 /**
+ * Validates that a string is a recognized IANA timezone.
+ * Empty/null/undefined are considered VALID (they represent "no tz set").
+ * Only actively rejects non-empty strings that aren't valid IANA zones.
+ * Length-capped to avoid pathological inputs.
+ */
+export function validateTimezone(tz: string | null | undefined): boolean {
+  if (tz === null || tz === undefined || tz === '') return true;
+  if (typeof tz !== 'string') return false;
+  if (tz.length > 64) return false; // DoS guard
+  try {
+    // Intl.DateTimeFormat throws RangeError for invalid zones
+    new Intl.DateTimeFormat('en-US', { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * HTML entity encoding for safe display. Encodes the five critical characters
  * that can break out of HTML context.
  */

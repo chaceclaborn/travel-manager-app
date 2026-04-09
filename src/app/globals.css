@@ -1,5 +1,10 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+/* Leaflet base styles. Imported here (rather than per-map-component) because
+   Next 16 + Turbopack can drop CSS side-effect imports from dynamically
+   imported client components, which breaks the map tile layout. Loading it
+   globally is the react-leaflet recommended pattern for Next.js. */
+@import "leaflet/dist/leaflet.css";
 
 @custom-variant dark (&:is(.dark *));
 

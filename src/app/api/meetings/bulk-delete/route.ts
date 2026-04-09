@@ -28,13 +28,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No valid ids provided' }, { status: 400 });
     }
 
-    // deleteMany silently skips rows not owned by this user, so we can batch safely
-    const results = await prisma.$transaction(
-      ids.map((id: string) => prisma.meeting.deleteMany({ where: { id, userId: user.id } }))
-    );
-    const deleted = results.reduce((sum, r) => sum + r.count, 0);
+    // Verify ownership inside a transaction, then delete atomically.
+    // Matches the trip/booking/vendor/client bulk-delete pattern — one
+    // findMany to whitelist owned ids, then a single deleteMany. Previously
+    // issued one DELETE per id (N+1 round trips at the 200-id cap).
+    const deletedCount = await prisma.$transaction(async (tx) => {
+      const owned = await tx.meeting.findMany({
+        where: { id: { in: ids }, userId: user.id },
+        select: { id: true },
+      });
+      const ownedIds = owned.map((m) => m.id);
+      if (ownedIds.length === 0) return 0;
+      const result = await tx.meeting.deleteMany({ where: { id: { in: ownedIds }, userId: user.id } });
+      return result.count;
+    });
 
-    return NextResponse.json({ success: true, deleted });
+    return NextResponse.json({ success: true, deleted: deletedCount });
   } catch (error) {
     console.error('Error bulk deleting meetings:', error instanceof Error ? error.message : error);
     return NextResponse.json({ error: 'Failed to bulk delete meetings' }, { status: 500 });

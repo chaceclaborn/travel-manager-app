@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getMyMeetings, createMeeting } from '@/lib/travelmanager/meetings';
 import { requireAuth } from '@/lib/travelmanager/auth';
 import { rateLimit } from '@/lib/rate-limit';
-import { sanitizeObject, validateUUID, validateDateString } from '@/lib/sanitize';
+import { sanitizeObject, validateUUID, validateDateString, validateTimezone } from '@/lib/sanitize';
 
 const MEETING_ALLOWED_FIELDS = ['title', 'startDateTime', 'endDateTime', 'timezone', 'location', 'notes', 'tripId', 'clientId'];
 
@@ -51,6 +51,10 @@ export async function POST(request: NextRequest) {
 
     if (sanitized.clientId && !validateUUID(sanitized.clientId as string)) {
       return NextResponse.json({ error: 'Invalid client ID' }, { status: 400 });
+    }
+
+    if (!validateTimezone(sanitized.timezone as string | null | undefined)) {
+      return NextResponse.json({ error: 'Invalid timezone' }, { status: 400 });
     }
 
     const meeting = await createMeeting(sanitized as unknown as Parameters<typeof createMeeting>[0], user.id);

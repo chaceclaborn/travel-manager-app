@@ -1,9 +1,19 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { rateLimit } from '@/lib/rate-limit';
 
 const OLD_PROJECT_REF = 'biaxoishtoysdjfiqddl';
 
 export async function proxy(request: NextRequest) {
+  // Rate limit the public /share/:token page to prevent brute-force token
+  // enumeration. This runs before the Supabase session refresh below because
+  // the page is intentionally unauthenticated — we don't want attackers
+  // pinning us into expensive DB lookups per token.
+  if (request.nextUrl.pathname.startsWith('/share/')) {
+    const limited = rateLimit(request, 'read');
+    if (limited) return limited;
+  }
+
   // CSRF protection: verify Origin header on state-changing API requests.
   // Defense-in-depth — the primary CSRF defense is the auth cookie's SameSite attribute.
   // If Origin is present and mismatches Host, reject (browser-based attacks always send Origin).

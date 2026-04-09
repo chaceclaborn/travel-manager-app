@@ -42,8 +42,12 @@ export async function POST(request: NextRequest) {
 
     const targetUserId = typeof clean.userId === 'string' ? clean.userId : '';
     const title = typeof clean.title === 'string' ? clean.title : '';
-    const body = typeof clean.body === 'string' ? clean.body : '';
-    const url = typeof clean.url === 'string' ? clean.url : undefined;
+    // body/url are parsed here so the sanitize contract stays stable for the
+    // real dispatch, but we deliberately don't log them (PII — see below).
+    const _body = typeof clean.body === 'string' ? clean.body : '';
+    const _url = typeof clean.url === 'string' ? clean.url : undefined;
+    void _body;
+    void _url;
 
     if (!targetUserId || !title) {
       return NextResponse.json(
@@ -57,11 +61,12 @@ export async function POST(request: NextRequest) {
       select: { token: true, platform: true },
     });
 
+    // Log only non-PII metadata. `title`/`body`/`url` may contain booking
+    // details (confirmation numbers, locations, client names) — Vercel log
+    // retention + downstream log shipping would otherwise persist that as
+    // a GDPR exposure. Keep this shape when the real APNs/FCM dispatch lands.
     console.log('[push/send] STUB dispatch', {
       targetUserId,
-      title,
-      body,
-      url,
       tokenCount: tokens.length,
     });
 

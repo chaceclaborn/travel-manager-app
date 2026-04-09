@@ -2,7 +2,7 @@
 
 import { MapContainer, TileLayer, Marker } from 'react-leaflet';
 import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+// leaflet/dist/leaflet.css is imported globally in src/app/globals.css
 import { MapPinOff } from 'lucide-react';
 
 interface TripMiniMapProps {

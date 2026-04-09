@@ -10,31 +10,41 @@ export const dynamic = 'force-dynamic';
 export async function generateMetadata(
   { params }: { params: Promise<{ token: string }> }
 ): Promise<Metadata> {
-  const { token } = await params;
-  const trip = await getPublicTripByToken(token);
-
-  if (!trip) {
-    return {
-      title: 'Trip not found',
-      robots: { index: false, follow: false },
-    };
-  }
-
-  const description = trip.destination
-    ? `View this trip to ${trip.destination}`
-    : 'View this shared trip itinerary';
-
-  return {
-    title: `${trip.title} — shared trip`,
-    description,
-    openGraph: {
-      title: trip.title,
-      description: trip.destination || 'Shared trip',
-      type: 'website',
-    },
-    // Share links shouldn't be indexed by search engines
+  const fallback: Metadata = {
+    title: 'Trip not found',
     robots: { index: false, follow: false },
   };
+
+  try {
+    const { token } = await params;
+    // Gate bad-shape tokens here too so generateMetadata never hits the DB
+    // with garbage and throws. Matches the guard in the page component.
+    if (!token || token.length > 128 || !/^[A-Za-z0-9_-]+$/.test(token)) {
+      return fallback;
+    }
+
+    const trip = await getPublicTripByToken(token);
+    if (!trip) return fallback;
+
+    const description = trip.destination
+      ? `View this trip to ${trip.destination}`
+      : 'View this shared trip itinerary';
+
+    return {
+      title: `${trip.title} — shared trip`,
+      description,
+      openGraph: {
+        title: trip.title,
+        description: trip.destination || 'Shared trip',
+        type: 'website',
+      },
+      // Share links shouldn't be indexed by search engines
+      robots: { index: false, follow: false },
+    };
+  } catch {
+    // Never let a DB/runtime error bubble up into a 500 on a public page.
+    return fallback;
+  }
 }
 
 function UnsharedTripMessage() {
@@ -79,19 +89,25 @@ function UnsharedTripMessage() {
 export default async function SharedTripPage(
   { params }: { params: Promise<{ token: string }> }
 ) {
-  const { token } = await params;
+  try {
+    const { token } = await params;
 
-  // Basic token shape guard — our tokens are 22 chars of base64url (A-Z, a-z, 0-9, -, _)
-  if (!token || token.length > 128 || !/^[A-Za-z0-9_-]+$/.test(token)) {
+    // Basic token shape guard — our tokens are 22 chars of base64url (A-Z, a-z, 0-9, -, _)
+    if (!token || token.length > 128 || !/^[A-Za-z0-9_-]+$/.test(token)) {
+      return <UnsharedTripMessage />;
+    }
+
+    const trip = await getPublicTripByToken(token);
+
+    // getPublicTripByToken already enforces shareEnabled and shareExpiresAt.
+    if (!trip) {
+      return <UnsharedTripMessage />;
+    }
+
+    return <SharedTripView trip={trip} />;
+  } catch {
+    // Any runtime error (DB down, Prisma crash, etc.) should degrade
+    // gracefully to the "not shared" page instead of a 500.
     return <UnsharedTripMessage />;
   }
-
-  const trip = await getPublicTripByToken(token);
-
-  // getPublicTripByToken already enforces shareEnabled and shareExpiresAt.
-  if (!trip) {
-    return <UnsharedTripMessage />;
-  }
-
-  return <SharedTripView trip={trip} />;
 }

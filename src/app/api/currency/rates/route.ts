@@ -6,8 +6,14 @@ import { rateLimit } from '@/lib/rate-limit';
 // per day (ECB reference rates), so a 1-hour TTL is generous without being
 // stale. Cache lives for the lifetime of the server process, which is fine
 // here — worst case after a deploy we re-fetch 20-ish bases.
+//
+// Bounded to MAX_CACHE_ENTRIES with simple FIFO eviction to prevent an
+// authenticated user from pinning memory by requesting arbitrary 3-letter
+// codes. Map preserves insertion order, so `cache.keys().next().value` gives
+// us the oldest entry in O(1).
 const cache = new Map<string, { data: unknown; at: number }>();
 const ONE_HOUR = 60 * 60 * 1000;
+const MAX_CACHE_ENTRIES = 50;
 
 export async function GET(request: NextRequest) {
   try {
@@ -34,6 +40,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Rates service unavailable' }, { status: 502 });
     }
     const data = await upstream.json();
+
+    // FIFO eviction when the cache is full. We only evict if this is a new
+    // key; if we're refreshing an existing entry, `set` just updates in place
+    // and insertion order is preserved.
+    if (!cache.has(base) && cache.size >= MAX_CACHE_ENTRIES) {
+      const oldest = cache.keys().next().value;
+      if (oldest) cache.delete(oldest);
+    }
     cache.set(base, { data, at: Date.now() });
     return NextResponse.json(data);
   } catch (error) {

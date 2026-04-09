@@ -3,7 +3,7 @@
 import { useMemo, useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+// leaflet/dist/leaflet.css is imported globally in src/app/globals.css
 import { formatDate } from '@/lib/date-utils';
 
 interface MapTrip {

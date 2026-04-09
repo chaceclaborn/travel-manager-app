@@ -436,13 +436,11 @@ export async function getTripShareInfo(tripId: string, userId: string) {
 
 export async function enableTripShare(tripId: string, userId: string, expiresAt: Date | null) {
   await verifyTripOwnership(tripId, userId);
-  const existing = await prisma.trip.findUnique({
-    where: { id: tripId },
-    select: { shareToken: true },
-  });
 
-  // Reuse an existing token if one exists — re-enabling yields the same URL.
-  const shareToken = existing?.shareToken ?? generateShareToken();
+  // ALWAYS rotate the token on enable. Reusing an old token would let anyone
+  // who previously had the URL (e.g. a revoked client) regain access the
+  // moment sharing is re-enabled, defeating the revocation model.
+  const shareToken = generateShareToken();
 
   return prisma.trip.update({
     where: { id: tripId },
@@ -457,7 +455,8 @@ export async function enableTripShare(tripId: string, userId: string, expiresAt:
 
 export async function disableTripShare(tripId: string, userId: string) {
   await verifyTripOwnership(tripId, userId);
-  // Keep the token dormant so re-enabling gives the same URL.
+  // The old token stays in the row but is inert (shareEnabled=false gates
+  // all public lookups). Re-enabling will rotate to a fresh token anyway.
   return prisma.trip.update({
     where: { id: tripId },
     data: { shareEnabled: false },

@@ -32,6 +32,17 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Range validation: real-world coordinates are bounded by [-90,90] x
+    // [-180,180]. This isn't an SSRF fix (upstream URL is hardcoded) but it
+    // prevents polluting Open-Meteo logs and kills any future SSRF angle if
+    // the URL ever becomes templated.
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      return NextResponse.json(
+        { error: 'lat must be in [-90, 90] and lng must be in [-180, 180]' },
+        { status: 400 }
+      );
+    }
+
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
 
@@ -62,7 +73,25 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      const data = await res.json();
+      // Defensive size cap: a healthy Open-Meteo 7-day forecast response
+      // is ~3-5KB. Reject anything over 50KB to prevent a misconfigured or
+      // compromised upstream from piping a multi-MB body through to clients.
+      const MAX_BYTES = 50 * 1024;
+      const contentLength = res.headers.get('content-length');
+      if (contentLength && Number(contentLength) > MAX_BYTES) {
+        return NextResponse.json(
+          { error: 'Upstream weather response too large' },
+          { status: 502 }
+        );
+      }
+      const text = await res.text();
+      if (text.length > MAX_BYTES) {
+        return NextResponse.json(
+          { error: 'Upstream weather response too large' },
+          { status: 502 }
+        );
+      }
+      const data = JSON.parse(text);
       return NextResponse.json(data, {
         headers: {
           'Cache-Control': 'public, max-age=900, s-maxage=900',
