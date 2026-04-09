@@ -43,11 +43,21 @@ function getPrismaClient(): PrismaClient {
       return globalForPrisma.prisma;
     }
   }
-  return createPrismaClient();
+  const client = createPrismaClient();
+  globalForPrisma.prisma = client;
+  return client;
 }
 
-export const prisma = getPrismaClient();
+// Lazy singleton — resolved on first database access, not at module load time.
+// This prevents build-time failures when DB_PASSWORD is absent (e.g. CI, local
+// builds without a .env.local) because Next.js executes module initializers
+// during the "Collecting page data" build phase.
+const prismaProxy = new Proxy({} as PrismaClient, {
+  get(_target, prop) {
+    return (getPrismaClient() as unknown as Record<string | symbol, unknown>)[prop];
+  },
+});
+
+export const prisma: PrismaClient = prismaProxy;
 
 export default prisma;
-
-globalForPrisma.prisma = prisma;
