@@ -43,11 +43,24 @@ export function useAuth() {
     });
   }
 
+  async function signInWithApple() {
+    if (!supabase?.auth) {
+      console.error('Supabase client not initialized — check NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY');
+      return;
+    }
+    await supabase.auth.signInWithOAuth({
+      provider: 'apple',
+      options: {
+        redirectTo: window.location.origin + '/auth/callback',
+      },
+    });
+  }
+
   async function signOut() {
     if (!supabase?.auth) return;
     await supabase.auth.signOut();
     window.location.href = '/tour';
   }
 
-  return { user, loading, signInWithGoogle, signOut };
+  return { user, loading, signInWithGoogle, signInWithApple, signOut };
 }

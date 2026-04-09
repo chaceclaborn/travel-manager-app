@@ -467,6 +467,77 @@ yarn cap:ios       # opens Xcode (or just hit Run in Xcode if it's already open)
 
 ---
 
+## 9c. Sign in with Apple setup (2026-04-08)
+
+**Why this exists:** App Store Review Guideline 4.8 requires that any app offering a third-party social login (e.g. Google, Facebook) MUST also offer Sign in with Apple as a peer option. Shipping the Capacitor build without it is an automatic rejection. We already have Google Sign-In wired through Supabase, so Apple is mandatory.
+
+### What's already done in the code
+
+- `src/lib/travelmanager/useAuth.ts` exports a new `signInWithApple()` helper that calls `supabase.auth.signInWithOAuth({ provider: 'apple', options: { redirectTo: ... } })`.
+- `src/app/tour/page.tsx` renders an Apple HIG-compliant button (black background, white text, inline Apple logo SVG, exact wording "Sign in with Apple") next to the Google button in both the hero and footer CTAs.
+- `src/app/auth/callback/route.ts` is provider-agnostic — it calls `exchangeCodeForSession` and reads `user.email` + `user_metadata.full_name` / `avatar_url`. Apple returns `email` and (on first sign-in only) `name`; both optional reads use `?? ''` / `?? null` so missing fields won't break the flow.
+
+### What the user (Chace) still has to configure
+
+This is the manual one-time setup. You can't do this from code — it happens in the Apple Developer portal and the Supabase dashboard.
+
+#### A. Prerequisites
+1. **Enroll in the Apple Developer Program** ($99/year). Required before you can create any Services ID or Key. See section 5 of this doc for the identity-verification walkthrough.
+
+#### B. Apple Developer portal — create a Services ID
+1. Go to https://developer.apple.com/account → **Certificates, Identifiers & Profiles** → **Identifiers**.
+2. Click the `+` button, choose **Services IDs**, continue.
+3. Description: `Travel Manager Web Auth` (visible to users on the Apple consent screen).
+4. Identifier: `com.chaceclaborn.travelmanager.auth` (reverse-DNS; must be unique, cannot collide with your main iOS App ID).
+5. Register.
+6. Click the new Services ID to edit it → enable **Sign in with Apple** → click **Configure**:
+   - Primary App ID: pick your iOS App ID (or create one first under Identifiers → App IDs with "Sign in with Apple" capability enabled).
+   - Domains and Subdomains: `<your-project-ref>.supabase.co`
+   - Return URLs: `https://<your-project-ref>.supabase.co/auth/v1/callback`
+   - Save.
+
+#### C. Apple Developer portal — create a Sign in with Apple Key
+1. Still in **Certificates, Identifiers & Profiles** → **Keys** → `+`.
+2. Key Name: `Travel Manager Sign in with Apple`.
+3. Enable **Sign in with Apple** → click **Configure** → choose the same Primary App ID → Save → Continue → Register.
+4. **Download the .p8 file immediately** — Apple only lets you download it once. Store it in 1Password / similar.
+5. Note the **Key ID** (10-char string shown on the key page) and your **Team ID** (top-right of the portal, 10-char string).
+
+#### D. Supabase Dashboard
+1. Go to https://supabase.com/dashboard → your project → **Authentication** → **Providers** → **Apple**.
+2. Toggle **Enable Sign in with Apple** → ON.
+3. Fill in:
+   - **Services ID** (this is Supabase's "Client ID" field): `com.chaceclaborn.travelmanager.auth`
+   - **Team ID**: from step C5
+   - **Key ID**: from step C5
+   - **Secret Key**: paste the full contents of the .p8 file (including `-----BEGIN PRIVATE KEY-----` / `-----END PRIVATE KEY-----` lines)
+4. Save.
+
+#### E. Test locally
+1. `yarn dev` → open http://localhost:3000/tour
+2. Click **Sign in with Apple** → you should bounce to `appleid.apple.com`
+3. Approve → Apple redirects to `https://<your-project-ref>.supabase.co/auth/v1/callback?code=...`
+4. Supabase redirects to `http://localhost:3000/auth/callback?code=...`
+5. Our callback calls `exchangeCodeForSession`, upserts the user in Prisma, and redirects to `/`
+6. If you see `?error=auth` on the tour page, check the Supabase Dashboard → Logs → Auth for the actual failure reason (most commonly: the Services ID or return URL on Apple's side doesn't match what Supabase expects).
+
+### Mobile / Capacitor tradeoff (important for the iOS build)
+
+On the web, `signInWithOAuth({ provider: 'apple' })` opens a popup / same-tab redirect to `appleid.apple.com` — that's what we have today and it's fine.
+
+Inside the Capacitor iOS build, there are two ways to do Sign in with Apple:
+
+| Option | UX | Effort | Guideline 4.8 compliant? |
+|---|---|---|---|
+| **A. Supabase OAuth in Safari View Controller** (current approach, zero new code) | User taps button → `@capacitor/browser` opens Safari → Apple consent screen → deep-link back via `capacitor://` / universal link → Supabase exchanges code → session restored | Zero — works out of the box with the web code we just added | ✅ Yes — Guideline 4.8 only requires that Apple sign-in is **offered** as an option; it does not mandate the native ASAuthorizationController SDK |
+| **B. Native ASAuthorizationController via `@capacitor-community/apple-sign-in`** | One-tap, stays in-app, Face ID auto-fill, matches what users expect from native apps | Adds a new package install + deep-link handling + iOS entitlement plist config + Supabase `signInWithIdToken` path + extra code to map the identity token into a Supabase session | ✅ Yes — and this is Apple's _preferred_ integration |
+
+**Decision for launch:** use **Option A**. It's free (no new packages — the user's constraint), it matches our Google Sign-In flow exactly, and it passes review. We can upgrade to Option B post-launch if the in-app Safari bounce feels janky in TestFlight. The native flow is a polish item, not a compliance item.
+
+**Note for the Capacitor build:** when we wrap the app, the `redirectTo` URL needs to be a universal link or custom scheme that iOS knows to bounce back into the app (e.g. `com.chaceclaborn.travelmanager://auth/callback`). We'll set this up with `@capacitor/app`'s `appUrlOpen` listener when we do the Capacitor work in section 4 of this doc — it applies equally to Google and Apple, it's not Apple-specific.
+
+---
+
 ## 10. Sources
 
 ### Capacitor / Next.js integration

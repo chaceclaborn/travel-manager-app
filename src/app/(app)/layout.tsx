@@ -13,6 +13,7 @@ import { FeedbackWidget } from '@/components/travelmanager/FeedbackWidget';
 import { ClickTracker } from '@/components/travelmanager/ClickTracker';
 import { ServiceWorkerRegister } from '@/components/travelmanager/ServiceWorkerRegister';
 import { PushRegister } from '@/components/travelmanager/PushRegister';
+import { OfflineIndicator } from '@/components/travelmanager/OfflineIndicator';
 import { useAuth } from '@/lib/travelmanager/useAuth';
 
 export default function TravelManagerLayout({
@@ -30,7 +31,7 @@ export default function TravelManagerLayout({
   const router = useRouter();
   const { user, loading, signOut } = useAuth();
 
-  const PUBLIC_PATHS = ['/tour', '/privacy'];
+  const PUBLIC_PATHS = ['/tour', '/privacy', '/terms', '/support'];
   const isPublicPage = PUBLIC_PATHS.includes(pathname);
 
   const pageTitle = pathname === '/' ? 'Dashboard'
@@ -150,7 +151,7 @@ export default function TravelManagerLayout({
     };
   }, [router]);
 
-  // Public pages (tour, privacy) are outside this route group,
+  // Public pages (tour, privacy, terms, support) are outside this route group,
   // so this check is a fallback only
   if (isPublicPage) {
     return <>{children}</>;
@@ -240,9 +241,14 @@ export default function TravelManagerLayout({
           </div>
         )}
 
+        {/* PushRegister must live inside TMToastProvider because it calls
+            useTMToast() to surface foreground pushes as in-app toasts. */}
+        <PushRegister />
+        <OfflineIndicator />
+
         <div className="flex min-h-screen max-w-[100vw] overflow-x-hidden">
           {/* Desktop Sidebar */}
-          <aside className="hidden md:flex w-64 flex-col fixed inset-y-0 left-0 bg-slate-900 z-40" role="navigation" aria-label="Main navigation">
+          <aside className="hidden md:flex w-64 flex-col fixed inset-y-0 left-0 bg-slate-900 z-40 safe-area-top safe-area-bottom safe-area-left" role="navigation" aria-label="Main navigation">
             <div className="flex items-center justify-between px-6 py-5 border-b border-white/10">
               <div>
                 <h1 className="text-lg font-bold text-white">Travel Manager</h1>
@@ -264,7 +270,7 @@ export default function TravelManagerLayout({
           </aside>
 
           {/* Mobile Top Bar */}
-          <div className="md:hidden fixed top-0 inset-x-0 z-40 bg-slate-900/95 backdrop-blur-md border-b border-white/10">
+          <div className="md:hidden fixed top-0 inset-x-0 z-40 bg-slate-900/95 backdrop-blur-md border-b border-white/10 safe-area-top">
             <div className="flex items-center justify-between px-4 h-16">
               <div>
                 <h1 className="text-lg font-bold text-white flex items-center gap-1.5">
@@ -345,7 +351,7 @@ export default function TravelManagerLayout({
           </AnimatePresence>
 
           {/* Main Content */}
-          <main id="main-content" className="flex-1 min-w-0 md:ml-64 mt-16 md:mt-0 overflow-x-hidden">
+          <main id="main-content" className="flex-1 min-w-0 md:ml-64 mt-16 md:mt-0 overflow-x-hidden safe-area-bottom">
             <div className="p-4 md:p-8 max-w-full">{children}</div>
           </main>
         </div>
@@ -356,7 +362,6 @@ export default function TravelManagerLayout({
       <FeedbackWidget />
       <CookieBanner />
       <ServiceWorkerRegister />
-      <PushRegister />
     </>
   );
 }

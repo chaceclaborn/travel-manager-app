@@ -386,9 +386,27 @@ export async function getUserData(userId: string) {
 }
 
 export async function deleteAllUserData(userId: string) {
+  // Apple Guideline 5.1.1(v) — account deletion must wipe ALL user data.
+  // Order matters: delete leaf rows first, then parents, then the User row.
+  // Models with `onDelete: Cascade` on the User relation (ClickEvent,
+  // DeviceToken, OAuthToken, and trip-scoped rows via Trip cascade) would
+  // clean up automatically when User is deleted, but we delete them
+  // explicitly for predictability and to keep audit/error surfaces tight.
+
+  // Revoke Gmail tokens remotely before we drop the row (so Google forgets us)
+  try {
+    const { revokeGmailAccess } = await import('@/lib/travelmanager/gmail');
+    await revokeGmailAccess(userId);
+  } catch {
+    // Best-effort revocation — continue with deletion
+  }
+
   const trips = await prisma.trip.findMany({ where: { userId }, select: { id: true } });
   const tripIds = trips.map(t => t.id);
 
+  // Trip-scoped leaf rows. Most have onDelete: Cascade from Trip, but we
+  // delete explicitly so the User-relation FKs (which do NOT cascade) are
+  // cleared before we drop the User row.
   if (tripIds.length > 0) {
     await prisma.expense.deleteMany({ where: { tripId: { in: tripIds } } });
     await prisma.booking.deleteMany({ where: { tripId: { in: tripIds } } });
@@ -400,21 +418,29 @@ export async function deleteAllUserData(userId: string) {
     await prisma.tripClient.deleteMany({ where: { tripId: { in: tripIds } } });
   }
 
-  // Delete bookings not tied to a trip (tripId is optional on Booking)
-  await prisma.booking.deleteMany({ where: { userId } });
+  // Standalone rows (not tied to a trip, or with their own User FK)
+  await prisma.meeting.deleteMany({ where: { userId } });           // Meeting: no cascade on User
+  await prisma.booking.deleteMany({ where: { userId } });           // catches tripId=null bookings
+  await prisma.expense.deleteMany({ where: { userId } });           // defensive: any orphan expenses
+  await prisma.checklistItem.deleteMany({ where: { userId } });     // defensive
+  await prisma.tripNote.deleteMany({ where: { userId } });          // defensive
+  await prisma.tripAttachment.deleteMany({ where: { userId } });    // defensive
 
   await prisma.trip.deleteMany({ where: { userId } });
   await prisma.vendor.deleteMany({ where: { userId } });
   await prisma.client.deleteMany({ where: { userId } });
-  await prisma.auditLog.deleteMany({ where: { userId } });
 
-  // Revoke Gmail tokens if connected
-  try {
-    const { revokeGmailAccess } = await import('@/lib/travelmanager/gmail');
-    await revokeGmailAccess(userId);
-  } catch {
-    // Best-effort revocation — continue with deletion
-  }
+  // Non-trip user-owned rows
+  await prisma.feedback.deleteMany({ where: { userId } });          // Feedback: no cascade on User
+  await prisma.auditLog.deleteMany({ where: { userId } });          // AuditLog: no cascade on User
+  await prisma.clickEvent.deleteMany({ where: { userId } });        // cascades, but explicit
+  await prisma.deviceToken.deleteMany({ where: { userId } });       // cascades, but explicit
+  await prisma.oAuthToken.deleteMany({ where: { userId } });        // cascades; also revoked above
+
+  // Finally drop the Prisma User row itself. The Supabase auth user is
+  // deleted by the caller (src/app/api/user/delete/route.ts) via the
+  // service role admin client after this function returns.
+  await prisma.user.delete({ where: { id: userId } });
 }
 
 // ─── Public Share Links ───

@@ -76,12 +76,22 @@ const features = [
 ];
 
 const securityPoints = [
-  { icon: UserCheck, text: 'Google authentication for secure sign-in' },
+  { icon: UserCheck, text: 'Google or Apple authentication for secure sign-in' },
   { icon: Lock, text: 'Encrypted data storage' },
   { icon: Shield, text: 'Per-user data isolation' },
   { icon: Download, text: 'Export your data anytime' },
   { icon: Trash2, text: 'Delete your account and data on request' },
 ];
+
+// Apple HIG-compliant logo for "Sign in with Apple" button.
+// See: https://developer.apple.com/design/human-interface-guidelines/sign-in-with-apple
+function AppleLogo({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
+    </svg>
+  );
+}
 
 export default function TourPage() {
   return (
@@ -92,7 +102,7 @@ export default function TourPage() {
 }
 
 function TourPageContent() {
-  const { signInWithGoogle } = useAuth();
+  const { signInWithGoogle, signInWithApple } = useAuth();
   const searchParams = useSearchParams();
   const errorCode = searchParams.get('error');
   const errorMessage = errorCode ? errorMessages[errorCode] ?? errorMessages.auth : null;
@@ -127,13 +137,23 @@ function TourPageContent() {
           <p className="mx-auto mt-4 max-w-lg text-lg text-slate-600">
             Plan trips, manage vendors, track clients — all in one place
           </p>
-          <Button
-            onClick={signInWithGoogle}
-            size="lg"
-            className="mt-8 bg-amber-500 hover:bg-amber-600 text-white px-8 text-base"
-          >
-            Sign in with Google
-          </Button>
+          <div className="mt-8 flex flex-col items-center gap-3">
+            <Button
+              onClick={signInWithGoogle}
+              size="lg"
+              className="bg-amber-500 hover:bg-amber-600 text-white px-8 text-base w-64"
+            >
+              Sign in with Google
+            </Button>
+            <Button
+              onClick={signInWithApple}
+              size="lg"
+              className="bg-black hover:bg-neutral-800 text-white px-8 text-base w-64 gap-2"
+            >
+              <AppleLogo className="size-5" />
+              Sign in with Apple
+            </Button>
+          </div>
         </motion.div>
 
         {/* Feature Cards */}
@@ -177,23 +197,37 @@ function TourPageContent() {
             <Link href="/privacy" className="text-amber-600 hover:underline">
               Privacy Policy
             </Link>
-            {' '}and{' '}
+            {', '}
             <Link href="/terms" className="text-amber-600 hover:underline">
               Terms of Service
+            </Link>
+            {', or visit '}
+            <Link href="/support" className="text-amber-600 hover:underline">
+              Support
             </Link>
           </p>
         </motion.div>
 
         {/* Footer CTA */}
         <motion.div variants={item} className="mt-16 pb-8 text-center">
-          <Button
-            onClick={signInWithGoogle}
-            size="lg"
-            className="bg-amber-500 hover:bg-amber-600 text-white px-8 text-base"
-          >
-            Sign in with Google
-          </Button>
-          <p className="mt-3 text-sm text-slate-400">Secure sign-in with your Google account</p>
+          <div className="flex flex-col items-center gap-3">
+            <Button
+              onClick={signInWithGoogle}
+              size="lg"
+              className="bg-amber-500 hover:bg-amber-600 text-white px-8 text-base w-64"
+            >
+              Sign in with Google
+            </Button>
+            <Button
+              onClick={signInWithApple}
+              size="lg"
+              className="bg-black hover:bg-neutral-800 text-white px-8 text-base w-64 gap-2"
+            >
+              <AppleLogo className="size-5" />
+              Sign in with Apple
+            </Button>
+          </div>
+          <p className="mt-3 text-sm text-slate-400">Secure sign-in with your Google or Apple account</p>
         </motion.div>
       </motion.div>
     </div>

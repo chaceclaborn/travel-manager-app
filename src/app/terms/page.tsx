@@ -1,117 +1,157 @@
-'use client';
-
+import type { Metadata } from 'next';
 import Link from 'next/link';
-import { TMBreadcrumb } from '@/components/travelmanager/TMBreadcrumb';
-import { Info, UserCheck, ShieldAlert, Server, Scale, Database, RefreshCw, LogOut, Mail } from 'lucide-react';
+import {
+  Sparkles,
+  UserCheck,
+  Database,
+  ShieldAlert,
+  Plug,
+  AlertTriangle,
+  Scale,
+  LogOut,
+  Gavel,
+  RefreshCw,
+  Mail,
+} from 'lucide-react';
 
-const sections = [
+export const metadata: Metadata = {
+  title: 'Terms of Service | Travel Manager',
+  description:
+    'Terms of Service for Travel Manager — the all-in-one workspace for independent travel agents.',
+  openGraph: {
+    title: 'Terms of Service | Travel Manager',
+    description:
+      'Terms of Service for Travel Manager — the all-in-one workspace for independent travel agents.',
+    type: 'article',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'Terms of Service | Travel Manager',
+    description:
+      'Terms of Service for Travel Manager — the all-in-one workspace for independent travel agents.',
+  },
+};
+
+type Section = {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  paragraphs?: string[];
+  items?: string[];
+};
+
+const sections: Section[] = [
   {
-    icon: Info,
-    title: 'Service Description',
-    content: [
-      'Travel Manager is a personal trip planning tool designed to help you organize trips, bookings, vendors, and clients in one place',
-      'The service provides features for itinerary management, vendor tracking, client management, file storage, and calendar views',
-      'Travel Manager is intended for personal and professional travel planning use',
+    icon: Sparkles,
+    title: '1. Early Access / Beta',
+    paragraphs: [
+      'Travel Manager is in early access. Features may change, break, or be removed as we iterate. We aim for stability, but we cannot guarantee it during this period. If a critical bug causes data loss despite our backups, your remedy is a refund of any fees you have paid in the preceding 30 days (currently $0, since the app is free during beta).',
     ],
   },
   {
     icon: UserCheck,
-    title: 'Account Terms',
-    content: [
-      'A Google account is required to sign in and use Travel Manager',
-      'Each person may maintain only one account — duplicate or shared accounts are not permitted',
-      'You are responsible for maintaining the security of your Google account and any activity that occurs under it',
-      'You must be at least 13 years of age to use this service',
-    ],
-  },
-  {
-    icon: ShieldAlert,
-    title: 'Acceptable Use',
-    content: [
-      'Do not abuse, disrupt, or overload the service or its infrastructure',
-      'Do not attempt to gain unauthorized access to other users\' data or any part of the system',
-      'Do not upload, store, or transmit any illegal, harmful, or infringing content',
-      'Do not reverse-engineer, decompile, or attempt to extract the source code of the service',
-      'Do not use automated tools (bots, scrapers) to access the service without prior written permission',
-    ],
-  },
-  {
-    icon: Server,
-    title: 'Service Availability',
-    content: [
-      'Travel Manager is provided on an "as-is" and "as-available" basis with no uptime guarantees',
-      'The service may experience downtime for maintenance, updates, or unforeseen technical issues',
-      'We reserve the right to modify, suspend, or discontinue the service at any time with reasonable notice when possible',
-      'We are not obligated to provide support, but will make reasonable efforts to keep the service running smoothly',
-    ],
-  },
-  {
-    icon: Scale,
-    title: 'Limitation of Liability',
-    content: [
-      'Travel Manager and its operators are not liable for any data loss, service interruptions, or damages arising from the use of the service',
-      'We are not responsible for travel outcomes, decisions, or consequences based on data stored in or retrieved from the application',
-      'The service is not a substitute for professional travel advisory or booking confirmation — always verify important details independently',
-      'In no event shall liability exceed the amount you have paid to use the service (which is zero for free accounts)',
+    title: '2. Your Account',
+    items: [
+      'You must be at least 18 years old and legally able to enter a contract.',
+      'You are responsible for keeping your sign-in email secure.',
+      'One account per person. Do not share credentials.',
+      'You must provide accurate information when signing up.',
     ],
   },
   {
     icon: Database,
-    title: 'Data Ownership',
-    content: [
-      'You retain full ownership of all data you create and store in Travel Manager',
-      'You can export all of your data or delete your account at any time from the Settings page — see our Privacy Policy for details',
-      'By using the service, you grant us a limited license to store, process, and display your data solely as needed to operate and improve the service',
-      'We will never sell your data or use it for purposes outside of providing the service',
+    title: '3. Your Data, Your Ownership',
+    paragraphs: [
+      'Everything you create in Travel Manager — trips, clients, vendors, bookings, notes, attachments — is yours. We claim no ownership over it. You grant us a limited license to store and process it solely to provide the service to you. You can export or delete it at any time.',
     ],
   },
   {
-    icon: RefreshCw,
-    title: 'Changes to Terms',
-    content: [
-      'We may update these Terms of Service from time to time to reflect changes in the service or legal requirements',
-      'The "Last updated" date at the top of this page will be revised when changes are made',
-      'Continued use of Travel Manager after changes are posted constitutes your acceptance of the revised terms',
+    icon: ShieldAlert,
+    title: '4. Acceptable Use',
+    paragraphs: ['You agree NOT to:'],
+    items: [
+      'Use the app for anything illegal or to harm others.',
+      'Scrape, crawl, or automate the app beyond what the normal UI allows.',
+      'Attempt to reverse engineer, break encryption, or probe security.',
+      'Resell, white-label, or sublicense the service without written permission.',
+      'Upload malware, illegal content, or data that violates third-party rights.',
+      'Impersonate others or misrepresent your affiliation with any organization.',
+      'Use the app to send unsolicited marketing ("spam") to your clients.',
+    ],
+  },
+  {
+    icon: Plug,
+    title: '5. Third-Party Services',
+    paragraphs: [
+      'Travel Manager integrates with third-party services (Gmail, weather APIs, etc.) when you choose to enable them. Your use of those services is also governed by their terms. We are not responsible for outages or changes to third-party services.',
+    ],
+  },
+  {
+    icon: AlertTriangle,
+    title: '6. No Warranty',
+    paragraphs: [
+      'THE APP IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. WE DO NOT WARRANT THAT THE APP WILL BE UNINTERRUPTED, BUG-FREE, OR SECURE.',
+    ],
+  },
+  {
+    icon: Scale,
+    title: '7. Limitation of Liability',
+    paragraphs: [
+      'TO THE MAXIMUM EXTENT PERMITTED BY LAW, OUR TOTAL LIABILITY TO YOU FOR ANY CLAIM ARISING OUT OF YOUR USE OF THE APP IS LIMITED TO THE GREATER OF (A) THE AMOUNT YOU HAVE PAID US IN THE PRECEDING 12 MONTHS OR (B) USD $50. WE ARE NOT LIABLE FOR INDIRECT, INCIDENTAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, LOST PROFITS, LOST DATA, OR BUSINESS INTERRUPTION.',
     ],
   },
   {
     icon: LogOut,
-    title: 'Termination',
-    content: [
-      'We reserve the right to suspend or terminate accounts that violate these terms, with notice when feasible',
-      'You may delete your account at any time from the Settings page — all associated data will be permanently removed',
-      'Upon termination, your right to access the service ceases immediately, but sections of these terms that should survive (such as Limitation of Liability and Data Ownership) will remain in effect',
+    title: '8. Termination',
+    paragraphs: [
+      'You may stop using Travel Manager and delete your account at any time. We may terminate or suspend your account if you violate these terms, if required by law, or if we discontinue the service. Upon termination, your data will be deleted in accordance with the Privacy Policy.',
+    ],
+  },
+  {
+    icon: Gavel,
+    title: '9. Governing Law',
+    paragraphs: [
+      'These terms are governed by the laws of the United States, without regard to conflict of laws principles. Any disputes will be resolved in the state or federal courts located in the operator\u2019s home jurisdiction, and you consent to that jurisdiction.',
+    ],
+  },
+  {
+    icon: RefreshCw,
+    title: '10. Changes',
+    paragraphs: [
+      'We may update these terms occasionally. If the changes are material, we will notify you in the app or by email at least 14 days before they take effect. Continued use after the effective date means you accept the new terms.',
     ],
   },
   {
     icon: Mail,
-    title: 'Contact',
-    content: [
-      'For questions or concerns about these Terms of Service, please reach out through the contact form on the main website at chaceclaborn.com',
+    title: '11. Contact',
+    paragraphs: [
+      'Questions? Email chaceclaborn@gmail.com.',
     ],
   },
 ];
 
 export default function TermsOfServicePage() {
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="max-w-3xl mx-auto px-4 py-8 md:py-12">
-        <TMBreadcrumb
-          items={[
-            { label: 'Travel Manager', href: '/' },
-            { label: 'Terms of Service' },
-          ]}
-        />
+    <main className="min-h-screen bg-slate-50 text-slate-900">
+      <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 md:py-12">
+        <Link
+          href="/"
+          className="mb-8 inline-flex items-center gap-2 text-sm text-slate-600 transition-colors hover:text-amber-600"
+        >
+          <span aria-hidden="true">&larr;</span> Travel Manager
+        </Link>
 
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-slate-800">Terms of Service</h1>
-          <p className="text-sm text-slate-500 mt-1">Last updated: February 2026</p>
-        </div>
+        <header className="mb-8">
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+            Terms of Service
+          </h1>
+          <p className="mt-2 text-sm text-slate-500">Effective date: April 6, 2026</p>
+        </header>
 
-        <div className="rounded-xl bg-white p-6 shadow-sm mb-6">
-          <p className="text-sm text-slate-600 leading-relaxed">
-            By using Travel Manager, you agree to these terms. Please read them carefully. If you do
-            not agree, you should not use the service. These terms work alongside our{' '}
+        <div className="mb-6 rounded-xl bg-white p-6 shadow-sm">
+          <p className="text-sm leading-relaxed text-slate-600">
+            Welcome to Travel Manager. By creating an account or using the app, you agree to
+            these terms. Please read them &mdash; they&rsquo;re short. These terms work alongside
+            our{' '}
             <Link href="/privacy" className="text-amber-600 hover:underline">
               Privacy Policy
             </Link>
@@ -120,35 +160,57 @@ export default function TermsOfServicePage() {
         </div>
 
         <div className="space-y-6">
-          {sections.map(({ icon: Icon, title, content }) => (
-            <div key={title} className="rounded-xl bg-white p-6 shadow-sm">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="flex items-center justify-center size-9 rounded-lg bg-amber-50">
+          {sections.map(({ icon: Icon, title, paragraphs, items }) => (
+            <section key={title} className="rounded-xl bg-white p-6 shadow-sm">
+              <div className="mb-4 flex items-center gap-3">
+                <div className="flex size-9 items-center justify-center rounded-lg bg-amber-50">
                   <Icon className="size-5 text-amber-600" />
                 </div>
                 <h2 className="text-lg font-semibold text-slate-800">{title}</h2>
               </div>
-              <ul className="space-y-2.5">
-                {content.map((item, i) => (
-                  <li key={i} className="flex gap-2.5 text-sm text-slate-600 leading-relaxed">
-                    <span className="text-amber-400 mt-1.5 shrink-0">&#8226;</span>
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+
+              {paragraphs?.map((p, i) => (
+                <p
+                  key={i}
+                  className="mb-3 text-sm leading-relaxed text-slate-600 last:mb-0"
+                >
+                  {p}
+                </p>
+              ))}
+
+              {items && items.length > 0 && (
+                <ul className="mt-3 space-y-2.5">
+                  {items.map((item, i) => (
+                    <li
+                      key={i}
+                      className="flex gap-2.5 text-sm leading-relaxed text-slate-600"
+                    >
+                      <span className="mt-1.5 shrink-0 text-amber-400" aria-hidden="true">
+                        &bull;
+                      </span>
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
           ))}
         </div>
 
-        <div className="mt-8 text-center">
-          <Link
-            href="/tour"
-            className="text-sm text-amber-600 hover:text-amber-700 transition-colors"
-          >
-            &larr; Back to Tour
-          </Link>
-        </div>
+        <footer className="mt-10 flex flex-col items-center gap-3 text-center text-sm text-slate-500">
+          <div className="flex flex-wrap justify-center gap-x-4 gap-y-2">
+            <Link href="/privacy" className="text-amber-600 hover:underline">
+              Privacy Policy
+            </Link>
+            <Link href="/support" className="text-amber-600 hover:underline">
+              Support
+            </Link>
+            <Link href="/" className="text-amber-600 hover:underline">
+              Back to Travel Manager
+            </Link>
+          </div>
+        </footer>
       </div>
-    </div>
+    </main>
   );
 }

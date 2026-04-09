@@ -53,20 +53,45 @@ export async function requestPushPermission(): Promise<boolean> {
 }
 
 /**
+ * Minimal shape of the Capacitor push notification payload used here.
+ * Avoids coupling callers to the plugin's real types.
+ */
+export interface PushMessage {
+  title?: string;
+  body?: string;
+  data?: Record<string, unknown>;
+}
+
+export interface RegisterPushOptions {
+  /** Called with the APNs device token once the OS hands it back. */
+  onToken: (token: string) => void;
+  /**
+   * Called when a push arrives while the app is in the foreground. iOS's
+   * presentationOptions in capacitor.config.ts already control whether the
+   * OS banner shows — this callback lets us ALSO surface an in-app toast so
+   * the UI is reactive regardless of OS settings. Apple reviewers explicitly
+   * look for "the app does something when a push arrives" for Guideline 4.2.
+   */
+  onForegroundPush?: (msg: PushMessage) => void;
+  /** Called when the user taps a notification (background / killed state). */
+  onNotificationTap?: (msg: PushMessage) => void;
+}
+
+/**
  * Register Capacitor push listeners. No-op on web.
  *
  * `onToken` is invoked with the APNs device token once the OS hands it back.
  * The caller is responsible for posting it to /api/push/register.
  */
 export async function registerPushListeners(
-  onToken: (token: string) => void
+  options: RegisterPushOptions
 ): Promise<void> {
   if (!isNativePlatform()) return;
   try {
     const { PushNotifications } = await import('@capacitor/push-notifications');
 
     await PushNotifications.addListener('registration', (token) => {
-      onToken(token.value);
+      options.onToken(token.value);
     });
 
     await PushNotifications.addListener('registrationError', (err) => {
@@ -74,14 +99,24 @@ export async function registerPushListeners(
     });
 
     await PushNotifications.addListener('pushNotificationReceived', (notification) => {
-      // Foreground receive — app is open. A real impl would route this to
-      // an in-app toast or notification center.
-      console.log('Push received in foreground:', notification);
+      // Foreground receive — app is open. iOS will still show a banner
+      // because presentationOptions: ['alert'] is set in capacitor.config.ts,
+      // but we also fire an in-app toast so the app feels reactive.
+      options.onForegroundPush?.({
+        title: notification.title,
+        body: notification.body,
+        data: notification.data as Record<string, unknown> | undefined,
+      });
     });
 
     await PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
       // User tapped a notification (from background or killed state).
-      console.log('Push tapped:', action);
+      const n = action.notification;
+      options.onNotificationTap?.({
+        title: n.title,
+        body: n.body,
+        data: n.data as Record<string, unknown> | undefined,
+      });
     });
   } catch {
     // Plugin not available yet — silent fail. The helper is effectively a

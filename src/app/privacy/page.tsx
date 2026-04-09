@@ -1,157 +1,215 @@
-'use client';
-
+import type { Metadata } from 'next';
 import Link from 'next/link';
-import { TMBreadcrumb } from '@/components/travelmanager/TMBreadcrumb';
-import { Shield, Database, Lock, Clock, UserCheck, Users, Mail, Cookie, Globe } from 'lucide-react';
+import {
+  Database,
+  Ban,
+  Server,
+  Users,
+  Plug,
+  UserCheck,
+  Baby,
+  RefreshCw,
+  Mail,
+} from 'lucide-react';
 
-const sections = [
+export const metadata: Metadata = {
+  title: 'Privacy Policy | Travel Manager',
+  description:
+    'Privacy Policy for Travel Manager — what data we collect, how it is stored, and your rights as a user.',
+  openGraph: {
+    title: 'Privacy Policy | Travel Manager',
+    description:
+      'Privacy Policy for Travel Manager — what data we collect, how it is stored, and your rights as a user.',
+    type: 'article',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'Privacy Policy | Travel Manager',
+    description:
+      'Privacy Policy for Travel Manager — what data we collect, how it is stored, and your rights as a user.',
+  },
+};
+
+type Section = {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  paragraphs?: string[];
+  items?: string[];
+};
+
+const sections: Section[] = [
   {
     icon: Database,
-    title: 'Data We Collect',
-    content: [
-      'Google account information (name, email address, profile photo) provided during sign-in',
-      'Trip data you create (destinations, dates, budgets, itineraries, notes)',
-      'Vendor records (names, contact info, categories, ratings)',
-      'Client records (names, contact info, associated trips)',
-      'Booking confirmations and travel arrangement details you save',
-      'Sign-in logs including timestamp, IP address, and browser/device information (user agent) — collected for security monitoring such as detecting unauthorized access attempts and rate limiting',
+    title: 'What We Collect',
+    paragraphs: [
+      'When you use Travel Manager, we collect and store the following on your behalf:',
+    ],
+    items: [
+      'Account information: your email address (required for sign-in) and, optionally, your name and profile photo.',
+      'Home location: if you enter a home city, we geocode it to latitude and longitude so the map view can center on it. This is never pulled from your device\u2019s GPS \u2014 you type it in manually.',
+      'Your business data: the trips, clients, vendors, bookings, meetings, itinerary items, expenses, checklists, and notes that you create in the app. This data is yours. We treat it as confidential and process it only to provide the service you\u2019re paying for (or using free during beta).',
+      'Attachments: any files you upload (receipts, booking confirmations, etc.).',
+      'Push notification tokens: if you enable notifications, we store an Apple Push Notification Service (APNs) token so we can send you the alerts you requested.',
+      'Usage analytics: we log in-app clicks and page visits to understand which features are used and to fix bugs. This is linked to your account but is never sold or shared with advertisers.',
+      'Audit log: sign-in, sign-out, data export, and account deletion events are logged with IP address and user agent for security.',
     ],
   },
   {
-    icon: Lock,
-    title: 'How We Store Your Data',
-    content: [
-      'All data is stored in a PostgreSQL database hosted on Supabase (powered by AWS infrastructure)',
-      'Data is encrypted at rest using AES-256 encryption and in transit using TLS 1.2+',
-      'Database backups are performed automatically by Supabase on a regular schedule',
+    icon: Ban,
+    title: 'What We Do NOT Collect',
+    items: [
+      'We do not track you across other apps or websites.',
+      'We do not use the iOS advertising identifier (IDFA).',
+      'We do not sell or share your data with data brokers or ad networks.',
+      'We do not access your device\u2019s contacts, photos, camera, microphone, or location without an explicit in-app request and your permission.',
     ],
   },
   {
-    icon: Shield,
-    title: 'Data Isolation',
-    content: [
-      'Each user can only access their own data — you cannot view, edit, or delete another user\'s trips, vendors, or clients',
-      'Data isolation is enforced through application-level access controls — all API routes are authenticated and filter queries by your user ID',
+    icon: Server,
+    title: 'Where Your Data Is Stored',
+    items: [
+      'Database and authentication: Supabase (PostgreSQL), US region.',
+      'Web hosting: Vercel, US region.',
+      'Encryption: data is encrypted in transit (TLS) and at rest. OAuth tokens (e.g., Gmail) are additionally encrypted with AES-256-GCM before being stored in our database.',
     ],
   },
   {
-    icon: Clock,
-    title: 'Data Retention',
-    content: [
-      'Your data is retained for as long as your account exists',
-      'Sign-in logs including IP addresses and browser information are retained for 90 days and then automatically purged',
-      'When you delete your account, all associated data is permanently removed immediately — this includes trips, vendors, clients, and sign-in history',
-      'There is no recovery period after account deletion; the action is irreversible',
+    icon: Users,
+    title: 'Who Can Access Your Data',
+    items: [
+      'You. Always. You can view, edit, export, and delete everything from inside the app.',
+      'Chace Claborn (developer/operator), only when required to resolve a support request you have opened or to investigate a security incident.',
+      'No one else. We do not have a sales team, a marketing data warehouse, or an analytics vendor that touches your business data.',
+    ],
+  },
+  {
+    icon: Plug,
+    title: 'Third-Party Services',
+    paragraphs: [
+      'The following services may process limited data on our behalf:',
+    ],
+    items: [
+      'Supabase \u2014 database and authentication provider (processor).',
+      'Vercel \u2014 web hosting (processor).',
+      'Apple Push Notification Service \u2014 push delivery, if you enable it.',
+      'Google Gmail API \u2014 read-only mailbox access, only if you choose to connect Gmail for the booking-import feature. You can disconnect at any time from the in-app settings.',
+      'Open-Meteo \u2014 weather forecasts. We send only the latitude and longitude of the trip destination. No user identity is transmitted.',
+      'Frankfurter \u2014 currency exchange rates. We send only currency codes.',
     ],
   },
   {
     icon: UserCheck,
     title: 'Your Rights',
-    content: [
-      'View all data associated with your account through the application interface',
-      'Export all of your data as a JSON file at any time from the Settings page',
-      'Download PDF summaries of your trip activity for specific time periods',
-      'Delete your account and all associated data permanently at any time from the Settings page',
-      'You maintain full control over your data at all times',
+    paragraphs: ['You have the right to:'],
+    items: [
+      'Access and export all your data. Use the in-app export feature (available at /api/user/export) to download a complete JSON archive of your account.',
+      'Correct any information by editing it inside the app.',
+      'Delete your account and all associated data at any time. Use the in-app delete-account feature (available at /api/user/delete). Deletion is permanent and cannot be undone.',
+      'Withdraw consent for optional features (Gmail import, push notifications, home location) from settings at any time.',
+      'We comply with GDPR and CCPA to the extent they apply.',
     ],
   },
   {
-    icon: Users,
-    title: 'Third-Party Sharing',
-    content: [
-      'We do not sell your data to any third parties',
-      'We do not share your data with any third parties for marketing or advertising purposes',
-      'Google — used solely for OAuth authentication (sign-in). When you sign in with Google, we receive your name, email address, and profile picture. We do not receive or store your Google password. No trip or personal data is shared back with Google',
-      'Supabase — database hosting provider (powered by AWS infrastructure); stores your encrypted data',
-      'Vercel — web hosting and deployment platform; serves the application but does not store your personal data',
-      'OpenStreetMap / CARTO — provides map tile rendering for trip maps; no personal data is sent to these services',
-      'No analytics or tracking services have access to your personal data within Travel Manager',
+    icon: Baby,
+    title: 'Children',
+    paragraphs: [
+      'Travel Manager is a professional tool for travel agents and is not directed at children under 13. We do not knowingly collect data from children.',
     ],
   },
   {
-    icon: Cookie,
-    title: 'Cookies',
-    content: [
-      'Supabase authentication cookies are used for session management — these are httpOnly and secure cookies required to keep you signed in',
-      'No tracking cookies or analytics cookies are used',
-      'No third-party advertising cookies are used',
-      'The only cookies stored are strictly necessary for authentication and session functionality',
-    ],
-  },
-  {
-    icon: Globe,
-    title: 'GDPR & CCPA',
-    content: [
-      'Right to access — you can view all data associated with your account and export it from the Settings page',
-      'Right to deletion — you can permanently delete your account and all associated data from the Settings page',
-      'Right to portability — you can export all of your data as a JSON file at any time',
-      'No profiling or automated decision-making is performed on your data',
-      'Data is processed and stored in the United States',
+    icon: RefreshCw,
+    title: 'Changes',
+    paragraphs: [
+      'If this policy changes materially, we will notify active users by email and via an in-app banner at least 14 days before the change takes effect.',
     ],
   },
   {
     icon: Mail,
     title: 'Contact',
-    content: [
-      'For privacy-related questions or concerns, email us at privacy@travels-manager.com or use the contact form at chaceclaborn.com',
+    paragraphs: [
+      'Questions? Email chaceclaborn@gmail.com.',
     ],
   },
 ];
 
 export default function PrivacyPolicyPage() {
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="max-w-3xl mx-auto px-4 py-8 md:py-12">
-        <TMBreadcrumb
-          items={[
-            { label: 'Travel Manager', href: '/' },
-            { label: 'Privacy Policy' },
-          ]}
-        />
+    <main className="min-h-screen bg-slate-50 text-slate-900">
+      <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 md:py-12">
+        <Link
+          href="/"
+          className="mb-8 inline-flex items-center gap-2 text-sm text-slate-600 transition-colors hover:text-amber-600"
+        >
+          <span aria-hidden="true">&larr;</span> Travel Manager
+        </Link>
 
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-slate-800">Privacy Policy</h1>
-          <p className="text-sm text-slate-500 mt-1">Last updated: February 2026</p>
-        </div>
+        <header className="mb-8">
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+            Privacy Policy
+          </h1>
+          <p className="mt-2 text-sm text-slate-500">Effective date: April 6, 2026</p>
+        </header>
 
-        <div className="rounded-xl bg-white p-6 shadow-sm mb-6">
-          <p className="text-sm text-slate-600 leading-relaxed">
-            Travel Manager is a personal trip planning tool. This policy explains what data we collect,
-            how it is stored, and what control you have over it. We believe in transparency and giving
-            you complete ownership of your information.
+        <div className="mb-6 rounded-xl bg-white p-6 shadow-sm">
+          <p className="text-sm leading-relaxed text-slate-600">
+            Travel Manager (&ldquo;the App&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;) is
+            operated by Chace Claborn as an independent developer. This policy explains what
+            data we collect, why we collect it, and what your rights are.
           </p>
         </div>
 
         <div className="space-y-6">
-          {sections.map(({ icon: Icon, title, content }) => (
-            <div key={title} className="rounded-xl bg-white p-6 shadow-sm">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="flex items-center justify-center size-9 rounded-lg bg-amber-50">
+          {sections.map(({ icon: Icon, title, paragraphs, items }) => (
+            <section key={title} className="rounded-xl bg-white p-6 shadow-sm">
+              <div className="mb-4 flex items-center gap-3">
+                <div className="flex size-9 items-center justify-center rounded-lg bg-amber-50">
                   <Icon className="size-5 text-amber-600" />
                 </div>
                 <h2 className="text-lg font-semibold text-slate-800">{title}</h2>
               </div>
-              <ul className="space-y-2.5">
-                {content.map((item, i) => (
-                  <li key={i} className="flex gap-2.5 text-sm text-slate-600 leading-relaxed">
-                    <span className="text-amber-400 mt-1.5 shrink-0">&#8226;</span>
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+
+              {paragraphs?.map((p, i) => (
+                <p
+                  key={i}
+                  className="mb-3 text-sm leading-relaxed text-slate-600 last:mb-0"
+                >
+                  {p}
+                </p>
+              ))}
+
+              {items && items.length > 0 && (
+                <ul className="mt-3 space-y-2.5">
+                  {items.map((item, i) => (
+                    <li
+                      key={i}
+                      className="flex gap-2.5 text-sm leading-relaxed text-slate-600"
+                    >
+                      <span className="mt-1.5 shrink-0 text-amber-400" aria-hidden="true">
+                        &bull;
+                      </span>
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
           ))}
         </div>
 
-        <div className="mt-8 text-center">
-          <Link
-            href="/tour"
-            className="text-sm text-amber-600 hover:text-amber-700 transition-colors"
-          >
-            &larr; Back to Tour
-          </Link>
-        </div>
+        <footer className="mt-10 flex flex-col items-center gap-3 text-center text-sm text-slate-500">
+          <div className="flex flex-wrap justify-center gap-x-4 gap-y-2">
+            <Link href="/terms" className="text-amber-600 hover:underline">
+              Terms of Service
+            </Link>
+            <Link href="/support" className="text-amber-600 hover:underline">
+              Support
+            </Link>
+            <Link href="/" className="text-amber-600 hover:underline">
+              Back to Travel Manager
+            </Link>
+          </div>
+        </footer>
       </div>
-    </div>
+    </main>
   );
 }

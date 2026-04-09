@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { deleteAllUserData, createAuditLog } from '@/lib/travelmanager/trips';
+import { deleteAllUserData } from '@/lib/travelmanager/trips';
 import { requireAuth } from '@/lib/travelmanager/auth';
 import { createSupabaseAdmin } from '@/lib/supabase/admin';
 import { rateLimit } from '@/lib/rate-limit';
@@ -14,10 +14,16 @@ export async function DELETE(request: NextRequest) {
 
     const admin = createSupabaseAdmin();
 
-    // Delete all Prisma data (trips, vendors, clients, audit logs, etc.)
-    await deleteAllUserData(user.id);
+    // Apple Guideline 5.1.1(v) requires complete account deletion. We do
+    // NOT write a final audit log because deleteAllUserData drops all
+    // AuditLog rows for this user (and then the User row itself) — any
+    // log we wrote here would be wiped milliseconds later anyway. If you
+    // later add external log shipping (Sentry / Datadog), emit the
+    // 'account_delete' event there, not in the DB.
 
-    // Delete all files from Supabase Storage (files are nested: userId/tripId/file)
+    // Delete all files from Supabase Storage (files are nested: userId/tripId/file).
+    // Do this before wiping DB rows — once the User row is gone we lose
+    // the ability to audit what was removed if storage deletion partially fails.
     const { data: tripDirs } = await admin.storage.from('trip-attachments').list(user.id);
     if (tripDirs && tripDirs.length > 0) {
       for (const dir of tripDirs) {
@@ -31,10 +37,12 @@ export async function DELETE(request: NextRequest) {
       }
     }
 
-    // Create final audit log entry before deleting auth user
-    await createAuditLog(user.id, 'account_delete');
+    // Delete all Prisma data (trips, vendors, clients, meetings, feedback,
+    // audit logs, oauth tokens, device tokens, click events, and finally
+    // the User row itself).
+    await deleteAllUserData(user.id);
 
-    // Delete Supabase Auth user
+    // Delete Supabase Auth user (requires service role key)
     await admin.auth.admin.deleteUser(user.id);
 
     return NextResponse.json({ success: true });

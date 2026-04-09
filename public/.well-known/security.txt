@@ -5,3 +5,4 @@ Contact: mailto:chaceclaborn@gmail.com
 Expires: 2027-04-06T23:59:59.000Z
 Preferred-Languages: en
 Canonical: https://<your-domain>/.well-known/security.txt
+Policy: https://<your-domain>/privacy
