@@ -8,6 +8,38 @@ import {
 import { requireAuth } from '@/lib/travelmanager/auth';
 import { rateLimit } from '@/lib/rate-limit';
 import { validateUUID, validateDateString } from '@/lib/sanitize';
+import prisma from '@/lib/prisma';
+
+/**
+ * Audit-log a share lifecycle event. Wrapped in try/catch so a logging
+ * failure can never break the user-facing share toggle. Share state is
+ * security-relevant (it exposes client data publicly), so every enable /
+ * disable / expiry change must be reconstructible from the AuditLog table.
+ */
+async function logShareEvent(
+  request: NextRequest,
+  userId: string,
+  action: 'share_enabled' | 'share_disabled' | 'share_expiry_updated',
+  tripId: string,
+  extra?: Record<string, unknown>
+) {
+  try {
+    await prisma.auditLog.create({
+      data: {
+        userId,
+        action,
+        ipAddress:
+          request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+          request.headers.get('x-real-ip') ??
+          null,
+        userAgent: request.headers.get('user-agent') ?? null,
+        metadata: { tripId, ...(extra ?? {}) },
+      },
+    });
+  } catch {
+    // Best-effort — never block the request on logging.
+  }
+}
 
 /**
  * Build the public shareable URL from the incoming request.
@@ -112,6 +144,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     const info = await enableTripShare(id, user.id, expiresAt);
+    await logShareEvent(request, user.id, 'share_enabled', id, {
+      expiresAt: expiresAt?.toISOString() ?? null,
+    });
     return NextResponse.json(serialize(request, info));
   } catch (error) {
     if (error instanceof Error && error.message === 'Trip not found') {
@@ -146,6 +181,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     const info = await updateTripShareExpiry(id, user.id, parsed.value);
+    await logShareEvent(request, user.id, 'share_expiry_updated', id, {
+      expiresAt: parsed.value?.toISOString() ?? null,
+    });
     return NextResponse.json(serialize(request, info));
   } catch (error) {
     if (error instanceof Error && error.message === 'Trip not found') {
@@ -170,6 +208,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     }
 
     await disableTripShare(id, user.id);
+    await logShareEvent(request, user.id, 'share_disabled', id);
     return NextResponse.json({ success: true });
   } catch (error) {
     if (error instanceof Error && error.message === 'Trip not found') {

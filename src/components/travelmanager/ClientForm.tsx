@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -32,15 +32,18 @@ export function ClientForm({ initialData, onSubmit, isLoading }: ClientFormProps
   const [notes, setNotes] = useState(initialData?.notes ?? '');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  useEffect(() => {
-    if (initialData) {
-      setName(initialData.name ?? '');
-      setCompany(initialData.company ?? '');
-      setEmail(initialData.email ?? '');
-      setPhone(initialData.phone ?? '');
-      setNotes(initialData.notes ?? '');
-    }
-  }, [initialData]);
+  // Sync to initialData when the parent passes a new reference (e.g. switching
+  // between editing different clients). Inline guard pattern avoids the
+  // cascading-render cost of useEffect — see react.dev "you might not need an effect".
+  const [prevInitial, setPrevInitial] = useState(initialData);
+  if (initialData !== prevInitial) {
+    setPrevInitial(initialData);
+    setName(initialData?.name ?? '');
+    setCompany(initialData?.company ?? '');
+    setEmail(initialData?.email ?? '');
+    setPhone(initialData?.phone ?? '');
+    setNotes(initialData?.notes ?? '');
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

@@ -45,6 +45,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid start date' }, { status: 400 });
     }
 
+    // Sanity-cap startDate to ±5 years from today. validateDateString already
+    // enforces YYYY-MM-DD shape, but it accepts year 0001 or 9999 — those would
+    // produce nonsense trip date ranges (and could overflow when durationDays
+    // is added). Five years either way covers every realistic agent workflow.
+    const FIVE_YEARS_MS = 5 * 365 * 24 * 60 * 60 * 1000;
+    const now = Date.now();
+    if (Math.abs(parsedStart.getTime() - now) > FIVE_YEARS_MS) {
+      return NextResponse.json(
+        { error: 'startDate must be within 5 years of today' },
+        { status: 400 }
+      );
+    }
+
     const { trip, itinerary, checklist } = instantiateTemplate(template, parsedStart);
 
     // Single transaction: create trip + nested itinerary + checklist items.

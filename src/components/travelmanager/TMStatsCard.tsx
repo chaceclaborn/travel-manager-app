@@ -25,13 +25,18 @@ const colorMap: Record<string, { bg: string; text: string; border: string }> = {
 
 function useCountUp(target: number, duration = 800) {
   const [count, setCount] = useState(0);
+  // Track previous target so we can reset `count` to 0 *during render* when
+  // target drops to 0. This is the React 19 "synced state" pattern — it
+  // avoids the synchronous setState-in-effect that would otherwise be needed.
+  const [prevTarget, setPrevTarget] = useState(target);
+  if (target !== prevTarget) {
+    setPrevTarget(target);
+    if (target === 0) setCount(0);
+  }
   const frameRef = useRef<number>(0);
 
   useEffect(() => {
-    if (target === 0) {
-      setCount(0);
-      return;
-    }
+    if (target === 0) return;
 
     const startTime = performance.now();
 

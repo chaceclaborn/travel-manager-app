@@ -9,8 +9,11 @@ export async function proxy(request: NextRequest) {
   // enumeration. This runs before the Supabase session refresh below because
   // the page is intentionally unauthenticated — we don't want attackers
   // pinning us into expensive DB lookups per token.
+  // Uses the dedicated 'public' bucket (20/min) so an attacker scanning the
+  // share endpoint can't exhaust the shared 'read' allowance authed users
+  // depend on for the rest of the API.
   if (request.nextUrl.pathname.startsWith('/share/')) {
-    const limited = rateLimit(request, 'read');
+    const limited = rateLimit(request, 'public');
     if (limited) return limited;
   }
 

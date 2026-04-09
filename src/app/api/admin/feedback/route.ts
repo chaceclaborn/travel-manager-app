@@ -66,6 +66,26 @@ export async function PATCH(request: NextRequest) {
       data,
     });
 
+    // Audit-log the admin mutation. Admin endpoints touch other users' data,
+    // so every state change must be reconstructible from the AuditLog table
+    // (who, when, what changed). Wrapped to never block the response.
+    try {
+      await prisma.auditLog.create({
+        data: {
+          userId: user.id,
+          action: 'admin_feedback_update',
+          ipAddress:
+            request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+            request.headers.get('x-real-ip') ??
+            null,
+          userAgent: request.headers.get('user-agent') ?? null,
+          metadata: { feedbackId: id, status: status ?? null, category: category ?? null },
+        },
+      });
+    } catch {
+      // Best-effort logging — never break admin actions on logging failure.
+    }
+
     return NextResponse.json({ feedback: updated });
   } catch (error) {
     console.error('Admin feedback update error:', error instanceof Error ? error.message : error);

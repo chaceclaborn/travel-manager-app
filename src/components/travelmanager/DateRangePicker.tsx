@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -30,43 +30,44 @@ export function DateRangePicker({
   maxDate,
 }: DateRangePickerProps) {
   const [open, setOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  // Lazy initializer reads matchMedia during the first client render so we
+  // never need a synchronous setState in an effect just to seed the value.
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia('(max-width: 640px)').matches;
+  });
   const [viewMonth, setViewMonth] = useState<Date>(() => parseLocalDate(startDate) || new Date());
-  const [range, setRange] = useState<DateRange | undefined>(() => {
+
+  // `range` is derived from the controlled props — no local state needed.
+  // This used to be `useState` + a sync effect, which tripped
+  // react-hooks/set-state-in-effect. Deriving in render is the React 19 fix.
+  const range = useMemo<DateRange | undefined>(() => {
     const from = parseLocalDate(startDate);
     const to = parseLocalDate(endDate);
     if (from || to) return { from, to };
     return undefined;
-  });
+  }, [startDate, endDate]);
 
   useEffect(() => {
     const mql = window.matchMedia('(max-width: 640px)');
-    setIsMobile(mql.matches);
     const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
     mql.addEventListener('change', handler);
     return () => mql.removeEventListener('change', handler);
   }, []);
 
-  useEffect(() => {
-    const from = parseLocalDate(startDate);
-    const to = parseLocalDate(endDate);
-    if (from || to) {
-      setRange({ from, to });
-    } else {
-      setRange(undefined);
-    }
-  }, [startDate, endDate]);
-
-  // Snap calendar to the right month when opened
-  useEffect(() => {
-    if (open) {
+  const handleOpenChange = (next: boolean) => {
+    // Block close while a partial range is in progress (start picked, no end).
+    if (!next && range?.from && (!range?.to || range.to.getTime() === range.from.getTime())) return;
+    // Snap the calendar to the relevant month when opening — handled in the
+    // event handler instead of an effect to avoid set-state-in-effect.
+    if (next) {
       const target = parseLocalDate(startDate) || parseLocalDate(endDate);
       if (target) setViewMonth(target);
     }
-  }, [open, startDate, endDate]);
+    setOpen(next);
+  };
 
   const handleSelect = (selected: DateRange | undefined) => {
-    setRange(selected);
     if (selected?.from) {
       onStartDateChange(toLocalDateString(selected.from));
     } else {
@@ -99,10 +100,7 @@ export function DateRangePicker({
       : 'Select dates';
 
   return (
-    <Popover open={open} onOpenChange={(next) => {
-      if (!next && range?.from && (!range?.to || range.to.getTime() === range.from.getTime())) return;
-      setOpen(next);
-    }}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"

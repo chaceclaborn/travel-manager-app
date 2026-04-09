@@ -251,7 +251,12 @@ export function TripForm({ initialData, onSubmit, isLoading }: TripFormProps) {
       .catch(() => {});
   }, []);
 
-  useEffect(() => {
+  // Sync to initialData when the parent passes a new reference (e.g. when an
+  // edit page hydrates the trip). Inline guard pattern avoids cascading
+  // renders from useEffect — see react.dev "you might not need an effect".
+  const [prevInitial, setPrevInitial] = useState(initialData);
+  if (initialData !== prevInitial) {
+    setPrevInitial(initialData);
     if (initialData) {
       setTitle(initialData.title || '');
       setDestination(initialData.destination || '');
@@ -274,7 +279,7 @@ export function TripForm({ initialData, onSubmit, isLoading }: TripFormProps) {
         lng: initialData.arrivalAirportLng || 0,
       } : null);
     }
-  }, [initialData]);
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

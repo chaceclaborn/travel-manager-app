@@ -1,0 +1,7 @@
+# RFC 9116 security contact file.
+# TODO: Replace <your-domain> below with the live production hostname
+# (e.g. https://travelmanager.app) before launch.
+Contact: mailto:chaceclaborn@gmail.com
+Expires: 2027-04-06T23:59:59.000Z
+Preferred-Languages: en
+Canonical: https://<your-domain>/.well-known/security.txt

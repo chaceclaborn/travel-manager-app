@@ -194,14 +194,16 @@ export function TravelMap({ trips, homeLocation }: TravelMapProps) {
         line.transportMode === 'CAR' && (line.type === 'outbound' || line.type === 'fallback')
       );
 
-    if (carRoutes.length === 0) {
-      setRoadGeometries({});
-      return;
-    }
-
     let cancelled = false;
 
     const fetchAll = async () => {
+      // No car routes — clear any stale geometries asynchronously so the
+      // setState happens off the synchronous effect body (React 19 lint).
+      if (carRoutes.length === 0) {
+        if (!cancelled) setRoadGeometries({});
+        return;
+      }
+
       const results = await Promise.allSettled(
         carRoutes.map(async ({ line, i }) => {
           const [fromLat, fromLng] = line.positions[0];

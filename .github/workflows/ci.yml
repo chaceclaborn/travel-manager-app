@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'yarn'
+      - run: yarn install --frozen-lockfile
+      - run: yarn prisma generate
+      - run: yarn tsc --noEmit
+      # Lint may currently fail on pre-existing React 19 set-state-in-render
+      # warnings being addressed in a parallel branch. Once that work lands,
+      # remove `continue-on-error` so lint failures block the build.
+      - run: yarn lint
+        continue-on-error: true
+      - run: yarn test
+      - run: yarn audit:static

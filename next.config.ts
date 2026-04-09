@@ -104,6 +104,26 @@ const nextConfig: NextConfig = {
               source: '/api/:path*',
               headers: [
                 { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate, private' },
+                // Vary on auth headers/cookies so any intermediary cache (CDN,
+                // browser, mobile WKWebView) keys responses per-credential.
+                // Critical now that we accept Bearer tokens from the iOS shell
+                // in addition to cookie sessions — without Vary, a CDN could
+                // serve user A's response to user B if both hit the same path.
+                { key: 'Vary', value: 'Authorization, Cookie' },
+                // Block legacy Adobe/Flash cross-domain access entirely.
+                { key: 'X-Permitted-Cross-Domain-Policies', value: 'none' },
+              ],
+            },
+            {
+              // Belt-and-suspenders for the public share page. The page already
+              // sets robots: { index: false, follow: false } in metadata, but
+              // HTTP headers are authoritative for crawlers that don't run JS
+              // and survive RSC/streaming edge cases. Cache-Control: no-store
+              // also keeps shared client data out of any intermediary cache.
+              source: '/share/:path*',
+              headers: [
+                { key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive' },
+                { key: 'Cache-Control', value: 'no-store' },
               ],
             },
             {

@@ -232,25 +232,36 @@ export default function AnalyticsPage() {
     return () => window.removeEventListener('resize', check);
   }, []);
 
-  const fetchAnalytics = useCallback(() => {
-    setLoading(true);
-    setError(false);
-    fetch(`/api/analytics?period=${period}`)
-      .then((res) => {
-        if (!res.ok) throw new Error('Request failed');
-        return res.json();
-      })
-      .then((d) => setData(d))
-      .catch(() => {
-        setData(null);
-        setError(true);
-      })
-      .finally(() => setLoading(false));
-  }, [period]);
+  // Fetch analytics whenever the period changes. The fetch is inlined in
+  // the effect (rather than a useCallback called from the effect) so the
+  // synchronous setLoading/setError happen off the effect body via the
+  // async function — keeps React 19's set-state-in-effect rule happy.
+  const [reloadKey, setReloadKey] = useState(0);
+  const refetch = useCallback(() => setReloadKey((k) => k + 1), []);
 
   useEffect(() => {
-    fetchAnalytics();
-  }, [fetchAnalytics]);
+    let cancelled = false;
+    const run = async () => {
+      if (cancelled) return;
+      setLoading(true);
+      setError(false);
+      try {
+        const res = await fetch(`/api/analytics?period=${period}`);
+        if (!res.ok) throw new Error('Request failed');
+        const d = await res.json();
+        if (!cancelled) setData(d);
+      } catch {
+        if (!cancelled) {
+          setData(null);
+          setError(true);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    run();
+    return () => { cancelled = true; };
+  }, [period, reloadKey]);
 
   const onPieEnter = useCallback((_: unknown, index: number) => {
     setActivePieIndex(index);
@@ -280,7 +291,7 @@ export default function AnalyticsPage() {
           Something went wrong. Check your connection and try again.
         </p>
         <Button
-          onClick={fetchAnalytics}
+          onClick={refetch}
           className="mt-6 bg-slate-900 hover:bg-slate-800 text-white shadow-sm"
         >
           <RefreshCw className="mr-2 size-4" />

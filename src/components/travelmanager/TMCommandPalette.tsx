@@ -251,7 +251,17 @@ export function TMCommandPalette({ open, onClose }: TMCommandPaletteProps) {
   const showEmptyState =
     !loading && query.trim().length >= 2 && results !== null && !hasAnyResults(results);
 
-  let currentSection: EntityType | null = null;
+  // Pre-compute which items begin a new section, so render stays pure
+  // (no `let` reassignment during the .map() callback).
+  const sectionFlags = useMemo(() => {
+    const flags: boolean[] = [];
+    let prev: EntityType | null = null;
+    for (const item of flatItems) {
+      flags.push(item.type !== prev);
+      prev = item.type;
+    }
+    return flags;
+  }, [flatItems]);
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -312,8 +322,7 @@ export function TMCommandPalette({ open, onClose }: TMCommandPaletteProps) {
           )}
 
           {flatItems.map((item, index) => {
-            const showHeader = item.type !== currentSection;
-            if (showHeader) currentSection = item.type;
+            const showHeader = sectionFlags[index];
             const Icon = sectionIcons[item.type];
 
             return (

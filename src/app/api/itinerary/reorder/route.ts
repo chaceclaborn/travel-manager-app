@@ -35,6 +35,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'orderedIds must be a non-empty array' }, { status: 400 });
     }
 
+    // DoS guard: a single authenticated user could otherwise submit 10k+ ids
+    // and trigger one Prisma update per id inside a transaction. 500 is well
+    // above any realistic single-day itinerary.
+    if (orderedIds.length > 500) {
+      return NextResponse.json({ error: 'orderedIds cannot exceed 500 items' }, { status: 400 });
+    }
+
     if (!orderedIds.every((id): id is string => typeof id === 'string' && validateUUID(id))) {
       return NextResponse.json({ error: 'orderedIds must be valid UUIDs' }, { status: 400 });
     }

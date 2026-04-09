@@ -24,6 +24,23 @@ const EMPTY_RESULTS: SearchResults = {
   itinerary: [],
 };
 
+/**
+ * Global search across the user's trips, bookings, meetings, vendors, clients,
+ * and itinerary items. Each entity is filtered by `userId` and capped at 5 hits.
+ *
+ * KNOWN SCALING CONCERN (post-launch hardening, not a launch blocker):
+ * This uses Prisma `contains` which compiles to Postgres `ILIKE '%query%'`.
+ * That pattern is unindexable — Postgres falls back to a sequential scan, so
+ * cost is O(N) per entity per query. At the current B2B scale (tens to low
+ * hundreds of trips per agent) this is fine, and the route is rate-limited
+ * via `read` (60/min) so a malicious authenticated user can't easily abuse it.
+ *
+ * At ~10k+ rows per user this becomes noticeably slow. The upgrade path is
+ * Postgres `pg_trgm` extension + a GIN index on the relevant text columns
+ * (e.g. `CREATE INDEX ON trip USING GIN (title gin_trgm_ops)`). That makes
+ * `ILIKE` index-backed and turns each query into milliseconds regardless of
+ * table size. Defer until a real user actually has that much data.
+ */
 export async function searchAll(userId: string, query: string): Promise<SearchResults> {
   const q = query.trim();
   if (q.length < 2) return EMPTY_RESULTS;

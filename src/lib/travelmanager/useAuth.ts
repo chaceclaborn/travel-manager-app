@@ -5,15 +5,14 @@ import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
 
 export function useAuth() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
   const supabase = createSupabaseBrowserClient();
+  const [user, setUser] = useState<User | null>(null);
+  // Derive initial loading from whether supabase is available — avoids
+  // a synchronous setLoading(false) inside the effect body (React 19 lint).
+  const [loading, setLoading] = useState(() => Boolean(supabase?.auth));
 
   useEffect(() => {
-    if (!supabase?.auth) {
-      setLoading(false);
-      return;
-    }
+    if (!supabase?.auth) return;
 
     async function init() {
       const { data } = await supabase.auth.getUser();

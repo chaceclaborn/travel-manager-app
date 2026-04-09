@@ -83,6 +83,14 @@ export default function TravelManagerLayout({
     setMobileMenuOpen(false);
   }, [pathname]);
 
+  // Redirect unauthenticated users to the tour page.
+  // Must run in an effect (not during render) — render must be a pure function.
+  useEffect(() => {
+    if (!loading && !user && !isPublicPage) {
+      router.push('/tour');
+    }
+  }, [loading, user, isPublicPage, router]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -158,11 +166,8 @@ export default function TravelManagerLayout({
     );
   }
 
-  // Not authenticated — redirect to tour page
+  // Not authenticated — render nothing while the effect above pushes to /tour.
   if (!user) {
-    if (typeof window !== 'undefined') {
-      window.location.href = '/tour';
-    }
     return null;
   }
 

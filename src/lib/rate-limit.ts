@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-type RateLimitCategory = 'auth' | 'read' | 'write' | 'sensitive';
+type RateLimitCategory = 'auth' | 'read' | 'write' | 'sensitive' | 'public';
 
 const LIMITS: Record<RateLimitCategory, { maxRequests: number; windowMs: number }> = {
   auth: { maxRequests: 10, windowMs: 60_000 },
   read: { maxRequests: 60, windowMs: 60_000 },
   write: { maxRequests: 30, windowMs: 60_000 },
   sensitive: { maxRequests: 5, windowMs: 60_000 },
+  // Tighter bucket for unauthenticated public surface area (e.g. /share/:token).
+  // Lives in its own bucket so a brute-force scan against the share page can't
+  // exhaust the global 'read' allowance and DoS authed users on the same IP.
+  public: { maxRequests: 20, windowMs: 60_000 },
 };
 
 interface RequestRecord {
