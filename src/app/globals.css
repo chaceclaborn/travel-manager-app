@@ -99,6 +99,21 @@
   }
 }
 
+/* Leaflet + Tailwind v4 fix: Tailwind's base reset applies `max-width: 100%`
+   to all `img` elements, which breaks Leaflet tile rendering — tiles have
+   explicit inline width/height that Tailwind overrides, making them render
+   at wrong sizes and appear as a solid black container with only markers
+   and polylines visible. Force Leaflet's tile images to keep their
+   explicit dimensions. Do NOT remove this. */
+.leaflet-container img {
+  max-width: none !important;
+}
+/* Friendly fallback background while tiles are loading (or if they fail).
+   Matches the app's dark theme so the map doesn't flash white on load. */
+.leaflet-container {
+  background: #1e293b;
+}
+
 /* iOS safe area support — accounts for notch / Dynamic Island and home indicator.
    Requires `viewport-fit=cover` in the viewport meta (set in src/app/layout.tsx). */
 :root {
