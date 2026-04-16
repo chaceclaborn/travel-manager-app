@@ -104,7 +104,31 @@ try {
   process.exit(1);
 }
 
-// ── Step 2: run next build ─────────────────────────────────────────────
+// ── Step 2: generate Prisma client ────────────────────────────────────
+console.log(`${c.gray}Running prisma generate...${c.reset}`);
+const prisma = spawn('npx', ['prisma', 'generate'], {
+  cwd: ROOT,
+  stdio: 'inherit',
+  shell: process.platform === 'win32',
+});
+
+await new Promise((resolve) => {
+  prisma.on('exit', (code) => {
+    if (code !== 0) {
+      restoreAll();
+      console.error(`${c.yellow}prisma generate exited with code ${code}${c.reset}`);
+      process.exit(code ?? 1);
+    }
+    resolve();
+  });
+  prisma.on('error', (err) => {
+    restoreAll();
+    console.error(`${c.yellow}Failed to spawn prisma generate:${c.reset}`, err);
+    process.exit(1);
+  });
+});
+
+// ── Step 3: run next build ─────────────────────────────────────────────
 console.log(`${c.cyan}${c.bold}Building Next.js static export for Capacitor...${c.reset}`);
 console.log(`${c.gray}NEXT_STATIC_EXPORT=1 next build${c.reset}\n`);
 
