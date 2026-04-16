@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/travelmanager/auth';
+import { requireAdmin } from '@/lib/travelmanager/admin';
 import { rateLimit } from '@/lib/rate-limit';
 import { sanitizeObject } from '@/lib/sanitize';
 import prisma from '@/lib/prisma';
@@ -27,15 +27,8 @@ export async function POST(request: NextRequest) {
     const rateLimited = rateLimit(request, 'sensitive');
     if (rateLimited) return rateLimited;
 
-    const { user, response } = await requireAuth();
+    const { user, response } = await requireAdmin();
     if (!user) return response;
-
-    // Admin gate: only the configured admin email can trigger sends in the
-    // stub. When the real APNs integration lands, this will likely be
-    // replaced with an internal/system call rather than an HTTP route.
-    if (user.email !== process.env.ADMIN_EMAIL) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
 
     const raw = await request.json();
     const clean = sanitizeObject(raw, ['userId', 'title', 'body', 'url']);
@@ -58,24 +51,62 @@ export async function POST(request: NextRequest) {
 
     const tokens = await prisma.deviceToken.findMany({
       where: { userId: targetUserId },
-      select: { token: true, platform: true },
+      select: { id: true, token: true, platform: true },
     });
 
     // Log only non-PII metadata. `title`/`body`/`url` may contain booking
     // details (confirmation numbers, locations, client names) — Vercel log
     // retention + downstream log shipping would otherwise persist that as
     // a GDPR exposure. Keep this shape when the real APNs/FCM dispatch lands.
-    console.log('[push/send] STUB dispatch', {
+    console.log('[push/send] dispatch', {
       targetUserId,
       tokenCount: tokens.length,
     });
 
-    // TODO: real APNs/FCM dispatch once signing certs are provisioned.
+    // Real APNs dispatch is gated on env vars being present. This lets the
+    // route ship safely in production with no certs — the stub path returns
+    // `targeted` counts so the caller can tell what WOULD have been sent.
+    //
+    // To activate real delivery, provision in Apple Developer portal:
+    //   APNS_KEY_ID       10-char key ID from the .p8 key
+    //   APNS_TEAM_ID      10-char Apple team ID
+    //   APNS_BUNDLE_ID    com.chaceclaborn.travelmanager
+    //   APNS_KEY          contents of AuthKey_*.p8 (BEGIN/END PRIVATE KEY)
+    //   APNS_HOST         api.push.apple.com (prod) / api.sandbox.push.apple.com (dev)
+    // Then install `@parse/node-apn` (or roll our own HTTP/2 + ES256 JWT via
+    // node:crypto) and replace the stub block below with a dispatch loop that
+    // DELETEs any token Apple responds to with HTTP 410 (token invalid/expired).
+    const certsConfigured = !!(
+      process.env.APNS_KEY_ID &&
+      process.env.APNS_TEAM_ID &&
+      process.env.APNS_BUNDLE_ID &&
+      process.env.APNS_KEY
+    );
+
+    if (!certsConfigured) {
+      return NextResponse.json({
+        ok: true,
+        stub: true,
+        targeted: tokens.length,
+        note: 'APNs certs not configured — dispatch skipped. Set APNS_* env vars to activate.',
+      });
+    }
+
+    // Scaffolding for the real path: iterate tokens, dispatch via APNs, prune
+    // rejected tokens. Leaving unreachable for now — certs + package land first.
+    const results: Array<{ token: string; ok: boolean; status?: number }> = [];
+    for (const _row of tokens) {
+      void _row;
+      // const res = await sendApns(row.token, { title, body: _body, url: _url });
+      // if (res.status === 410) await prisma.deviceToken.delete({ where: { id: row.id } });
+      // results.push({ token: row.token.slice(0, 8) + '…', ok: res.ok, status: res.status });
+    }
 
     return NextResponse.json({
       ok: true,
-      stub: true,
+      stub: results.length === 0,
       targeted: tokens.length,
+      results,
     });
   } catch (error) {
     console.error(

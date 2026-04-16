@@ -4,6 +4,17 @@ Everything you'll paste into App Store Connect when submitting Travel Manager. E
 
 > **How to use this file:** Open the section you need, copy the fenced block, paste it into the matching App Store Connect field. Fields marked "updateable" can be edited post-submission without a new build review.
 
+> **⚠️ Feature-reality check before you submit (last updated 2026-04-14):**
+> The Review Notes in §5 claim several native features. Confirm each is actually shipping in the build you're submitting — reviewers will test them. Current status:
+> - ✅ Native bottom tab bar / sidebar navigation — shipped
+> - ✅ Native iOS share sheet (`@capacitor/share`) — shipped 2026-04-14 on Trip detail page
+> - ⚠️ Push notifications — client-side wired (`src/lib/push.ts`), server dispatch stubbed (certs not provisioned). Honest claim: "Push notification registration is supported; active dispatch launches with first update after App Store approval."
+> - ❌ Face ID / Touch ID unlock — NOT YET IMPLEMENTED. Either ship it or strike the bullet.
+> - ❌ Offline cache — NOT YET IMPLEMENTED. Either ship it or strike the bullet.
+> - ⚠️ Native file picker / document scanner — uses standard HTML file input today. Strike "document scanner" unless you wire `@capacitor/camera`.
+>
+> Apple Guideline 4.2 specifically rejects wrappers that claim native features they don't deliver. Trim the Review Notes list to what's real before pasting.
+
 ---
 
 ## 1. App Store Listing Basics

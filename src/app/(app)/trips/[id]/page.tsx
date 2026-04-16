@@ -71,6 +71,7 @@ import { TripJournal } from '@/components/travelmanager/TripJournal';
 import { useTMToast } from '@/components/travelmanager/TMToast';
 import { useDeleteEntity } from '@/lib/travelmanager/useDeleteEntity';
 import { formatDateLong as formatDate } from '@/lib/date-utils';
+import { nativeShare } from '@/lib/native/share';
 
 const statusOrder = ['DRAFT', 'PLANNED', 'IN_PROGRESS', 'COMPLETED'];
 const statusLabels: Record<string, string> = {
@@ -426,6 +427,25 @@ export default function TripDetailPage() {
       setTimeout(() => setShareCopied(false), 2000);
     } catch {
       showToast('Failed to copy link', 'error');
+    }
+  };
+
+  // Native share sheet — iOS/Android Capacitor surfaces the OS share UI,
+  // mobile browsers use Web Share API, desktop falls back to clipboard.
+  // This is the concretely-native feature Apple Guideline 4.2 looks for.
+  const handleNativeShare = async () => {
+    if (!shareUrl || !trip) return;
+    const result = await nativeShare({
+      title: trip.title,
+      text: `Check out my trip: ${trip.title}${trip.destination ? ` — ${trip.destination}` : ''}`,
+      url: shareUrl,
+      dialogTitle: 'Share trip',
+    });
+    if (result === 'clipboard') {
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2000);
+    } else if (result === 'failed') {
+      showToast('Failed to share link', 'error');
     }
   };
 
@@ -1064,6 +1084,17 @@ export default function TripDetailPage() {
                           Copy
                         </>
                       )}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleNativeShare}
+                      className="gap-1.5"
+                      aria-label="Share via system share sheet"
+                    >
+                      <Share2 className="size-3.5" />
+                      Share
                     </Button>
                   </div>
                 </div>
