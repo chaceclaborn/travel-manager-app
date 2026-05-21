@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, use } from 'react';
 import Link from 'next/link';
-import { Pencil, X, MapPin, Clock, Hash, Armchair, Plane, AlertCircle, RefreshCw } from 'lucide-react';
+import { Pencil, X, MapPin, Clock, Hash, Armchair, Plane, AlertCircle, RefreshCw, Ban, RotateCcw, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,10 +14,12 @@ import { useDeleteEntity } from '@/lib/travelmanager/useDeleteEntity';
 import { DatePicker } from '@/components/travelmanager/DatePicker';
 import { formatDate, formatDateTime } from '@/lib/date-utils';
 import { type BookingType, typeConfig, typeLabels, getBookingFormHelpers } from '@/lib/travelmanager/booking-config';
+import type { BookingStatus } from '@/lib/travelmanager/types';
 
 interface BookingData {
   id: string;
   type: BookingType;
+  status: BookingStatus;
   provider: string;
   confirmationNum: string | null;
   startDateTime: string | null;
@@ -43,6 +45,7 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
   const [error, setError] = useState(false);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
   const [form, setForm] = useState({
     type: 'FLIGHT' as BookingType,
@@ -126,6 +129,26 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
       showToast('Failed to update booking', 'error');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleCancelToggle = async () => {
+    if (!booking || cancelling) return;
+    const nextStatus: BookingStatus = booking.status === 'CANCELLED' ? 'ACTIVE' : 'CANCELLED';
+    setCancelling(true);
+    try {
+      const res = await fetch(`/api/bookings/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: nextStatus }),
+      });
+      if (!res.ok) throw new Error();
+      setBooking((prev) => prev ? { ...prev, status: nextStatus } : prev);
+      showToast(nextStatus === 'CANCELLED' ? 'Booking cancelled' : 'Booking reactivated');
+    } catch {
+      showToast(nextStatus === 'CANCELLED' ? 'Failed to cancel booking' : 'Failed to reactivate booking', 'error');
+    } finally {
+      setCancelling(false);
     }
   };
 
@@ -312,15 +335,38 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
                   {config.icon}
                 </span>
                 <div>
-                  <h1 className="text-2xl font-bold text-slate-800">{booking.provider}</h1>
-                  <span className={`inline-block mt-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${config.badgeColor}`}>
-                    {config.label}
-                  </span>
+                  <h1 className={`text-2xl font-bold ${booking.status === 'CANCELLED' ? 'text-slate-400 line-through' : 'text-slate-800'}`}>{booking.provider}</h1>
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${config.badgeColor}`}>
+                      {config.label}
+                    </span>
+                    {booking.status === 'CANCELLED' && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-200">
+                        <Ban className="size-2.5" /> Cancelled
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
                   <Pencil className="mr-1 size-3.5" /> Edit
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleCancelToggle}
+                  disabled={cancelling}
+                  className={booking.status === 'CANCELLED' ? 'text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50' : 'text-amber-600 hover:text-amber-700 hover:bg-amber-50'}
+                >
+                  {cancelling ? (
+                    <Loader2 className="mr-1 size-3.5 animate-spin" />
+                  ) : booking.status === 'CANCELLED' ? (
+                    <RotateCcw className="mr-1 size-3.5" />
+                  ) : (
+                    <Ban className="mr-1 size-3.5" />
+                  )}
+                  {booking.status === 'CANCELLED' ? 'Reactivate' : 'Cancel'}
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => setDeleteOpen(true)} className="text-red-600 hover:text-red-700 hover:bg-red-50">
                   Delete
