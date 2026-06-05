@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Plane, Trash2, Plus, X, MapPin, Clock, Hash, Armchair, Pencil, Ban, RotateCcw } from 'lucide-react';
+import { Plane, Trash2, Plus, X, MapPin, Clock, Hash, Armchair, Pencil, Ban, RotateCcw, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,11 +12,12 @@ import { TMDeleteDialog } from '@/components/travelmanager/TMDeleteDialog';
 import { DatePicker } from '@/components/travelmanager/DatePicker';
 import { formatDate, formatDateTime } from '@/lib/date-utils';
 import { type BookingType, typeConfig, typeLabels, emptyBookingForm, getBookingFormHelpers } from '@/lib/travelmanager/booking-config';
+import type { BookingStatus } from '@/lib/travelmanager/types';
 
 interface Booking {
   id: string;
   type: BookingType;
-  status: 'ACTIVE' | 'CANCELLED';
+  status: BookingStatus;
   provider: string;
   confirmationNum: string | null;
   startDateTime: string | null;
@@ -43,9 +44,10 @@ const cardVariants = {
   }),
 };
 
-function BookingCard({ booking, onDelete, onEdit, onToggleCancel, index }: { booking: Booking; onDelete: (id: string) => void; onEdit: (booking: Booking) => void; onToggleCancel: (id: string, cancelled: boolean) => void; index: number }) {
+function BookingCard({ booking, onDelete, onEdit, onCancel, cancellingId, index }: { booking: Booking; onDelete: (id: string) => void; onEdit: (booking: Booking) => void; onCancel: (id: string, next: BookingStatus) => void; cancellingId: string | null; index: number }) {
   const config = typeConfig[booking.type];
   const isCancelled = booking.status === 'CANCELLED';
+  const isCancelling = cancellingId === booking.id;
 
   return (
     <motion.div
@@ -53,17 +55,17 @@ function BookingCard({ booking, onDelete, onEdit, onToggleCancel, index }: { boo
       variants={cardVariants}
       initial="hidden"
       animate="visible"
-      className={`rounded-lg border bg-white p-4 shadow-sm transition-all duration-200 ${isCancelled ? 'border-slate-200 opacity-60' : `border-slate-100 ${config.borderAccent} hover:-translate-y-0.5 hover:shadow-md`}`}
+      className={`rounded-lg border border-slate-100 p-4 shadow-sm transition-all duration-200 ${config.borderAccent} hover:-translate-y-0.5 hover:shadow-md ${isCancelled ? 'bg-slate-50 opacity-70' : 'bg-white'}`}
     >
       <div className="mb-3 flex items-start justify-between">
         <div className="flex items-center gap-2.5">
-          <span className={`flex items-center justify-center rounded-xl p-2.5 ring-2 ${isCancelled ? 'bg-slate-100 text-slate-400 ring-slate-200' : config.iconBg}`}>
+          <span className={`flex items-center justify-center rounded-xl p-2.5 ring-2 ${config.iconBg}`}>
             {config.icon}
           </span>
           <div>
-            <p className={`font-semibold ${isCancelled ? 'text-slate-400 line-through' : 'text-slate-800'}`}>{booking.provider}</p>
+            <p className={`font-semibold text-slate-800 ${isCancelled ? 'line-through' : ''}`}>{booking.provider}</p>
             <div className="flex items-center gap-1.5">
-              <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${isCancelled ? 'bg-slate-100 text-slate-500' : config.badgeColor}`}>
+              <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${config.badgeColor}`}>
                 {config.label}
               </span>
               {isCancelled && (
@@ -75,23 +77,28 @@ function BookingCard({ booking, onDelete, onEdit, onToggleCancel, index }: { boo
           </div>
         </div>
         <div className="flex items-center gap-1">
-          {!isCancelled && (
-            <button
-              onClick={() => onEdit(booking)}
-              className="cursor-pointer rounded-md p-2 text-slate-300 transition-all duration-200 hover:bg-amber-50 hover:text-amber-500"
-              title="Edit booking"
-              aria-label="Edit booking"
-            >
-              <Pencil className="size-4" />
-            </button>
-          )}
           <button
-            onClick={() => onToggleCancel(booking.id, isCancelled)}
-            className={`cursor-pointer rounded-md p-2 transition-all duration-200 ${isCancelled ? 'text-slate-300 hover:bg-green-50 hover:text-green-600' : 'text-slate-300 hover:bg-orange-50 hover:text-orange-500'}`}
-            title={isCancelled ? 'Restore booking' : 'Cancel booking'}
-            aria-label={isCancelled ? 'Restore booking' : 'Cancel booking'}
+            onClick={() => onEdit(booking)}
+            className="cursor-pointer rounded-md p-2 text-slate-300 transition-all duration-200 hover:bg-amber-50 hover:text-amber-500"
+            title="Edit booking"
+            aria-label="Edit booking"
           >
-            {isCancelled ? <RotateCcw className="size-4" /> : <Ban className="size-4" />}
+            <Pencil className="size-4" />
+          </button>
+          <button
+            onClick={() => onCancel(booking.id, isCancelled ? 'ACTIVE' : 'CANCELLED')}
+            disabled={isCancelling}
+            className={`cursor-pointer rounded-md p-2 text-slate-300 transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50 ${isCancelled ? 'hover:bg-emerald-50 hover:text-emerald-600' : 'hover:bg-orange-50 hover:text-orange-500'}`}
+            title={isCancelled ? 'Reactivate booking' : 'Mark as cancelled'}
+            aria-label={isCancelled ? 'Reactivate booking' : 'Mark as cancelled'}
+          >
+            {isCancelling ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : isCancelled ? (
+              <RotateCcw className="size-4" />
+            ) : (
+              <Ban className="size-4" />
+            )}
           </button>
           <button
             onClick={() => onDelete(booking.id)}
@@ -258,6 +265,7 @@ export function TripBookings({ tripId, tripStartDate, tripEndDate }: TripBooking
   const [form, setForm] = useState(emptyBookingForm);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
 
   const fetchBookings = useCallback(async () => {
     try {
@@ -355,19 +363,21 @@ export function TripBookings({ tripId, tripStartDate, tripEndDate }: TripBooking
     }
   };
 
-  const handleToggleCancel = async (id: string, currentlyCancelled: boolean) => {
-    const newStatus = currentlyCancelled ? 'ACTIVE' : 'CANCELLED';
+  const handleCancel = async (id: string, nextStatus: BookingStatus) => {
+    setCancellingId(id);
     try {
       const res = await fetch(`/api/bookings/${id}`, {
-        method: 'PATCH',
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ status: nextStatus }),
       });
       if (!res.ok) throw new Error();
-      showToast(currentlyCancelled ? 'Booking restored' : 'Booking cancelled');
+      showToast(nextStatus === 'CANCELLED' ? 'Booking cancelled' : 'Booking reactivated');
       fetchBookings();
     } catch {
-      showToast(currentlyCancelled ? 'Failed to restore booking' : 'Failed to cancel booking', 'error');
+      showToast(nextStatus === 'CANCELLED' ? 'Failed to cancel booking' : 'Failed to reactivate booking', 'error');
+    } finally {
+      setCancellingId(null);
     }
   };
 
@@ -591,7 +601,7 @@ export function TripBookings({ tripId, tripStartDate, tripEndDate }: TripBooking
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
           {bookings.map((booking, i) => (
-            <BookingCard key={booking.id} booking={booking} onDelete={setDeleteTarget} onEdit={startEdit} onToggleCancel={handleToggleCancel} index={i} />
+            <BookingCard key={booking.id} booking={booking} onDelete={setDeleteTarget} onEdit={startEdit} onCancel={handleCancel} cancellingId={cancellingId} index={i} />
           ))}
         </div>
       )}
