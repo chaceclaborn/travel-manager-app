@@ -75,3 +75,9 @@ export function getBookingFormHelpers(type: BookingType) {
     dateOnly: type === 'HOTEL',
   };
 }
+
+export type BookingStatus = 'ACTIVE' | 'CANCELLED';
+
+export function getNextBookingStatus(current: BookingStatus): BookingStatus {
+  return current === 'ACTIVE' ? 'CANCELLED' : 'ACTIVE';
+}

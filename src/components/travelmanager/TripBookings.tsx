@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Plane, Trash2, Plus, X, MapPin, Clock, Hash, Armchair, Pencil } from 'lucide-react';
+import { Plane, Trash2, Plus, X, MapPin, Clock, Hash, Armchair, Pencil, Ban, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,11 +11,12 @@ import { useTMToast } from '@/components/travelmanager/TMToast';
 import { TMDeleteDialog } from '@/components/travelmanager/TMDeleteDialog';
 import { DatePicker } from '@/components/travelmanager/DatePicker';
 import { formatDate, formatDateTime } from '@/lib/date-utils';
-import { type BookingType, typeConfig, typeLabels, emptyBookingForm, getBookingFormHelpers } from '@/lib/travelmanager/booking-config';
+import { type BookingType, type BookingStatus, typeConfig, typeLabels, emptyBookingForm, getBookingFormHelpers, getNextBookingStatus } from '@/lib/travelmanager/booking-config';
 
 interface Booking {
   id: string;
   type: BookingType;
+  status: BookingStatus;
   provider: string;
   confirmationNum: string | null;
   startDateTime: string | null;
@@ -42,8 +43,9 @@ const cardVariants = {
   }),
 };
 
-function BookingCard({ booking, onDelete, onEdit, index }: { booking: Booking; onDelete: (id: string) => void; onEdit: (booking: Booking) => void; index: number }) {
+function BookingCard({ booking, onDelete, onEdit, onToggleCancel, index }: { booking: Booking; onDelete: (id: string) => void; onEdit: (booking: Booking) => void; onToggleCancel: (id: string, status: BookingStatus) => void; index: number }) {
   const config = typeConfig[booking.type];
+  const isCancelled = booking.status === 'CANCELLED';
 
   return (
     <motion.div
@@ -51,7 +53,7 @@ function BookingCard({ booking, onDelete, onEdit, index }: { booking: Booking; o
       variants={cardVariants}
       initial="hidden"
       animate="visible"
-      className={`rounded-lg border border-slate-100 bg-white p-4 shadow-sm transition-all duration-200 ${config.borderAccent} hover:-translate-y-0.5 hover:shadow-md`}
+      className={`rounded-lg border border-slate-100 bg-white p-4 shadow-sm transition-all duration-200 ${config.borderAccent} hover:-translate-y-0.5 hover:shadow-md ${isCancelled ? 'opacity-60' : ''}`}
     >
       <div className="mb-3 flex items-start justify-between">
         <div className="flex items-center gap-2.5">
@@ -59,13 +61,32 @@ function BookingCard({ booking, onDelete, onEdit, index }: { booking: Booking; o
             {config.icon}
           </span>
           <div>
-            <p className="font-semibold text-slate-800">{booking.provider}</p>
-            <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${config.badgeColor}`}>
-              {config.label}
-            </span>
+            <p className={`font-semibold text-slate-800 ${isCancelled ? 'line-through' : ''}`}>{booking.provider}</p>
+            <div className="flex items-center gap-1.5">
+              <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${config.badgeColor}`}>
+                {config.label}
+              </span>
+              {isCancelled && (
+                <span className="inline-block rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-600">
+                  Cancelled
+                </span>
+              )}
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-1">
+          <button
+            onClick={() => onToggleCancel(booking.id, booking.status)}
+            className={`cursor-pointer rounded-md p-2 transition-all duration-200 ${
+              isCancelled
+                ? 'text-slate-300 hover:bg-green-50 hover:text-green-500'
+                : 'text-slate-300 hover:bg-orange-50 hover:text-orange-500'
+            }`}
+            title={isCancelled ? 'Restore booking' : 'Cancel booking'}
+            aria-label={isCancelled ? 'Restore booking' : 'Cancel booking'}
+          >
+            {isCancelled ? <RotateCcw className="size-4" /> : <Ban className="size-4" />}
+          </button>
           <button
             onClick={() => onEdit(booking)}
             className="cursor-pointer rounded-md p-2 text-slate-300 transition-all duration-200 hover:bg-amber-50 hover:text-amber-500"
@@ -320,6 +341,23 @@ export function TripBookings({ tripId, tripStartDate, tripEndDate }: TripBooking
     }
   };
 
+  const handleToggleCancel = async (id: string, currentStatus: BookingStatus) => {
+    const newStatus = getNextBookingStatus(currentStatus);
+    try {
+      const res = await fetch(`/api/bookings/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (!res.ok) throw new Error();
+      const updated = await res.json();
+      setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status: updated.status } : b)));
+      showToast(newStatus === 'CANCELLED' ? 'Booking cancelled' : 'Booking restored');
+    } catch {
+      showToast('Failed to update booking status', 'error');
+    }
+  };
+
   const handleDelete = async () => {
     if (!deleteTarget) return;
     setIsDeleting(true);
@@ -556,7 +594,7 @@ export function TripBookings({ tripId, tripStartDate, tripEndDate }: TripBooking
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
           {bookings.map((booking, i) => (
-            <BookingCard key={booking.id} booking={booking} onDelete={setDeleteTarget} onEdit={startEdit} index={i} />
+            <BookingCard key={booking.id} booking={booking} onDelete={setDeleteTarget} onEdit={startEdit} onToggleCancel={handleToggleCancel} index={i} />
           ))}
         </div>
       )}
