@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Plane, Trash2, Plus, X, MapPin, Clock, Hash, Armchair, Pencil } from 'lucide-react';
+import { Plane, Trash2, Plus, X, MapPin, Clock, Hash, Armchair, Pencil, Ban, RotateCcw, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,10 +12,12 @@ import { TMDeleteDialog } from '@/components/travelmanager/TMDeleteDialog';
 import { DatePicker } from '@/components/travelmanager/DatePicker';
 import { formatDate, formatDateTime } from '@/lib/date-utils';
 import { type BookingType, typeConfig, typeLabels, emptyBookingForm, getBookingFormHelpers } from '@/lib/travelmanager/booking-config';
+import type { BookingStatus } from '@/lib/travelmanager/types';
 
 interface Booking {
   id: string;
   type: BookingType;
+  status: BookingStatus;
   provider: string;
   confirmationNum: string | null;
   startDateTime: string | null;
@@ -42,8 +44,20 @@ const cardVariants = {
   }),
 };
 
-function BookingCard({ booking, onDelete, onEdit, index }: { booking: Booking; onDelete: (id: string) => void; onEdit: (booking: Booking) => void; index: number }) {
+function BookingCard({ booking, onDelete, onEdit, onCancel, index }: { booking: Booking; onDelete: (id: string) => void; onEdit: (booking: Booking) => void; onCancel: (id: string, nextStatus: BookingStatus) => Promise<void>; index: number }) {
   const config = typeConfig[booking.type];
+  const isCancelled = booking.status === 'CANCELLED';
+  const [isCancelling, setIsCancelling] = useState(false);
+
+  const handleCancelClick = async () => {
+    if (isCancelling) return;
+    setIsCancelling(true);
+    try {
+      await onCancel(booking.id, isCancelled ? 'ACTIVE' : 'CANCELLED');
+    } finally {
+      setIsCancelling(false);
+    }
+  };
 
   return (
     <motion.div
@@ -51,7 +65,7 @@ function BookingCard({ booking, onDelete, onEdit, index }: { booking: Booking; o
       variants={cardVariants}
       initial="hidden"
       animate="visible"
-      className={`rounded-lg border border-slate-100 bg-white p-4 shadow-sm transition-all duration-200 ${config.borderAccent} hover:-translate-y-0.5 hover:shadow-md`}
+      className={`rounded-lg border p-4 shadow-sm transition-all duration-200 ${isCancelled ? 'border-slate-200 bg-slate-50/60 opacity-70' : `border-slate-100 bg-white ${config.borderAccent} hover:-translate-y-0.5 hover:shadow-md`}`}
     >
       <div className="mb-3 flex items-start justify-between">
         <div className="flex items-center gap-2.5">
@@ -59,10 +73,17 @@ function BookingCard({ booking, onDelete, onEdit, index }: { booking: Booking; o
             {config.icon}
           </span>
           <div>
-            <p className="font-semibold text-slate-800">{booking.provider}</p>
-            <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${config.badgeColor}`}>
-              {config.label}
-            </span>
+            <p className={`font-semibold ${isCancelled ? 'text-slate-500 line-through' : 'text-slate-800'}`}>{booking.provider}</p>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${config.badgeColor}`}>
+                {config.label}
+              </span>
+              {isCancelled && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-200">
+                  <Ban className="size-2.5" />Cancelled
+                </span>
+              )}
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-1">
@@ -73,6 +94,15 @@ function BookingCard({ booking, onDelete, onEdit, index }: { booking: Booking; o
             aria-label="Edit booking"
           >
             <Pencil className="size-4" />
+          </button>
+          <button
+            onClick={handleCancelClick}
+            disabled={isCancelling}
+            className={`cursor-pointer rounded-md p-2 text-slate-300 transition-all duration-200 focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 ${isCancelled ? 'hover:bg-emerald-50 hover:text-emerald-600' : 'hover:bg-orange-50 hover:text-orange-500'}`}
+            title={isCancelled ? 'Reactivate booking' : 'Mark as cancelled'}
+            aria-label={isCancelled ? 'Reactivate booking' : 'Mark as cancelled'}
+          >
+            {isCancelling ? <Loader2 className="size-4 animate-spin" /> : isCancelled ? <RotateCcw className="size-4" /> : <Ban className="size-4" />}
           </button>
           <button
             onClick={() => onDelete(booking.id)}
@@ -336,6 +366,23 @@ export function TripBookings({ tripId, tripStartDate, tripEndDate }: TripBooking
     }
   };
 
+  const handleCancel = async (id: string, nextStatus: BookingStatus) => {
+    try {
+      const res = await fetch(`/api/bookings/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: nextStatus }),
+      });
+      if (!res.ok) throw new Error();
+      showToast(nextStatus === 'CANCELLED' ? 'Booking cancelled' : 'Booking reactivated');
+      setBookings((prev) =>
+        prev.map((b) => (b.id === id ? { ...b, status: nextStatus } : b))
+      );
+    } catch {
+      showToast(nextStatus === 'CANCELLED' ? 'Failed to cancel booking' : 'Failed to reactivate booking', 'error');
+    }
+  };
+
   const updateForm = (field: string, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
@@ -556,7 +603,7 @@ export function TripBookings({ tripId, tripStartDate, tripEndDate }: TripBooking
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
           {bookings.map((booking, i) => (
-            <BookingCard key={booking.id} booking={booking} onDelete={setDeleteTarget} onEdit={startEdit} index={i} />
+            <BookingCard key={booking.id} booking={booking} onDelete={setDeleteTarget} onEdit={startEdit} onCancel={handleCancel} index={i} />
           ))}
         </div>
       )}
