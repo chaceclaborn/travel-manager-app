@@ -16,9 +16,8 @@ describe('cancel toggle logic', () => {
   });
 
   it('isCancelled is true only for CANCELLED status', () => {
-    const cancelled: BookingStatus = 'CANCELLED';
-    const active: BookingStatus = 'ACTIVE';
-    expect(cancelled === 'CANCELLED').toBe(true);
-    expect(active === 'CANCELLED').toBe(false);
+    const isCancelled = (s: BookingStatus) => s === 'CANCELLED';
+    expect(isCancelled('CANCELLED')).toBe(true);
+    expect(isCancelled('ACTIVE')).toBe(false);
   });
 });
