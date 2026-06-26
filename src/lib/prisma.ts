@@ -46,8 +46,17 @@ function getPrismaClient(): PrismaClient {
   return createPrismaClient();
 }
 
-export const prisma = getPrismaClient();
+// Defer initialization until first use so `next build` doesn't throw when
+// DB_PASSWORD is absent from the Vercel Preview environment.
+export const prisma: PrismaClient = new Proxy({} as PrismaClient, {
+  get(_target, prop: string | symbol) {
+    const client = getPrismaClient();
+    if (!globalForPrisma.prisma) {
+      globalForPrisma.prisma = client;
+    }
+    const val = Reflect.get(client as object, prop);
+    return typeof val === 'function' ? (val as (...args: unknown[]) => unknown).bind(client) : val;
+  },
+});
 
 export default prisma;
-
-globalForPrisma.prisma = prisma;
