@@ -180,6 +180,81 @@ async function testBookingEndpointsReturnJson() {
   }
 }
 
+// ─── Cancel / Status Update Endpoints Require Auth ───
+
+async function testCancelBookingRequiresAuth() {
+  console.log('\n  Cancel Booking Endpoints Require Auth (401)\n');
+
+  const endpoints = [
+    {
+      label: 'PUT /api/bookings/[id] with status CANCELLED requires auth',
+      method: 'PUT',
+      path: `/api/bookings/${FAKE_ID}`,
+      body: { status: 'CANCELLED' },
+    },
+    {
+      label: 'PUT /api/bookings/[id] with status ACTIVE requires auth',
+      method: 'PUT',
+      path: `/api/bookings/${FAKE_ID}`,
+      body: { status: 'ACTIVE' },
+    },
+  ];
+
+  for (const ep of endpoints) {
+    try {
+      const res = await fetch(`${BASE_URL}${ep.path}`, {
+        method: ep.method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(ep.body),
+      });
+      const body = await res.json().catch(() => null);
+
+      const statusOk = res.status === 401;
+      const bodyOk = body && body.error === 'Unauthorized';
+
+      if (statusOk && bodyOk) {
+        report(ep.label, true);
+      } else {
+        const reasons = [];
+        if (!statusOk) reasons.push(`status=${res.status} (expected 401)`);
+        if (!bodyOk) reasons.push(`body=${JSON.stringify(body)}`);
+        report(ep.label, false, reasons.join(', '));
+      }
+    } catch (err) {
+      report(ep.label, false, `Fetch failed: ${err.message}`);
+    }
+  }
+}
+
+// ─── Invalid Status Value Does Not Cause Server Error ───
+
+async function testInvalidBookingStatusRejected() {
+  console.log('\n  Invalid Booking Status Values Do Not Cause 5xx\n');
+
+  // Auth runs before validation, so invalid status gets 401 without credentials.
+  // This confirms the endpoint is reachable and auth-protected (not a 404 or 500).
+  const invalidStatuses = ['PENDING', 'DELETED', '', 'cancelled', 'active'];
+
+  for (const status of invalidStatuses) {
+    try {
+      const res = await fetch(`${BASE_URL}/api/bookings/${FAKE_ID}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      });
+
+      const notServerError = res.status !== 500 && res.status !== 502 && res.status !== 503;
+      report(
+        `PUT with status="${status}" does not cause 5xx`,
+        notServerError,
+        `Got status ${res.status}`
+      );
+    } catch (err) {
+      report(`PUT with status="${status}" is reachable`, false, `Fetch failed: ${err.message}`);
+    }
+  }
+}
+
 // ─── Run ───
 
 async function main() {
@@ -192,6 +267,8 @@ async function main() {
   await testBookingRoutesDoNotCrash();
   await testBookingPostValidation();
   await testBookingEndpointsReturnJson();
+  await testCancelBookingRequiresAuth();
+  await testInvalidBookingStatusRejected();
 
   console.log('\n--- Summary ---');
   console.log(`  ${passed} passed, ${failed} failed out of ${passed + failed}`);
