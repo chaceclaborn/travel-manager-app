@@ -11,12 +11,12 @@ import { useTMToast } from '@/components/travelmanager/TMToast';
 import { TMDeleteDialog } from '@/components/travelmanager/TMDeleteDialog';
 import { DatePicker } from '@/components/travelmanager/DatePicker';
 import { formatDate, formatDateTime } from '@/lib/date-utils';
-import { type BookingType, type BookingStatus, typeConfig, typeLabels, emptyBookingForm, getBookingFormHelpers, getNextBookingStatus } from '@/lib/travelmanager/booking-config';
+import { type BookingType, typeConfig, typeLabels, emptyBookingForm, getBookingFormHelpers } from '@/lib/travelmanager/booking-config';
 
 interface Booking {
   id: string;
   type: BookingType;
-  status: BookingStatus;
+  status: 'ACTIVE' | 'CANCELLED';
   provider: string;
   confirmationNum: string | null;
   startDateTime: string | null;
@@ -43,7 +43,7 @@ const cardVariants = {
   }),
 };
 
-function BookingCard({ booking, onDelete, onEdit, onToggleCancel, index }: { booking: Booking; onDelete: (id: string) => void; onEdit: (booking: Booking) => void; onToggleCancel: (id: string, status: BookingStatus) => void; index: number }) {
+function BookingCard({ booking, onDelete, onEdit, onToggleCancel, index }: { booking: Booking; onDelete: (id: string) => void; onEdit: (booking: Booking) => void; onToggleCancel: (id: string, newStatus: 'ACTIVE' | 'CANCELLED') => void; index: number }) {
   const config = typeConfig[booking.type];
   const isCancelled = booking.status === 'CANCELLED';
 
@@ -53,17 +53,23 @@ function BookingCard({ booking, onDelete, onEdit, onToggleCancel, index }: { boo
       variants={cardVariants}
       initial="hidden"
       animate="visible"
-      className={`rounded-lg border border-slate-100 bg-white p-4 shadow-sm transition-all duration-200 ${config.borderAccent} hover:-translate-y-0.5 hover:shadow-md ${isCancelled ? 'opacity-60' : ''}`}
+      className={`rounded-lg border bg-white p-4 shadow-sm transition-all duration-200 ${
+        isCancelled
+          ? 'border-red-100 opacity-75'
+          : `border-slate-100 ${config.borderAccent} hover:-translate-y-0.5 hover:shadow-md`
+      }`}
     >
       <div className="mb-3 flex items-start justify-between">
         <div className="flex items-center gap-2.5">
-          <span className={`flex items-center justify-center rounded-xl p-2.5 ring-2 ${config.iconBg}`}>
+          <span className={`flex items-center justify-center rounded-xl p-2.5 ring-2 ${isCancelled ? 'bg-slate-100 text-slate-400 ring-slate-200' : config.iconBg}`}>
             {config.icon}
           </span>
           <div>
-            <p className={`font-semibold text-slate-800 ${isCancelled ? 'line-through' : ''}`}>{booking.provider}</p>
+            <p className={`font-semibold ${isCancelled ? 'text-slate-400 line-through' : 'text-slate-800'}`}>
+              {booking.provider}
+            </p>
             <div className="flex items-center gap-1.5">
-              <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${config.badgeColor}`}>
+              <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${isCancelled ? 'bg-slate-100 text-slate-400' : config.badgeColor}`}>
                 {config.label}
               </span>
               {isCancelled && (
@@ -75,25 +81,27 @@ function BookingCard({ booking, onDelete, onEdit, onToggleCancel, index }: { boo
           </div>
         </div>
         <div className="flex items-center gap-1">
+          {!isCancelled && (
+            <button
+              onClick={() => onEdit(booking)}
+              className="cursor-pointer rounded-md p-2 text-slate-300 transition-all duration-200 hover:bg-amber-50 hover:text-amber-500"
+              title="Edit booking"
+              aria-label="Edit booking"
+            >
+              <Pencil className="size-4" />
+            </button>
+          )}
           <button
-            onClick={() => onToggleCancel(booking.id, booking.status)}
+            onClick={() => onToggleCancel(booking.id, isCancelled ? 'ACTIVE' : 'CANCELLED')}
             className={`cursor-pointer rounded-md p-2 transition-all duration-200 ${
               isCancelled
-                ? 'text-slate-300 hover:bg-green-50 hover:text-green-500'
-                : 'text-slate-300 hover:bg-orange-50 hover:text-orange-500'
+                ? 'text-slate-300 hover:bg-green-50 hover:text-green-600'
+                : 'text-slate-300 hover:bg-red-50 hover:text-red-500'
             }`}
-            title={isCancelled ? 'Restore booking' : 'Cancel booking'}
-            aria-label={isCancelled ? 'Restore booking' : 'Cancel booking'}
+            title={isCancelled ? 'Reactivate booking' : 'Cancel booking'}
+            aria-label={isCancelled ? 'Reactivate booking' : 'Cancel booking'}
           >
             {isCancelled ? <RotateCcw className="size-4" /> : <Ban className="size-4" />}
-          </button>
-          <button
-            onClick={() => onEdit(booking)}
-            className="cursor-pointer rounded-md p-2 text-slate-300 transition-all duration-200 hover:bg-amber-50 hover:text-amber-500"
-            title="Edit booking"
-            aria-label="Edit booking"
-          >
-            <Pencil className="size-4" />
           </button>
           <button
             onClick={() => onDelete(booking.id)}
@@ -106,7 +114,7 @@ function BookingCard({ booking, onDelete, onEdit, onToggleCancel, index }: { boo
         </div>
       </div>
 
-      <div className="space-y-1.5 text-sm">
+      <div className={`space-y-1.5 text-sm ${isCancelled ? 'opacity-60' : ''}`}>
         {booking.type === 'FLIGHT' && (
           <>
             {(booking.location || booking.endLocation) && (
@@ -341,23 +349,6 @@ export function TripBookings({ tripId, tripStartDate, tripEndDate }: TripBooking
     }
   };
 
-  const handleToggleCancel = async (id: string, currentStatus: BookingStatus) => {
-    const newStatus = getNextBookingStatus(currentStatus);
-    try {
-      const res = await fetch(`/api/bookings/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
-      });
-      if (!res.ok) throw new Error();
-      const updated = await res.json();
-      setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status: updated.status } : b)));
-      showToast(newStatus === 'CANCELLED' ? 'Booking cancelled' : 'Booking restored');
-    } catch {
-      showToast('Failed to update booking status', 'error');
-    }
-  };
-
   const handleDelete = async () => {
     if (!deleteTarget) return;
     setIsDeleting(true);
@@ -371,6 +362,21 @@ export function TripBookings({ tripId, tripStartDate, tripEndDate }: TripBooking
       showToast('Failed to delete booking', 'error');
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleToggleCancel = async (id: string, newStatus: 'ACTIVE' | 'CANCELLED') => {
+    try {
+      const res = await fetch(`/api/bookings/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (!res.ok) throw new Error();
+      showToast(newStatus === 'CANCELLED' ? 'Booking cancelled' : 'Booking reactivated');
+      fetchBookings();
+    } catch {
+      showToast('Failed to update booking status', 'error');
     }
   };
 
