@@ -83,6 +83,38 @@
   --sidebar-ring: #F59E0B;
 }
 
+@theme {
+  /* Elevation scale — layered, soft shadows instead of single-blur defaults.
+     Generates shadow-card / shadow-card-hover / shadow-glow utilities. */
+  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04), 0 2px 8px -2px rgba(15, 23, 42, 0.06);
+  --shadow-card-hover: 0 2px 4px rgba(15, 23, 42, 0.05), 0 12px 32px -8px rgba(15, 23, 42, 0.14);
+  --shadow-glow: 0 0 20px rgba(245, 158, 11, 0.35);
+}
+
+/* Frosted-glass surface for overlays and chrome (light theme). */
+@utility glass {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(12px) saturate(1.4);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+}
+
+/* Brand gradient text — use sparingly (hero headings, brand marks). */
+@utility text-gradient-brand {
+  background-image: linear-gradient(115deg, #f59e0b 20%, #fbbf24 50%, #d97706 80%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Faint blueprint grid for hero / empty-state backdrops. */
+@utility bg-grid-faint {
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.07) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -90,6 +122,11 @@
   html {
     scroll-behavior: smooth;
     overflow-x: hidden;
+    /* The app ships a light-only palette (no .dark token block). `only light`
+       opts out of Chrome's Auto Dark Mode force-darkening, which otherwise
+       inverts public pages — the (app) shell's !important overrides only
+       protect authenticated routes. */
+    color-scheme: only light;
   }
   body {
     @apply text-foreground antialiased;

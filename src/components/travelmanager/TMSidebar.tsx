@@ -52,7 +52,7 @@ function NavItem({
       {isActive && (
         <motion.div
           layoutId="sidebar-active-accent"
-          className="absolute left-0 top-1 bottom-1 w-[3px] rounded-full bg-amber-500"
+          className="absolute left-0 top-1 bottom-1 w-[3px] rounded-full bg-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.65)]"
           transition={{ type: 'spring', stiffness: 350, damping: 30 }}
         />
       )}

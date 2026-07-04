@@ -14,13 +14,13 @@ interface TMStatsCardProps {
 }
 
 const colorMap: Record<string, { bg: string; text: string; border: string }> = {
-  blue: { bg: 'bg-blue-50', text: 'text-blue-600', border: 'bg-blue-500' },
-  amber: { bg: 'bg-amber-50', text: 'text-amber-600', border: 'bg-amber-500' },
-  purple: { bg: 'bg-purple-50', text: 'text-purple-600', border: 'bg-purple-500' },
-  green: { bg: 'bg-green-50', text: 'text-green-600', border: 'bg-green-500' },
-  red: { bg: 'bg-red-50', text: 'text-red-600', border: 'bg-red-500' },
-  indigo: { bg: 'bg-indigo-50', text: 'text-indigo-600', border: 'bg-indigo-500' },
-  slate: { bg: 'bg-slate-50', text: 'text-slate-600', border: 'bg-slate-500' },
+  blue: { bg: 'bg-gradient-to-br from-blue-50 to-blue-100/80 ring-1 ring-inset ring-blue-500/10', text: 'text-blue-600', border: 'bg-gradient-to-r from-blue-500 to-blue-400' },
+  amber: { bg: 'bg-gradient-to-br from-amber-50 to-amber-100/80 ring-1 ring-inset ring-amber-500/10', text: 'text-amber-600', border: 'bg-gradient-to-r from-amber-500 to-amber-400' },
+  purple: { bg: 'bg-gradient-to-br from-purple-50 to-purple-100/80 ring-1 ring-inset ring-purple-500/10', text: 'text-purple-600', border: 'bg-gradient-to-r from-purple-500 to-purple-400' },
+  green: { bg: 'bg-gradient-to-br from-green-50 to-green-100/80 ring-1 ring-inset ring-green-500/10', text: 'text-green-600', border: 'bg-gradient-to-r from-green-500 to-green-400' },
+  red: { bg: 'bg-gradient-to-br from-red-50 to-red-100/80 ring-1 ring-inset ring-red-500/10', text: 'text-red-600', border: 'bg-gradient-to-r from-red-500 to-red-400' },
+  indigo: { bg: 'bg-gradient-to-br from-indigo-50 to-indigo-100/80 ring-1 ring-inset ring-indigo-500/10', text: 'text-indigo-600', border: 'bg-gradient-to-r from-indigo-500 to-indigo-400' },
+  slate: { bg: 'bg-gradient-to-br from-slate-50 to-slate-100/80 ring-1 ring-inset ring-slate-500/10', text: 'text-slate-600', border: 'bg-gradient-to-r from-slate-500 to-slate-400' },
 };
 
 function useCountUp(target: number, duration = 800) {
@@ -74,7 +74,7 @@ export function TMStatsCard({ title, value, icon: Icon, color, href }: TMStatsCa
         y: -3,
         boxShadow: '0 8px 24px -4px rgba(0,0,0,0.08), 0 4px 8px -4px rgba(0,0,0,0.04)',
       }}
-      className={`relative overflow-hidden rounded-xl bg-white p-6 shadow-sm transition-colors${
+      className={`relative overflow-hidden rounded-xl bg-white p-6 shadow-card ring-1 ring-slate-900/[0.04] transition-colors${
         href ? ' cursor-pointer hover:bg-slate-50/40' : ''
       }`}
     >
@@ -88,7 +88,7 @@ export function TMStatsCard({ title, value, icon: Icon, color, href }: TMStatsCa
           <Icon className={`size-5 ${colors.text}`} />
         </div>
         <div className="min-w-0">
-          <p className="text-3xl font-bold tracking-tight text-slate-900">
+          <p className="text-3xl font-bold tracking-tight tabular-nums text-slate-900">
             {displayValue}
           </p>
           <p className="mt-0.5 text-xs font-medium tracking-wide text-slate-400 uppercase">

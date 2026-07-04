@@ -127,12 +127,21 @@ function TourPageContent() {
         )}
 
         {/* Hero Section */}
-        <motion.div variants={item} className="text-center pt-8 pb-16">
-          <div className="mx-auto mb-6 flex size-16 items-center justify-center rounded-2xl bg-amber-100">
-            <Plane className="size-8 text-amber-600" />
+        <motion.div variants={item} className="relative text-center pt-8 pb-16">
+          {/* Decorative backdrop — faint blueprint grid + soft amber glow */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-0 -top-16 bottom-0 bg-grid-faint [mask-image:radial-gradient(ellipse_65%_65%_at_50%_35%,black,transparent)]"
+          />
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute left-1/2 top-4 size-72 -translate-x-1/2 rounded-full bg-amber-400/15 blur-3xl"
+          />
+          <div className="relative mx-auto mb-6 flex size-16 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 shadow-glow">
+            <Plane className="size-8 text-white" />
           </div>
-          <h1 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">
-            Travel Manager
+          <h1 className="relative text-4xl font-bold tracking-tight sm:text-5xl">
+            <span className="text-gradient-brand">Travel Manager</span>
           </h1>
           <p className="mx-auto mt-4 max-w-lg text-lg text-slate-600">
             Plan trips, manage vendors, track clients — all in one place
@@ -166,9 +175,9 @@ function TourPageContent() {
               <motion.div
                 key={feature.title}
                 variants={item}
-                className="rounded-xl bg-white p-6 shadow-sm hover:shadow-md transition-shadow"
+                className="rounded-xl bg-white p-6 shadow-card ring-1 ring-slate-900/[0.03] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-card-hover"
               >
-                <div className="mb-3 flex size-10 items-center justify-center rounded-full bg-amber-100">
+                <div className="mb-3 flex size-10 items-center justify-center rounded-lg bg-gradient-to-br from-amber-50 to-amber-100 ring-1 ring-inset ring-amber-500/10">
                   <feature.icon className="size-5 text-amber-600" />
                 </div>
                 <h3 className="text-sm font-semibold text-slate-800">{feature.title}</h3>
@@ -179,7 +188,7 @@ function TourPageContent() {
         </motion.div>
 
         {/* Security Section */}
-        <motion.div variants={item} className="mt-16 rounded-xl bg-white p-8 shadow-sm">
+        <motion.div variants={item} className="mt-16 rounded-xl bg-white p-8 shadow-card ring-1 ring-slate-900/[0.03]">
           <div className="text-center mb-6">
             <Shield className="mx-auto size-8 text-amber-600 mb-3" />
             <h2 className="text-xl font-bold text-slate-800">Your data is secure</h2>
