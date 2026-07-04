@@ -14,6 +14,7 @@ const geistMono = Geist_Mono({
 
 export const viewport: Viewport = {
   themeColor: "#f59e0b",
+  colorScheme: "only light", // opt out of Chrome Auto Dark Mode (light-only palette)
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -44,7 +45,10 @@ export const metadata: Metadata = {
   // alone — we have our own theme system and the extension's DOM mutations
   // cause noisy hydration warnings on every page load.
   other: {
-    "darkreader-lock": "",
+    // Next.js drops `other` meta entries whose value is an empty string, so
+    // this must be non-empty for the tag to render. Dark Reader only checks
+    // that the tag exists; the content is ignored.
+    "darkreader-lock": "true",
   },
 };
 

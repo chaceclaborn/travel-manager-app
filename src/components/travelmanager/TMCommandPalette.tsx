@@ -168,29 +168,47 @@ export function TMCommandPalette({ open, onClose }: TMCommandPaletteProps) {
     [results]
   );
 
-  // Reset state when opening
-  useEffect(() => {
+  // Reset state when opening — adjusted during render (React's "adjusting
+  // state when props change" pattern) so no effect-triggered re-render.
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
     if (open) {
       setQuery('');
       setResults(null);
       setActiveIndex(0);
       setRecentSearches(getRecentSearches());
-      setTimeout(() => inputRef.current?.focus(), 50);
+    }
+  }
+
+  // Focus the input when opening (DOM side effect stays in an effect)
+  useEffect(() => {
+    if (open) {
+      const timer = setTimeout(() => inputRef.current?.focus(), 50);
+      return () => clearTimeout(timer);
     }
   }, [open]);
+
+  // Loading/reset state tracks query transitions — adjusted during render so
+  // the effect below only owns the actual network request.
+  const [prevQuery, setPrevQuery] = useState(query);
+  if (query !== prevQuery) {
+    setPrevQuery(query);
+    if (query.trim().length < 2) {
+      setResults(null);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
+  }
 
   // Debounced search with AbortController — cancels stale requests
   useEffect(() => {
     const q = query.trim();
 
-    if (q.length < 2) {
-      setResults(null);
-      setLoading(false);
-      return;
-    }
+    if (q.length < 2) return;
 
     const controller = new AbortController();
-    setLoading(true);
 
     const timer = setTimeout(async () => {
       try {

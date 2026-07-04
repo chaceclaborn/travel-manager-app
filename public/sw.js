@@ -39,15 +39,32 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET') return;
 
+  const url = new URL(request.url);
+
+  // Never intercept cross-origin requests (map tiles, avatars, OAuth, CDNs).
+  // A fetch() made here runs under the service worker's CSP connect-src —
+  // stricter than the page's img-src — so proxying third-party images
+  // through the worker gets them blocked, and the old offline fallback then
+  // served offline.html as the "image" body (tiles rendered as black).
+  if (url.origin !== self.location.origin) return;
+
   // Don't intercept API calls — they need to fail fast when offline so the UI
   // can show a meaningful error instead of stale cached data.
-  const url = new URL(request.url);
   if (url.pathname.startsWith('/api/')) return;
 
   event.respondWith(
-    fetch(request).catch(() =>
-      caches.match(request).then((cached) => cached || caches.match(OFFLINE_URL))
-    )
+    fetch(request).catch(async () => {
+      const cached = await caches.match(request);
+      if (cached) return cached;
+      // The offline page only makes sense as a response to a page
+      // navigation. For subresources (images, scripts, styles) serving
+      // HTML would corrupt the consumer — let those fail naturally.
+      if (request.mode === 'navigate') {
+        const offline = await caches.match(OFFLINE_URL);
+        if (offline) return offline;
+      }
+      return Response.error();
+    })
   );
 });
 

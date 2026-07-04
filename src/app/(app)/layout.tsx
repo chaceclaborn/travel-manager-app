@@ -46,23 +46,22 @@ export default function TravelManagerLayout({
     : '';
 
   useEffect(() => {
+    // Mount-only hydration from localStorage/navigator — values that don't
+    // exist on the server, so they can't be useState initializers.
     const dismissedAt = localStorage.getItem('tm-demo-dismissed');
-    if (dismissedAt) {
-      const weekMs = 7 * 24 * 60 * 60 * 1000;
-      setDemoDismissed(Date.now() - Number(dismissedAt) < weekMs);
-    } else {
-      setDemoDismissed(false);
-    }
+    const weekMs = 7 * 24 * 60 * 60 * 1000;
+    const dismissed = dismissedAt ? Date.now() - Number(dismissedAt) < weekMs : false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time client hydration, not a render cascade
+    setDemoDismissed(dismissed);
     if (!navigator.platform.includes('Mac')) {
       setModKey('Ctrl');
     }
   }, []);
 
   useEffect(() => {
-    if (!user) {
-      setIsAdminChecked(true);
-      return;
-    }
+    // No user → no admin check needed; the sidebar renders `isAdminChecked &&
+    // isAdmin`, which is false either way, and signed-out users are redirected.
+    if (!user) return;
     fetch('/api/auth/is-admin')
       .then((r) => r.json())
       .then((data) => {
@@ -80,9 +79,13 @@ export default function TravelManagerLayout({
     }
   }, [user]);
 
-  useEffect(() => {
+  // Close the mobile drawer on navigation — state adjustment during render
+  // instead of an effect, per React's "adjusting state when props change".
+  const [prevPathname, setPrevPathname] = useState(pathname);
+  if (pathname !== prevPathname) {
+    setPrevPathname(pathname);
     setMobileMenuOpen(false);
-  }, [pathname]);
+  }
 
   // Redirect unauthenticated users to the tour page.
   // Must run in an effect (not during render) — render must be a pure function.
@@ -248,11 +251,16 @@ export default function TravelManagerLayout({
 
         <div className="flex min-h-screen max-w-[100vw] overflow-x-hidden">
           {/* Desktop Sidebar */}
-          <aside className="hidden md:flex w-64 flex-col fixed inset-y-0 left-0 bg-slate-900 z-40 safe-area-top safe-area-bottom safe-area-left" role="navigation" aria-label="Main navigation">
-            <div className="flex items-center justify-between px-6 py-5 border-b border-white/10">
-              <div>
-                <h1 className="text-lg font-bold text-white">Travel Manager</h1>
-                <p className="text-xs text-slate-400 mt-0.5">Trip Planning Dashboard</p>
+          <aside className="hidden md:flex w-64 flex-col fixed inset-y-0 left-0 bg-gradient-to-b from-slate-900 to-slate-950 border-r border-white/[0.06] z-40 safe-area-top safe-area-bottom safe-area-left" role="navigation" aria-label="Main navigation">
+            <div className="flex items-center justify-between px-5 py-5 border-b border-white/10">
+              <div className="flex items-center gap-2.5">
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 shadow-glow">
+                  <MapPin className="size-4 text-white" aria-hidden="true" />
+                </span>
+                <div>
+                  <h1 className="text-base font-bold text-white leading-tight">Travel Manager</h1>
+                  <p className="text-[11px] text-slate-400">Trip Planning Dashboard</p>
+                </div>
               </div>
               <TMUserMenu user={user} onSignOut={signOut} />
             </div>
@@ -264,7 +272,7 @@ export default function TravelManagerLayout({
               >
                 <Search className="size-4" />
                 <span>Search</span>
-                <kbd className="ml-auto text-xs bg-white/10 px-1.5 py-0.5 rounded">{modKey}+K</kbd>
+                <kbd className="ml-auto font-mono text-[10px] tracking-wide border border-white/10 bg-white/5 px-1.5 py-0.5 rounded-md">{modKey}+K</kbd>
               </button>
             </div>
           </aside>
@@ -273,8 +281,10 @@ export default function TravelManagerLayout({
           <div className="md:hidden fixed top-0 inset-x-0 z-40 bg-slate-900/95 backdrop-blur-md border-b border-white/10 safe-area-top">
             <div className="flex items-center justify-between px-4 h-16">
               <div>
-                <h1 className="text-lg font-bold text-white flex items-center gap-1.5">
-                  <MapPin className="size-4 text-amber-400" />
+                <h1 className="text-lg font-bold text-white flex items-center gap-2">
+                  <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-amber-400 to-amber-600 shadow-glow">
+                    <MapPin className="size-3.5 text-white" aria-hidden="true" />
+                  </span>
                   Travel Manager
                 </h1>
                 {pageTitle && (
@@ -324,15 +334,20 @@ export default function TravelManagerLayout({
                   animate={{ x: 0 }}
                   exit={{ x: '-100%' }}
                   transition={{ duration: 0.3, ease: 'easeInOut' }}
-                  className="md:hidden fixed inset-y-0 left-0 w-64 bg-slate-900 z-[60] flex flex-col"
+                  className="md:hidden fixed inset-y-0 left-0 w-64 bg-gradient-to-b from-slate-900 to-slate-950 z-[60] flex flex-col"
                   id="mobile-nav"
                   role="navigation"
                   aria-label="Main navigation"
                 >
-                  <div className="flex items-center justify-between px-6 py-5 border-b border-white/10">
-                    <div>
-                      <h1 className="text-lg font-bold text-white">Travel Manager</h1>
-                      <p className="text-xs text-slate-400 mt-0.5">Trip Planning Dashboard</p>
+                  <div className="flex items-center justify-between px-5 py-5 border-b border-white/10">
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 shadow-glow">
+                        <MapPin className="size-4 text-white" aria-hidden="true" />
+                      </span>
+                      <div>
+                        <h1 className="text-base font-bold text-white leading-tight">Travel Manager</h1>
+                        <p className="text-[11px] text-slate-400">Trip Planning Dashboard</p>
+                      </div>
                     </div>
                     <button
                       onClick={() => setMobileMenuOpen(false)}

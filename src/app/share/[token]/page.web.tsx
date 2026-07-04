@@ -89,25 +89,26 @@ function UnsharedTripMessage() {
 export default async function SharedTripPage(
   { params }: { params: Promise<{ token: string }> }
 ) {
+  // Only data fetching lives in the try/catch — JSX is returned outside it,
+  // since render errors can't be caught here anyway (that's error.tsx's job).
+  let trip: Awaited<ReturnType<typeof getPublicTripByToken>> = null;
   try {
     const { token } = await params;
 
     // Basic token shape guard — our tokens are 22 chars of base64url (A-Z, a-z, 0-9, -, _)
-    if (!token || token.length > 128 || !/^[A-Za-z0-9_-]+$/.test(token)) {
-      return <UnsharedTripMessage />;
+    if (token && token.length <= 128 && /^[A-Za-z0-9_-]+$/.test(token)) {
+      trip = await getPublicTripByToken(token);
     }
-
-    const trip = await getPublicTripByToken(token);
-
-    // getPublicTripByToken already enforces shareEnabled and shareExpiresAt.
-    if (!trip) {
-      return <UnsharedTripMessage />;
-    }
-
-    return <SharedTripView trip={trip} />;
   } catch {
     // Any runtime error (DB down, Prisma crash, etc.) should degrade
     // gracefully to the "not shared" page instead of a 500.
+    trip = null;
+  }
+
+  // getPublicTripByToken already enforces shareEnabled and shareExpiresAt.
+  if (!trip) {
     return <UnsharedTripMessage />;
   }
+
+  return <SharedTripView trip={trip} />;
 }

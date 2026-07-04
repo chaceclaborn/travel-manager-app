@@ -12,7 +12,7 @@ const ContentSecurityPolicy = `
   style-src 'self' 'unsafe-inline';
   img-src 'self' data: blob: *.tile.openstreetmap.org *.basemaps.cartocdn.com *.googleusercontent.com *.supabase.co;
   font-src 'self';
-  connect-src 'self' *.supabase.co accounts.google.com *.googleapis.com nominatim.openstreetmap.org;
+  connect-src 'self' *.supabase.co accounts.google.com *.googleapis.com nominatim.openstreetmap.org *.basemaps.cartocdn.com *.tile.openstreetmap.org;
   frame-src accounts.google.com *.supabase.co;
   frame-ancestors 'none';
   object-src 'none';

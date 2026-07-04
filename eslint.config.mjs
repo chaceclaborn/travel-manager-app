@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Prisma-generated client: thousands of autogen warnings we don't own.
     "src/lib/generated/**",
+    // Capacitor iOS shell: committed static-export build output, not source.
+    "ios/**",
   ]),
 ]);
 
