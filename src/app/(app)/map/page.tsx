@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { MapPin, Globe as GlobeIcon, Plane, Route, Loader2, Home, Search } from 'lucide-react';
+import { MapPin, Globe as GlobeIcon, Plane, Car, Route, Loader2, Home, Search } from 'lucide-react';
 import { TMBreadcrumb } from '@/components/travelmanager/TMBreadcrumb';
 import { haversineDistance, KM_TO_MILES } from '@/lib/distance';
 import { useGeocodingSearch, formatGeoName } from '@/lib/travelmanager/useGeocodingSearch';
@@ -225,6 +225,45 @@ export default function MapPage() {
 
   const completedTrips = geoTrips.filter(t => t.status === 'COMPLETED').length;
 
+  // Flown vs driven mileage across every trip's route (stop chains plus the
+  // implicit home departure/return legs, matching each trip page's Route
+  // card). A stop's stored mode wins; otherwise legs over 250 straight-line
+  // miles count as flights. Straight-line estimates, so ~ in the UI.
+  const modeMiles = (() => {
+    const chains = new Map<string, MapStop[]>();
+    for (const s of stops) {
+      const list = chains.get(s.tripId) ?? [];
+      list.push(s);
+      chains.set(s.tripId, list);
+    }
+    let flown = 0;
+    let ground = 0;
+    const legMiles = (a: { latitude: number; longitude: number }, b: { latitude: number; longitude: number }) =>
+      haversineDistance(a.latitude, a.longitude, b.latitude, b.longitude) * KM_TO_MILES;
+    const bucket = (miles: number, storedMode: string | null) => {
+      const mode = storedMode ?? (miles > 250 ? 'flight' : 'drive');
+      if (mode === 'flight') flown += miles;
+      else ground += miles;
+    };
+    for (const chain of chains.values()) {
+      chain.sort((a, b) => a.sortOrder - b.sortOrder);
+      const first = chain[0];
+      const last = chain[chain.length - 1];
+      if (homeLocation && first) {
+        const m = legMiles(homeLocation, first);
+        if (m > 15) bucket(m, first.travelMode);
+      }
+      for (let i = 1; i < chain.length; i++) {
+        bucket(legMiles(chain[i - 1], chain[i]), chain[i].travelMode);
+      }
+      if (homeLocation && last) {
+        const m = legMiles(last, homeLocation);
+        if (m > 15) bucket(m, null);
+      }
+    }
+    return { flown, ground };
+  })();
+
   return (
     <div className="flex flex-col h-full overflow-x-hidden">
       <div className="px-4 pt-4 pb-2 md:px-6 md:pt-6">
@@ -337,6 +376,32 @@ export default function MapPage() {
             </div>
             <p className="text-xs text-slate-400 mt-1">Miles completed</p>
           </div>
+
+          {(modeMiles.flown > 0 || modeMiles.ground > 0) && (
+            <div className="flex-1 bg-white border border-slate-200 rounded-xl p-4">
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-500 mb-2">By mode</p>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-2 text-sm text-slate-600">
+                    <Plane className="size-4 text-amber-500" />
+                    Flown
+                  </span>
+                  <span className="text-sm font-bold tabular-nums text-slate-900">
+                    ~{formatDistance(modeMiles.flown)} mi
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-2 text-sm text-slate-600">
+                    <Car className="size-4 text-amber-500" />
+                    Driven
+                  </span>
+                  <span className="text-sm font-bold tabular-nums text-slate-900">
+                    ~{formatDistance(modeMiles.ground)} mi
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="flex-1 bg-white border border-slate-200 rounded-xl p-4">
             <div className="flex items-center gap-2 text-slate-500 mb-1">
