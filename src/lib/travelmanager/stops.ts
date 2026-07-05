@@ -6,6 +6,9 @@ async function verifyTripOwnership(tripId: string, userId: string) {
   return trip;
 }
 
+export const STOP_TRAVEL_MODES = ['drive', 'flight', 'train', 'bus', 'boat', 'walk'] as const;
+export type StopTravelMode = (typeof STOP_TRAVEL_MODES)[number];
+
 export interface CreateStopInput {
   tripId: string;
   name: string;
@@ -13,6 +16,14 @@ export interface CreateStopInput {
   longitude: number;
   date?: string | null;
   notes?: string | null;
+  travelMode?: string | null;
+}
+
+export interface UpdateStopInput {
+  name?: string;
+  date?: string | null;
+  notes?: string | null;
+  travelMode?: string | null;
 }
 
 export async function getStops(tripId: string, userId: string) {
@@ -38,9 +49,48 @@ export async function createStop(data: CreateStopInput, userId: string) {
       longitude: data.longitude,
       date: data.date ? new Date(data.date) : null,
       notes: data.notes ?? null,
+      travelMode: data.travelMode ?? null,
       sortOrder: (last?.sortOrder ?? -1) + 1,
     },
   });
+}
+
+export async function updateStop(
+  stopId: string,
+  tripId: string,
+  userId: string,
+  data: UpdateStopInput
+) {
+  await verifyTripOwnership(tripId, userId);
+  // updateMany scoped to tripId so a stop id from another trip is a no-op
+  const result = await prisma.tripStop.updateMany({
+    where: { id: stopId, tripId },
+    data: {
+      ...(data.name !== undefined ? { name: data.name } : {}),
+      ...(data.date !== undefined ? { date: data.date ? new Date(data.date) : null } : {}),
+      ...(data.notes !== undefined ? { notes: data.notes } : {}),
+      ...(data.travelMode !== undefined ? { travelMode: data.travelMode } : {}),
+    },
+  });
+  if (result.count === 0) throw new Error('Stop not found');
+  return prisma.tripStop.findUnique({ where: { id: stopId } });
+}
+
+export async function reorderStops(tripId: string, userId: string, orderedIds: string[]) {
+  await verifyTripOwnership(tripId, userId);
+  // Verify all ids belong to this trip (prevents cross-trip reordering)
+  const existing = await prisma.tripStop.findMany({
+    where: { id: { in: orderedIds }, tripId },
+    select: { id: true },
+  });
+  if (existing.length !== orderedIds.length) {
+    throw new Error('Some stops do not belong to this trip');
+  }
+  await prisma.$transaction(
+    orderedIds.map((id, index) =>
+      prisma.tripStop.update({ where: { id }, data: { sortOrder: index } })
+    )
+  );
 }
 
 export async function deleteStop(stopId: string, tripId: string, userId: string) {

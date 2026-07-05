@@ -5,19 +5,14 @@ import { MapContainer, TileLayer, Marker, Polyline, useMap } from 'react-leaflet
 import L from 'leaflet';
 // leaflet/dist/leaflet.css is imported globally in src/app/globals.css
 import { MapPinOff } from 'lucide-react';
-
-interface MiniMapStop {
-  id: string;
-  name: string;
-  latitude: number;
-  longitude: number;
-}
+import type { TripStopData, RouteLeg } from './TripStops';
 
 interface TripMiniMapProps {
   latitude: number | null;
   longitude: number | null;
   destination?: string | null;
-  stops?: MiniMapStop[];
+  stops?: TripStopData[];
+  legs?: RouteLeg[];
 }
 
 /**
@@ -37,8 +32,7 @@ function createMarkerIcon() {
 }
 
 /**
- * Numbered dot for stops within the trip — visually subordinate to the main
- * destination pin.
+ * Numbered dot for route stops.
  */
 function createStopIcon(n: number) {
   const html = `<div style="display:flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:9999px;background:#f59e0b;border:2px solid #fff;box-shadow:0 1px 3px rgba(15,23,42,.3);color:#fff;font-size:10px;font-weight:700;font-family:inherit;">${n}</div>`;
@@ -69,20 +63,33 @@ function FitPoints({ points }: { points: [number, number][] }) {
 }
 
 /**
- * A small, non-interactive-ish map showing the trip's destination plus any
- * stops visited within the trip, connected in order.
- * Must be dynamically imported (ssr: false) by the parent to avoid SSR errors
- * from Leaflet touching `window`.
+ * Trip map: the ordered route through every place visited. Driven legs
+ * follow the actual roads (geometry from the routing proxy); flights and
+ * other non-road legs draw as dashed straight lines. The trip's top-level
+ * destination pin is shown standalone only until it's added to the route.
+ * Must be dynamically imported (ssr: false) by the parent — Leaflet
+ * touches `window`.
  */
 export function TripMiniMap({
   latitude,
   longitude,
   destination,
   stops = [],
+  legs = [],
 }: TripMiniMapProps) {
   const hasMain = latitude != null && longitude != null;
   const stopPoints: [number, number][] = stops.map((s) => [s.latitude, s.longitude]);
-  const allPoints: [number, number][] = hasMain
+
+  // Show the destination pin only if it isn't already represented as a stop
+  // (compare by proximity — ~1km — so "El Paso" the stop hides the dupe pin).
+  const mainIsAStop =
+    hasMain &&
+    stops.some(
+      (s) => Math.abs(s.latitude - latitude) < 0.01 && Math.abs(s.longitude - longitude) < 0.01
+    );
+  const showMainPin = hasMain && !mainIsAStop;
+
+  const allPoints: [number, number][] = showMainPin
     ? [[latitude, longitude], ...stopPoints]
     : stopPoints;
 
@@ -109,7 +116,7 @@ export function TripMiniMap({
     <div className="h-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-shadow duration-300 hover:shadow-md">
       <div className="flex items-center justify-between px-6 pt-5 pb-3">
         <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-600">
-          Location
+          {stops.length > 1 ? 'Route' : 'Location'}
         </h3>
         {destination && (
           <span className="truncate text-xs text-slate-500" title={destination}>
@@ -132,7 +139,7 @@ export function TripMiniMap({
         >
           <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
           <FitPoints points={allPoints} />
-          {hasMain && (
+          {showMainPin && (
             <Marker
               position={[latitude, longitude]}
               icon={createMarkerIcon()}
@@ -148,12 +155,32 @@ export function TripMiniMap({
               title={stop.name}
             />
           ))}
-          {allPoints.length > 1 && (
-            <Polyline
-              positions={allPoints}
-              pathOptions={{ color: '#f59e0b', weight: 2.5, opacity: 0.7, dashArray: '6 6' }}
-            />
-          )}
+          {/* Route legs between consecutive stops */}
+          {stops.map((stop, i) => {
+            if (i === 0) return null;
+            const from = stops[i - 1];
+            const leg = legs.find((l) => l.toId === stop.id);
+            const positions: [number, number][] =
+              leg?.geometry && leg.geometry.length > 1
+                ? leg.geometry
+                : [
+                    [from.latitude, from.longitude],
+                    [stop.latitude, stop.longitude],
+                  ];
+            const isRoad = !!leg?.geometry;
+            return (
+              <Polyline
+                key={`leg-${stop.id}`}
+                positions={positions}
+                pathOptions={{
+                  color: '#f59e0b',
+                  weight: isRoad ? 3 : 2.5,
+                  opacity: isRoad ? 0.85 : 0.6,
+                  dashArray: isRoad ? undefined : '6 6',
+                }}
+              />
+            );
+          })}
         </MapContainer>
       </div>
     </div>

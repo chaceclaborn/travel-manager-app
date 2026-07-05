@@ -43,7 +43,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { TripWeatherWidget } from '@/components/travelmanager/TripWeatherWidget';
-import { TripStops, type TripStopData } from '@/components/travelmanager/TripStops';
+import { TripStops, type TripStopData, type RouteLeg } from '@/components/travelmanager/TripStops';
 
 // Leaflet touches `window`, so the mini-map must be client-only.
 const TripMiniMap = dynamic(
@@ -177,6 +177,7 @@ export default function TripDetailPage() {
     client?: { id: string; name: string; company?: string | null } | null;
   }>>([]);
   const [stops, setStops] = useState<TripStopData[]>([]);
+  const [routeLegs, setRouteLegs] = useState<RouteLeg[]>([]);
   const [tripVendors, setTripVendors] = useState<Array<{ vendor: { id: string; name: string; category?: string | null; [key: string]: unknown } }>>([]);
   const [tripClients, setTripClients] = useState<Array<{ client: { id: string; name: string; company?: string | null; [key: string]: unknown } }>>([]);
   const [allVendors, setAllVendors] = useState<Array<{ id: string; name: string; category?: string }>>([]);
@@ -878,10 +879,20 @@ export default function TripDetailPage() {
               longitude={trip.longitude}
               destination={trip.destination}
               stops={stops}
+              legs={routeLegs}
             />
           </div>
           <div className="mt-4">
-            <TripStops tripId={id} onStopsChange={setStops} />
+            <TripStops
+              tripId={id}
+              tripDestination={trip.destination}
+              tripLatitude={trip.latitude}
+              tripLongitude={trip.longitude}
+              onRouteChange={(s, l) => {
+                setStops(s);
+                setRouteLegs(l);
+              }}
+            />
           </div>
         </motion.div>
       )}

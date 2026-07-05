@@ -186,6 +186,11 @@ model TripStop {
   longitude Float
   date      DateTime?
   notes     String?
+  // How the traveler got TO this stop from the previous point:
+  // drive | flight | train | bus | boat | walk. Free text validated
+  // app-side (like Booking.type) — the Trip-level TransportMode enum is
+  // intentionally not reused so stop modes can grow without a DB migration.
+  travelMode String?
   sortOrder Int       @default(0)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt

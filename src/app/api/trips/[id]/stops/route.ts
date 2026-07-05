@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getStops, createStop } from '@/lib/travelmanager/stops';
+import { getStops, createStop, STOP_TRAVEL_MODES } from '@/lib/travelmanager/stops';
 import { requireAuth } from '@/lib/travelmanager/auth';
 import { rateLimit } from '@/lib/rate-limit';
-import { sanitizeObject, validateUUID, validateDateString } from '@/lib/sanitize';
+import { sanitizeObject, validateUUID, validateDateString, validateEnum } from '@/lib/sanitize';
 
-const STOP_ALLOWED_FIELDS = ['name', 'latitude', 'longitude', 'date', 'notes'];
+const STOP_ALLOWED_FIELDS = ['name', 'latitude', 'longitude', 'date', 'notes', 'travelMode'];
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -60,6 +60,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: 'Invalid date format' }, { status: 400 });
     }
 
+    if (sanitized.travelMode && !validateEnum(sanitized.travelMode as string, STOP_TRAVEL_MODES)) {
+      return NextResponse.json({ error: 'Invalid travel mode' }, { status: 400 });
+    }
+
     const stop = await createStop(
       {
         tripId,
@@ -68,6 +72,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         longitude,
         date: (sanitized.date as string) || null,
         notes: (sanitized.notes as string) || null,
+        travelMode: (sanitized.travelMode as string) || null,
       },
       user.id
     );
