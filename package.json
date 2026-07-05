@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "dev:no-open": "next dev",
+    "local": "prisma generate && DATABASE_URL=postgresql://postgres:postgres@localhost:5432/travelmanager node scripts/dev.mjs",
     "build": "prisma generate && node scripts/apply-manual-migrations.mjs && next build",
     "start": "next start",
     "lint": "eslint",

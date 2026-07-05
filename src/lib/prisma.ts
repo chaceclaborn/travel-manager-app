@@ -8,6 +8,25 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 function createPrismaClient(): PrismaClient {
+  // Local development: when a full DATABASE_URL is provided (e.g. `yarn local`
+  // pointing at the Docker Postgres), use it directly instead of the hardcoded
+  // Supabase pooler. Guarded on NODE_ENV so production can NEVER take this path
+  // (and thus never bypass the transaction-pooler tuning below), regardless of
+  // whether DATABASE_URL happens to be set in the deployed environment.
+  if (process.env.NODE_ENV !== 'production' && process.env.DATABASE_URL) {
+    if (!globalForPrisma.pool) {
+      globalForPrisma.pool = new pg.Pool({
+        connectionString: process.env.DATABASE_URL,
+        max: 5,
+        idleTimeoutMillis: 10000,
+        connectionTimeoutMillis: 10000,
+        allowExitOnIdle: true,
+      });
+    }
+    const adapter = new PrismaPg(globalForPrisma.pool);
+    return new PrismaClient({ adapter });
+  }
+
   if (!process.env.DB_PASSWORD) {
     throw new Error('DB_PASSWORD environment variable is not set');
   }

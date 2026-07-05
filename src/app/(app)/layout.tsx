@@ -3,13 +3,13 @@
 import { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, MapPin, Search } from 'lucide-react';
+import { Menu, X, MapPin, Search, MessageSquarePlus } from 'lucide-react';
 import { TMSidebar } from '@/components/travelmanager/TMSidebar';
 import { TMToastProvider } from '@/components/travelmanager/TMToast';
 import { TMCommandPalette } from '@/components/travelmanager/TMCommandPalette';
 import { TMUserMenu } from '@/components/travelmanager/TMUserMenu';
 import { CookieBanner } from '@/components/travelmanager/CookieBanner';
-import { FeedbackWidget } from '@/components/travelmanager/FeedbackWidget';
+import { FeedbackModal } from '@/components/travelmanager/FeedbackWidget';
 import { ClickTracker } from '@/components/travelmanager/ClickTracker';
 import { ServiceWorkerRegister } from '@/components/travelmanager/ServiceWorkerRegister';
 import { PushRegister } from '@/components/travelmanager/PushRegister';
@@ -24,6 +24,7 @@ export default function TravelManagerLayout({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [demoDismissed, setDemoDismissed] = useState(true);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [modKey, setModKey] = useState('⌘');
   const [isAdmin, setIsAdmin] = useState(false);
   const [isAdminChecked, setIsAdminChecked] = useState(false);
@@ -266,7 +267,7 @@ export default function TravelManagerLayout({
               <TMUserMenu user={user} onSignOut={signOut} />
             </div>
             <TMSidebar isAdmin={isAdminChecked && isAdmin} />
-            <div className="mt-auto px-4 py-4 border-t border-white/10">
+            <div className="mt-auto px-4 py-4 border-t border-white/10 space-y-1">
               <button
                 onClick={() => setSearchOpen(true)}
                 className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-400 hover:bg-white/10 hover:text-white transition-colors"
@@ -274,6 +275,13 @@ export default function TravelManagerLayout({
                 <Search className="size-4" />
                 <span>Search</span>
                 <kbd className="ml-auto font-mono text-[10px] tracking-wide border border-white/10 bg-white/5 px-1.5 py-0.5 rounded-md">{modKey}+K</kbd>
+              </button>
+              <button
+                onClick={() => setFeedbackOpen(true)}
+                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-400 hover:bg-white/10 hover:text-white transition-colors"
+              >
+                <MessageSquarePlus className="size-4" />
+                <span>Send Feedback</span>
               </button>
             </div>
           </aside>
@@ -361,6 +369,15 @@ export default function TravelManagerLayout({
                   <div onClick={() => setMobileMenuOpen(false)}>
                     <TMSidebar isAdmin={isAdminChecked && isAdmin} />
                   </div>
+                  <div className="mt-auto px-4 py-4 border-t border-white/10">
+                    <button
+                      onClick={() => { setMobileMenuOpen(false); setFeedbackOpen(true); }}
+                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-400 hover:bg-white/10 hover:text-white transition-colors"
+                    >
+                      <MessageSquarePlus className="size-4" />
+                      <span>Send Feedback</span>
+                    </button>
+                  </div>
                 </motion.aside>
               </>
             )}
@@ -375,7 +392,7 @@ export default function TravelManagerLayout({
 
       <TMCommandPalette open={searchOpen} onClose={() => setSearchOpen(false)} />
       <ClickTracker />
-      <FeedbackWidget />
+      <FeedbackModal open={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
       <CookieBanner />
       <ServiceWorkerRegister />
     </>
