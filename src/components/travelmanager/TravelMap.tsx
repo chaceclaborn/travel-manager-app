@@ -30,9 +30,20 @@ interface HomeLocation {
   city: string | null;
 }
 
+interface MapStop {
+  id: string;
+  tripId: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  travelMode: string | null;
+  sortOrder: number;
+}
+
 interface TravelMapProps {
   trips: MapTrip[];
   homeLocation?: HomeLocation | null;
+  stops?: MapStop[];
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -80,6 +91,18 @@ function createHomeIcon() {
   });
 }
 
+/** Small numbered dot for a stop within a trip's route. */
+function createStopDotIcon(n: number, color: string) {
+  const html = `<div style="display:flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:9999px;background:${color};border:2px solid #fff;box-shadow:0 1px 3px rgba(15,23,42,.3);color:#fff;font-size:9px;font-weight:700;font-family:inherit;">${n}</div>`;
+  return L.divIcon({
+    html,
+    className: '',
+    iconSize: [18, 18],
+    iconAnchor: [9, 9],
+    popupAnchor: [0, -9],
+  });
+}
+
 function FitBounds({ points }: { points: [number, number][] }) {
   const map = useMap();
   useEffect(() => {
@@ -94,7 +117,21 @@ function FitBounds({ points }: { points: [number, number][] }) {
   return null;
 }
 
-export function TravelMap({ trips, homeLocation }: TravelMapProps) {
+export function TravelMap({ trips, homeLocation, stops = [] }: TravelMapProps) {
+  // Group stops into per-trip route chains, ordered by route position.
+  const stopChains = useMemo(() => {
+    const byTrip = new Map<string, MapStop[]>();
+    for (const s of stops) {
+      const list = byTrip.get(s.tripId) ?? [];
+      list.push(s);
+      byTrip.set(s.tripId, list);
+    }
+    for (const list of byTrip.values()) {
+      list.sort((a, b) => a.sortOrder - b.sortOrder);
+    }
+    return byTrip;
+  }, [stops]);
+
   const geoTrips = useMemo(
     () => trips.filter((t): t is MapTrip & { latitude: number; longitude: number } =>
       t.latitude !== null && t.longitude !== null
@@ -114,8 +151,9 @@ export function TravelMap({ trips, homeLocation }: TravelMapProps) {
   const fitBoundsPoints = useMemo<[number, number][]>(() => {
     const pts: [number, number][] = geoTrips.map(t => [t.latitude, t.longitude]);
     if (homeLocation) pts.push([homeLocation.latitude, homeLocation.longitude]);
+    for (const s of stops) pts.push([s.latitude, s.longitude]);
     return pts;
-  }, [geoTrips, homeLocation]);
+  }, [geoTrips, homeLocation, stops]);
 
   const routeLines = useMemo(() => {
     const sorted = [...geoTrips].sort((a, b) => {
@@ -305,6 +343,54 @@ export function TravelMap({ trips, homeLocation }: TravelMapProps) {
             </div>
           </Popup>
         </Marker>
+      )}
+
+      {/* Per-trip route chains: every place visited within each trip.
+          Dots inherit the trip's status color; legs are dashed for flights
+          and solid for ground travel. */}
+      {[...stopChains.entries()].map(([tripId, chain]) => {
+        const trip = trips.find((t) => t.id === tripId);
+        const color = STATUS_COLORS[trip?.status ?? ''] || '#f59e0b';
+        return chain.map((stop, i) => (
+          <Marker
+            key={stop.id}
+            position={[stop.latitude, stop.longitude]}
+            icon={createStopDotIcon(i + 1, color)}
+            keyboard={false}
+          >
+            <Popup>
+              <div className="min-w-[140px]">
+                <div className="font-semibold text-sm text-slate-900">{stop.name}</div>
+                {trip && (
+                  <div className="text-xs text-slate-500 mt-0.5">
+                    Stop {i + 1} · {trip.title}
+                  </div>
+                )}
+              </div>
+            </Popup>
+          </Marker>
+        ));
+      })}
+      {[...stopChains.entries()].map(([tripId, chain]) =>
+        chain.slice(1).map((stop, i) => {
+          const from = chain[i];
+          const isFlight = (stop.travelMode ?? 'drive') === 'flight';
+          return (
+            <Polyline
+              key={`chain-${tripId}-${stop.id}`}
+              positions={[
+                [from.latitude, from.longitude],
+                [stop.latitude, stop.longitude],
+              ]}
+              pathOptions={{
+                color: STATUS_COLORS[trips.find((t) => t.id === tripId)?.status ?? ''] || '#f59e0b',
+                weight: 2,
+                opacity: 0.65,
+                dashArray: isFlight ? '6 6' : undefined,
+              }}
+            />
+          );
+        })
       )}
 
       {routeLines.map((line, i) => {

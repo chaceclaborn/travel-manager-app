@@ -38,6 +38,16 @@ interface HomeLocation {
   city: string | null;
 }
 
+interface MapStop {
+  id: string;
+  tripId: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  travelMode: string | null;
+  sortOrder: number;
+}
+
 function calcDistance(
   filteredTrips: (MapTrip & { latitude: number; longitude: number })[],
   home: HomeLocation | null
@@ -105,6 +115,7 @@ function formatDistance(miles: number): string {
 export default function MapPage() {
   const { showToast } = useTMToast();
   const [trips, setTrips] = useState<MapTrip[]>([]);
+  const [stops, setStops] = useState<MapStop[]>([]);
   const [homeLocation, setHomeLocation] = useState<HomeLocation | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSavingHome, setIsSavingHome] = useState(false);
@@ -123,10 +134,16 @@ export default function MapPage() {
   useEffect(() => {
     async function load() {
       try {
-        const [tripsRes, userRes] = await Promise.all([
+        const [tripsRes, userRes, stopsRes] = await Promise.all([
           fetch('/api/trips?fields=minimal'),
           fetch('/api/user'),
+          fetch('/api/stops'),
         ]);
+
+        if (stopsRes.ok) {
+          const stopData = await stopsRes.json();
+          setStops(Array.isArray(stopData) ? stopData : []);
+        }
 
         if (tripsRes.ok) {
           const data = await tripsRes.json();
@@ -277,7 +294,7 @@ export default function MapPage() {
             </div>
           ) : (
             <>
-              <TravelMap trips={trips} homeLocation={homeLocation} />
+              <TravelMap trips={trips} homeLocation={homeLocation} stops={stops} />
               {geoTrips.length === 0 && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[1000]">
                   <div className="text-center text-slate-500">

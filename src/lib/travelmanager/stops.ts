@@ -26,6 +26,23 @@ export interface UpdateStopInput {
   travelMode?: string | null;
 }
 
+/** Every stop across all of the user's trips — for the global travel map. */
+export async function getAllStops(userId: string) {
+  return prisma.tripStop.findMany({
+    where: { trip: { userId } },
+    orderBy: [{ tripId: 'asc' }, { sortOrder: 'asc' }, { createdAt: 'asc' }],
+    select: {
+      id: true,
+      tripId: true,
+      name: true,
+      latitude: true,
+      longitude: true,
+      travelMode: true,
+      sortOrder: true,
+    },
+  });
+}
+
 export async function getStops(tripId: string, userId: string) {
   await verifyTripOwnership(tripId, userId);
   return prisma.tripStop.findMany({
