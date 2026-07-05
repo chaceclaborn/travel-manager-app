@@ -169,23 +169,51 @@ export default function VendorsPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
+      <div className="space-y-6" role="status" aria-label="Loading vendors">
+        {/* Header row */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="text-2xl font-bold text-slate-800">Vendors</h1>
+          <div className="h-9 w-32 rounded-md bg-slate-200/80 animate-pulse" />
         </div>
+
+        {/* Search + filter row */}
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="h-9 flex-1 rounded-md bg-slate-200/60 animate-pulse" />
+          <div className="h-9 w-full sm:w-44 rounded-md bg-slate-200/60 animate-pulse" />
+          <div className="h-9 w-full sm:w-44 rounded-md bg-slate-200/60 animate-pulse" />
+        </div>
+
+        {/* Card grid */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="h-44 animate-pulse rounded-xl bg-white border border-slate-100 p-5">
-              <div className="flex justify-between mb-3">
-                <div className="h-5 w-2/3 rounded bg-slate-200" />
-                <div className="h-5 w-16 rounded-full bg-slate-100" />
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div
+              key={i}
+              className="h-44 rounded-xl bg-white p-5 shadow-card ring-1 ring-slate-900/[0.04]"
+            >
+              {/* Name + category badge */}
+              <div className="mb-3 flex items-start justify-between gap-2">
+                <div className="h-5 w-3/5 rounded-md bg-slate-200/80 animate-pulse" />
+                <div className="h-5 w-16 rounded-full bg-slate-200/60 animate-pulse" />
               </div>
-              <div className="h-3 w-1/2 rounded bg-slate-100" />
-              <div className="mt-2 h-3 w-3/4 rounded bg-slate-100" />
-              <div className="mt-2 h-3 w-1/3 rounded bg-slate-100" />
+              {/* Location / email / phone lines */}
+              <div className="mb-2 flex items-center gap-1.5">
+                <div className="size-3.5 rounded bg-slate-200/60 animate-pulse" />
+                <div className="h-3.5 w-2/5 rounded bg-slate-200/60 animate-pulse" />
+              </div>
+              <div className="mb-1 flex items-center gap-1.5">
+                <div className="size-3.5 rounded bg-slate-200/60 animate-pulse" />
+                <div className="h-3.5 w-3/5 rounded bg-slate-200/60 animate-pulse" />
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="size-3.5 rounded bg-slate-200/60 animate-pulse" />
+                <div className="h-3.5 w-2/5 rounded bg-slate-200/50 animate-pulse" />
+              </div>
+              {/* Trip count */}
+              <div className="mt-3 h-3 w-14 rounded bg-slate-200/50 animate-pulse" />
             </div>
           ))}
         </div>
+        <span className="sr-only">Loading vendors…</span>
       </div>
     );
   }

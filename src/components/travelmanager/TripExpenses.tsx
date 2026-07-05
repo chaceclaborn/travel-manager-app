@@ -17,6 +17,8 @@ import {
   Upload,
   DollarSign,
   Pencil,
+  AlertCircle,
+  RefreshCw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -94,6 +96,7 @@ export function TripExpenses({ tripId, tripStartDate, tripEndDate }: TripExpense
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [budget, setBudget] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [adding, setAdding] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -117,12 +120,12 @@ export function TripExpenses({ tripId, tripStartDate, tripEndDate }: TripExpense
   const fetchExpenses = useCallback(async () => {
     try {
       const res = await fetch(`/api/trips/${tripId}/expenses`);
-      if (res.ok) {
-        const data = await res.json();
-        setExpenses(Array.isArray(data) ? data : []);
-      }
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setExpenses(Array.isArray(data) ? data : []);
+      setLoadError(false);
     } catch {
-      // silent fail on initial load
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -372,6 +375,26 @@ export function TripExpenses({ tripId, tripStartDate, tripEndDate }: TripExpense
             <div key={i} className="h-14 animate-pulse rounded-lg bg-slate-100" />
           ))}
         </div>
+      ) : loadError ? (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25 }}
+          className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50/50 px-4 py-3 text-sm text-red-700"
+        >
+          <AlertCircle className="size-4 shrink-0" />
+          <span>Couldn&apos;t load expenses</span>
+          <button
+            type="button"
+            onClick={() => {
+              setLoading(true);
+              fetchExpenses();
+            }}
+            className="ml-auto inline-flex cursor-pointer items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-red-600 transition-colors hover:bg-red-100 hover:text-red-700 active:bg-red-100 active:text-red-700"
+          >
+            <RefreshCw className="size-3" /> Retry
+          </button>
+        </motion.div>
       ) : expenses.length === 0 ? (
         <div className="flex flex-col items-center py-8 text-center">
           <Receipt className="mb-2 size-8 text-slate-300" />

@@ -669,25 +669,42 @@ export default function MeetingsPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="h-8 w-32 animate-pulse rounded bg-slate-200" />
-          <div className="h-10 w-32 animate-pulse rounded bg-slate-200" />
+      <div className="space-y-6" role="status" aria-label="Loading meetings">
+        {/* Title row: heading + action buttons */}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h1 className="text-2xl font-bold text-slate-800">Meetings</h1>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="h-8 w-24 rounded-md bg-slate-200/60 animate-pulse" />
+            <div className="h-9 w-36 rounded-md bg-slate-200/70 animate-pulse" />
+          </div>
         </div>
-        <div className="h-10 w-full animate-pulse rounded bg-slate-200" />
+
+        {/* Search bar */}
+        <div className="h-9 w-full rounded-md bg-slate-200/70 animate-pulse" />
+
+        {/* Result count line */}
+        <div className="h-4 w-44 rounded bg-slate-200/50 animate-pulse" />
+
+        {/* Meeting cards */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="h-44 animate-pulse rounded-xl bg-white border border-slate-100 p-5">
-              <div className="flex justify-between mb-3">
-                <div className="h-5 w-2/3 rounded bg-slate-200" />
-                <div className="h-5 w-5 rounded bg-slate-100" />
+            <div key={i} className="rounded-lg border border-slate-100 bg-white p-4 shadow-sm">
+              <div className="mb-3 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="size-9 shrink-0 rounded-xl bg-slate-200/70 animate-pulse" />
+                  <div className="h-4 w-28 rounded bg-slate-200/80 animate-pulse" />
+                </div>
+                <div className="h-4 w-12 rounded bg-slate-200/50 animate-pulse" />
               </div>
-              <div className="h-3 w-1/2 rounded bg-slate-100" />
-              <div className="mt-2 h-3 w-3/4 rounded bg-slate-100" />
-              <div className="mt-2 h-3 w-1/3 rounded bg-slate-100" />
+              <div className="space-y-2">
+                <div className="h-3.5 w-3/4 rounded bg-slate-200/60 animate-pulse" />
+                <div className="h-3.5 w-1/2 rounded bg-slate-200/50 animate-pulse" />
+                <div className="h-3.5 w-1/3 rounded bg-slate-200/50 animate-pulse" />
+              </div>
             </div>
           ))}
         </div>
+        <span className="sr-only">Loading meetings…</span>
       </div>
     );
   }

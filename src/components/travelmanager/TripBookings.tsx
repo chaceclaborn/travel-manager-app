@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Plane, Trash2, Plus, X, MapPin, Clock, Hash, Armchair, Pencil } from 'lucide-react';
+import { Plane, Trash2, Plus, X, MapPin, Clock, Hash, Armchair, Pencil, AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -233,6 +233,7 @@ export function TripBookings({ tripId, tripStartDate, tripEndDate }: TripBooking
 
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -243,12 +244,12 @@ export function TripBookings({ tripId, tripStartDate, tripEndDate }: TripBooking
   const fetchBookings = useCallback(async () => {
     try {
       const res = await fetch(`/api/trips/${tripId}/bookings`);
-      if (res.ok) {
-        const data = await res.json();
-        setBookings(Array.isArray(data) ? data : []);
-      }
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setBookings(Array.isArray(data) ? data : []);
+      setLoadError(false);
     } catch {
-      // silent fail on initial load
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -547,6 +548,26 @@ export function TripBookings({ tripId, tripStartDate, tripEndDate }: TripBooking
             <div key={i} className="h-32 animate-pulse rounded-lg bg-slate-100" />
           ))}
         </div>
+      ) : loadError ? (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25 }}
+          className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50/50 px-4 py-3 text-sm text-red-700"
+        >
+          <AlertCircle className="size-4 shrink-0" />
+          <span>Couldn&apos;t load bookings</span>
+          <button
+            type="button"
+            onClick={() => {
+              setLoading(true);
+              fetchBookings();
+            }}
+            className="ml-auto inline-flex cursor-pointer items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-red-600 transition-colors hover:bg-red-100 hover:text-red-700 active:bg-red-100 active:text-red-700"
+          >
+            <RefreshCw className="size-3" /> Retry
+          </button>
+        </motion.div>
       ) : bookings.length === 0 ? (
         <div className="flex flex-col items-center py-8 text-center">
           <Plane className="mb-2 size-8 text-slate-300" />
