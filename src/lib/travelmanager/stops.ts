@@ -93,6 +93,13 @@ export async function updateStop(
   return prisma.tripStop.findUnique({ where: { id: stopId } });
 }
 
+/** Delete every stop on a trip (the "clear route" action). */
+export async function clearStops(tripId: string, userId: string) {
+  await verifyTripOwnership(tripId, userId);
+  const result = await prisma.tripStop.deleteMany({ where: { tripId } });
+  return result.count;
+}
+
 export async function reorderStops(tripId: string, userId: string, orderedIds: string[]) {
   await verifyTripOwnership(tripId, userId);
   // Verify all ids belong to this trip (prevents cross-trip reordering)

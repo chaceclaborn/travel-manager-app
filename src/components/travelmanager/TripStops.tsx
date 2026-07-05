@@ -15,6 +15,7 @@ import {
   Ship,
   Footprints,
   Home,
+  Trash2,
   type LucideIcon,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -115,6 +116,7 @@ export function TripStops({
   const [searching, setSearching] = useState(false);
   const [adding, setAdding] = useState(false);
   const [modePickerFor, setModePickerFor] = useState<string | null>(null);
+  const [confirmClear, setConfirmClear] = useState(false);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
@@ -352,6 +354,18 @@ export function TripStops({
     }
   };
 
+  const clearRoute = async () => {
+    setConfirmClear(false);
+    const prev = stops;
+    setStops([]);
+    try {
+      const res = await fetch(`/api/trips/${tripId}/stops`, { method: 'DELETE' });
+      if (!res.ok) setStops(prev);
+    } catch {
+      setStops(prev);
+    }
+  };
+
   const persistOrder = async (next: TripStopData[]) => {
     const prev = stops;
     setStops(next.map((s, i) => ({ ...s, sortOrder: i })));
@@ -405,12 +419,44 @@ export function TripStops({
         <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-600">
           Route
         </h3>
-        {legs.length > 0 && (
-          <span className="text-xs text-slate-400">
-            {stops.length} {stops.length === 1 ? 'place' : 'places'} ·{' '}
-            {hasApprox ? '~' : ''}{formatMiles(totalMiles)} mi
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {legs.length > 0 && (
+            <span className="text-xs text-slate-400">
+              {stops.length} {stops.length === 1 ? 'place' : 'places'} ·{' '}
+              {hasApprox ? '~' : ''}{formatMiles(totalMiles)} mi
+            </span>
+          )}
+          {stops.length > 0 && (
+            confirmClear ? (
+              <span className="flex items-center gap-1 text-xs">
+                <span className="text-slate-500">Clear route?</span>
+                <button
+                  type="button"
+                  onClick={clearRoute}
+                  className="rounded-md px-1.5 py-0.5 font-medium text-red-600 transition-colors hover:bg-red-50 active:bg-red-50"
+                >
+                  Yes
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmClear(false)}
+                  className="rounded-md px-1.5 py-0.5 text-slate-500 transition-colors hover:bg-slate-100 active:bg-slate-100"
+                >
+                  No
+                </button>
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setConfirmClear(true)}
+                aria-label="Clear the whole route"
+                className="flex size-6 items-center justify-center rounded-md text-slate-300 transition-colors hover:bg-red-50 hover:text-red-500 active:bg-red-50 active:text-red-500"
+              >
+                <Trash2 className="size-3.5" />
+              </button>
+            )
+          )}
+        </div>
       </div>
 
       {/* Search-to-add — matches places AND airports (type a city or code like HSV) */}
@@ -597,7 +643,7 @@ export function TripStops({
                       type="button"
                       onClick={() => removeStop(stop.id)}
                       aria-label={`Remove ${stop.name}`}
-                      className="flex size-6 shrink-0 items-center justify-center rounded-md text-slate-300 transition-colors hover:bg-red-50 hover:text-red-500 active:bg-red-50 active:text-red-500 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
+                      className="flex size-6 shrink-0 items-center justify-center rounded-md text-slate-300 transition-colors hover:bg-red-50 hover:text-red-500 active:bg-red-50 active:text-red-500"
                     >
                       <X className="size-3.5" />
                     </button>

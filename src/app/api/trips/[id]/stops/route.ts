@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getStops, createStop, STOP_TRAVEL_MODES } from '@/lib/travelmanager/stops';
+import { getStops, createStop, clearStops, STOP_TRAVEL_MODES } from '@/lib/travelmanager/stops';
 import { requireAuth } from '@/lib/travelmanager/auth';
 import { rateLimit } from '@/lib/rate-limit';
 import { sanitizeObject, validateUUID, validateDateString, validateEnum } from '@/lib/sanitize';
@@ -80,5 +80,27 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   } catch (error) {
     console.error('Error creating stop:', error instanceof Error ? error.message : error);
     return NextResponse.json({ error: 'Failed to create stop' }, { status: 500 });
+  }
+}
+
+/** DELETE /api/trips/[id]/stops — clear the whole route for a trip. */
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const rateLimited = rateLimit(request, 'write');
+    if (rateLimited) return rateLimited;
+
+    const { user, response } = await requireAuth();
+    if (!user) return response;
+
+    const { id: tripId } = await params;
+    if (!validateUUID(tripId)) {
+      return NextResponse.json({ error: 'Invalid trip ID' }, { status: 400 });
+    }
+
+    const count = await clearStops(tripId, user.id);
+    return NextResponse.json({ success: true, deleted: count });
+  } catch (error) {
+    console.error('Error clearing stops:', error instanceof Error ? error.message : error);
+    return NextResponse.json({ error: 'Failed to clear stops' }, { status: 500 });
   }
 }
