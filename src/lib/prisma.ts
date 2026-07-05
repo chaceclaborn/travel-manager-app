@@ -67,11 +67,21 @@ function getPrismaClient(): PrismaClient {
       return globalForPrisma.prisma;
     }
   }
-  return createPrismaClient();
+  globalForPrisma.prisma = createPrismaClient();
+  return globalForPrisma.prisma;
 }
 
-export const prisma = getPrismaClient();
+// Instantiate lazily on first use rather than at module import. `next build`
+// imports every route to collect page data; creating the real client here
+// would require DB_PASSWORD at build time — which is absent in preview and
+// local builds and only present in production. Deferring to the first actual
+// query keeps builds working everywhere; runtime behavior is unchanged.
+export const prisma = new Proxy({} as PrismaClient, {
+  get(_target, prop) {
+    const client = getPrismaClient();
+    const value = (client as unknown as Record<string | symbol, unknown>)[prop];
+    return typeof value === 'function' ? value.bind(client) : value;
+  },
+});
 
 export default prisma;
-
-globalForPrisma.prisma = prisma;
