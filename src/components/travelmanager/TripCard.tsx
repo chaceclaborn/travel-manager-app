@@ -14,6 +14,7 @@ import { DatePicker } from '@/components/travelmanager/DatePicker';
 import { useTMToast } from '@/components/travelmanager/TMToast';
 import { TMDeleteDialog } from '@/components/travelmanager/TMDeleteDialog';
 import { formatDate, formatDateDisplay } from '@/lib/date-utils';
+import { useShowCosts } from '@/lib/travelmanager/useShowCosts';
 
 interface TripCardProps {
   trip: {
@@ -74,6 +75,7 @@ export function TripCard({ trip, onSaved, onDeleted }: TripCardProps) {
   });
   const { showToast } = useTMToast();
   const reducedMotion = useReducedMotion();
+  const { showCosts } = useShowCosts();
 
   const days = trip.startDate && trip.endDate ? getDurationDays(trip.startDate, trip.endDate) : null;
   const vendorCount = trip._count?.vendors ?? trip.vendors?.length ?? 0;
@@ -246,7 +248,9 @@ export function TripCard({ trip, onSaved, onDeleted }: TripCardProps) {
             )}
 
             <div className="mt-3.5 flex items-center justify-between border-t border-slate-50 pt-3">
-              {trip.budget != null ? (
+              {!showCosts ? (
+                <span />
+              ) : trip.budget != null ? (
                 <span className="flex items-center gap-1 text-sm font-semibold text-slate-700"><DollarSign className="size-3.5 text-emerald-500" />{formatBudget(trip.budget)}</span>
               ) : (
                 <span className="text-xs text-slate-400">No budget set</span>

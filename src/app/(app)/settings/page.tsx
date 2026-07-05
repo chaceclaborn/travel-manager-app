@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { Shield, Download, FileText, Trash2, Loader2, Monitor, MapPin, X, Mail, CheckCircle2, Unlink, Wrench, PanelLeft, RotateCcw } from 'lucide-react';
+import { Shield, Download, FileText, Trash2, Loader2, Monitor, MapPin, X, Mail, CheckCircle2, Unlink, Wrench, PanelLeft, RotateCcw, DollarSign } from 'lucide-react';
 import { useNavPreferences, TOGGLEABLE_NAV_ITEMS } from '@/lib/travelmanager/useNavPreferences';
+import { useShowCosts } from '@/lib/travelmanager/useShowCosts';
 import { useGeocodingSearch, formatGeoName } from '@/lib/travelmanager/useGeocodingSearch';
 import type { GeoResult } from '@/lib/travelmanager/useGeocodingSearch';
 import { Input } from '@/components/ui/input';
@@ -72,21 +73,21 @@ const item = {
   show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.25, 0.1, 0.25, 1] as const } },
 };
 
-function NavToggle({
+function Toggle({
   checked,
   onChange,
-  label,
+  ariaLabel,
 }: {
   checked: boolean;
   onChange: (next: boolean) => void;
-  label: string;
+  ariaLabel: string;
 }) {
   return (
     <button
       type="button"
       role="switch"
       aria-checked={checked}
-      aria-label={`${checked ? 'Hide' : 'Show'} ${label} in sidebar`}
+      aria-label={ariaLabel}
       onClick={() => onChange(!checked)}
       className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:ring-offset-2 ${
         checked ? 'bg-amber-500' : 'bg-slate-300'
@@ -106,6 +107,7 @@ export default function SettingsPage() {
   const { showToast } = useTMToast();
   const { isHidden, setHidden, reset: resetNav, hydrated: navHydrated } = useNavPreferences();
   const hiddenCount = TOGGLEABLE_NAV_ITEMS.filter((i) => isHidden(i.key)).length;
+  const { showCosts, setShowCosts } = useShowCosts();
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loadingSessions, setLoadingSessions] = useState(true);
@@ -423,10 +425,10 @@ export default function SettingsPage() {
                   <p className={`text-sm font-medium ${visible ? 'text-slate-800' : 'text-slate-400'}`}>{label}</p>
                   {description && <p className="text-xs text-slate-400 truncate">{description}</p>}
                 </div>
-                <NavToggle
+                <Toggle
                   checked={visible}
                   onChange={(next) => setHidden(key, !next)}
-                  label={label}
+                  ariaLabel={`${visible ? 'Hide' : 'Show'} ${label} in sidebar`}
                 />
               </div>
             );
@@ -435,6 +437,31 @@ export default function SettingsPage() {
         {!navHydrated && (
           <p className="mt-3 text-xs text-slate-300">Loading your preferences…</p>
         )}
+      </motion.div>
+
+      {/* Display */}
+      <motion.div variants={item} className="rounded-xl bg-white p-6 shadow-sm">
+        <div className="flex items-center gap-2 mb-1">
+          <DollarSign className="size-5 text-amber-600" />
+          <h2 className="text-lg font-semibold text-slate-800">Display</h2>
+        </div>
+        <p className="text-xs text-slate-500 mb-4">
+          Control what&apos;s shown across your trips. Saved on this device.
+        </p>
+        <div className="flex items-center gap-3 py-1">
+          <div className={`flex size-9 shrink-0 items-center justify-center rounded-lg transition-colors ${showCosts ? 'bg-amber-50 text-amber-600' : 'bg-slate-100 text-slate-400'}`}>
+            <DollarSign className="size-[18px]" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className={`text-sm font-medium ${showCosts ? 'text-slate-800' : 'text-slate-400'}`}>Show costs</p>
+            <p className="text-xs text-slate-400">Trip budgets and the Expenses tab. Turning this off only hides them — your data is kept.</p>
+          </div>
+          <Toggle
+            checked={showCosts}
+            onChange={setShowCosts}
+            ariaLabel={`${showCosts ? 'Hide' : 'Show'} costs across trips`}
+          />
+        </div>
       </motion.div>
 
       {/* Tools */}

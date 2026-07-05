@@ -82,6 +82,7 @@ import { TripJournal } from '@/components/travelmanager/TripJournal';
 import { TripPhotos } from '@/components/travelmanager/TripPhotos';
 import { useTMToast } from '@/components/travelmanager/TMToast';
 import { useDeleteEntity } from '@/lib/travelmanager/useDeleteEntity';
+import { useShowCosts } from '@/lib/travelmanager/useShowCosts';
 import { formatDateLong as formatDate } from '@/lib/date-utils';
 import { nativeShare } from '@/lib/native/share';
 import { removePhotosForTrip } from '@/lib/photos/store';
@@ -167,6 +168,7 @@ export default function TripDetailPage() {
   const params = useParams();
   const id = params.id as string;
   const { showToast } = useTMToast();
+  const { showCosts } = useShowCosts();
   const { deleteOpen, setDeleteOpen, deleting, handleDelete } = useDeleteEntity(
     `/api/trips/${id}`,
     '/trips',
@@ -567,7 +569,13 @@ export default function TripDetailPage() {
   // Vendors/clients are a work-trip concern — hide the People tab on
   // personal trips (any existing links are kept, just not shown).
   const isWorkTrip = trip.tripType === 'WORK';
-  const visibleTabs = isWorkTrip ? tabConfig : tabConfig.filter((t) => t.value !== 'people');
+  // People tab is a work-trip concern; Expenses is hidden when the user has
+  // turned off cost display (Settings → Display). Existing data is untouched.
+  const visibleTabs = tabConfig.filter((t) => {
+    if (t.value === 'people' && !isWorkTrip) return false;
+    if (t.value === 'expenses' && !showCosts) return false;
+    return true;
+  });
   const currentTab = visibleTabs.some((t) => t.value === activeTab) ? activeTab : 'itinerary';
 
   return (
@@ -657,7 +665,7 @@ export default function TripDetailPage() {
                       Dates not set
                     </span>
                   )}
-                  {trip.budget != null && (
+                  {showCosts && trip.budget != null && (
                     <>
                       <span className="hidden text-slate-300 sm:inline" aria-hidden="true">|</span>
                       <span className="flex items-center gap-1.5">
