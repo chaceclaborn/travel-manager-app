@@ -14,6 +14,7 @@ import { TRIP_TEMPLATES } from '@/lib/travelmanager/templates';
 import { formatDate } from '@/lib/date-utils';
 
 import { useAuth } from '@/lib/travelmanager/useAuth';
+import { useShowCosts } from '@/lib/travelmanager/useShowCosts';
 import type { TripWithRelations } from '@/lib/travelmanager/types';
 
 interface DashboardData {
@@ -158,6 +159,7 @@ interface CalendarMeeting {
 
 export default function TravelManagerDashboard() {
   const { user } = useAuth();
+  const { showCosts } = useShowCosts();
   const [data, setData] = useState<DashboardData | null>(null);
   const [meetings, setMeetings] = useState<CalendarMeeting[]>([]);
   const [meetingsError, setMeetingsError] = useState(false);
@@ -442,7 +444,7 @@ export default function TravelManagerDashboard() {
                         : 'Dates not set'}
                     </p>
                     <div className="flex items-center gap-3 mt-1">
-                      {trip.budget != null && (
+                      {showCosts && trip.budget != null && (
                         <span className="inline-flex items-center gap-0.5 text-xs text-slate-400">
                           <DollarSign className="size-3" />
                           {trip.budget.toLocaleString()}
