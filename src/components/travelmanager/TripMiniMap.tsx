@@ -5,7 +5,9 @@ import { MapContainer, TileLayer, Marker, Polyline, useMap } from 'react-leaflet
 import L from 'leaflet';
 // leaflet/dist/leaflet.css is imported globally in src/app/globals.css
 import { MapPinOff } from 'lucide-react';
-import { HOME_STOP_ID, type TripStopData, type RouteLeg } from './TripStops';
+import { HOME_STOP_ID, HOME_START_STOP_ID, type TripStopData, type RouteLeg } from './TripStops';
+
+const isHomeId = (id: string) => id === HOME_STOP_ID || id === HOME_START_STOP_ID;
 
 interface TripMiniMapProps {
   latitude: number | null;
@@ -162,15 +164,18 @@ export function TripMiniMap({
               keyboard={false}
             />
           )}
-          {stops.map((stop, i) => (
-            <Marker
-              key={stop.id}
-              position={[stop.latitude, stop.longitude]}
-              icon={stop.id === HOME_STOP_ID ? createHomeIcon() : createStopIcon(i + 1)}
-              keyboard={false}
-              title={stop.name}
-            />
-          ))}
+          {(() => {
+            let n = 0;
+            return stops.map((stop) => (
+              <Marker
+                key={stop.id}
+                position={[stop.latitude, stop.longitude]}
+                icon={isHomeId(stop.id) ? createHomeIcon() : createStopIcon(++n)}
+                keyboard={false}
+                title={stop.name}
+              />
+            ));
+          })()}
           {/* Route legs between consecutive stops */}
           {stops.map((stop, i) => {
             if (i === 0) return null;

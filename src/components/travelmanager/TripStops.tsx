@@ -47,6 +47,8 @@ export interface RouteLeg {
 
 /** Synthetic id for the derived home point appended to the route. */
 export const HOME_STOP_ID = '__home__';
+/** Synthetic id for the derived home point the route departs from. */
+export const HOME_START_STOP_ID = '__home_start__';
 
 interface GeocodeResult {
   display_name: string;
@@ -183,51 +185,78 @@ export function TripStops({
 
     async function compute() {
       const next: RouteLeg[] = [];
+      // A stop's stored mode wins; otherwise default by distance — long
+      // hops read as flights, short ones as drives.
+      const effectiveMode = (stop: TripStopData, straight: number) =>
+        stop.travelMode ?? (straight > AUTO_HOME_FLIGHT_MILES ? 'flight' : 'drive');
+
+      async function buildLeg(
+        from: { latitude: number; longitude: number },
+        to: { latitude: number; longitude: number },
+        toId: string,
+        mode: string,
+        auto?: boolean
+      ): Promise<RouteLeg | null> {
+        if (modeConfig(mode).roadRouted) {
+          const road = await roadLeg(from, to);
+          if (cancelled) return null;
+          return road
+            ? { toId, mode, miles: road.miles, geometry: road.geometry, approx: false, auto }
+            : { toId, mode, miles: straightMiles(from, to), geometry: null, approx: true, auto };
+        }
+        return { toId, mode, miles: straightMiles(from, to), geometry: null, approx: false, auto };
+      }
+
+      // Departure leg FROM home into the first place — shown whenever home
+      // is set and the trip doesn't start where you live.
+      const first = stops[0];
+      const departsFromHome =
+        home && first && straightMiles(home, first) > HOME_ARRIVED_MILES;
+      if (home && first && departsFromHome) {
+        const straight = straightMiles(home, first);
+        const leg = await buildLeg(home, first, first.id, effectiveMode(first, straight));
+        if (cancelled) return;
+        if (leg) next.push(leg);
+      }
+
       for (let i = 1; i < stops.length; i++) {
         const from = stops[i - 1];
         const to = stops[i];
-        const mode = to.travelMode ?? 'drive';
-        if (modeConfig(mode).roadRouted) {
-          const road = await roadLeg(from, to);
-          if (cancelled) return;
-          next.push(
-            road
-              ? { toId: to.id, mode, miles: road.miles, geometry: road.geometry, approx: false }
-              : { toId: to.id, mode, miles: straightMiles(from, to), geometry: null, approx: true }
-          );
-        } else {
-          next.push({ toId: to.id, mode, miles: straightMiles(from, to), geometry: null, approx: false });
-        }
+        const leg = await buildLeg(from, to, to.id, effectiveMode(to, straightMiles(from, to)));
+        if (cancelled) return;
+        if (leg) next.push(leg);
       }
 
       // Implicit "back home" leg — automatic unless the route already ends
       // near home (or home isn't set).
-      let routeStops = stops;
+      let returnsHome = false;
       const last = stops[stops.length - 1];
       if (home && last && straightMiles(last, home) > HOME_ARRIVED_MILES) {
         const straight = straightMiles(last, home);
         const mode = straight > AUTO_HOME_FLIGHT_MILES ? 'flight' : 'drive';
-        let leg: RouteLeg = { toId: HOME_STOP_ID, mode, miles: straight, geometry: null, approx: mode === 'drive', auto: true };
-        if (mode === 'drive') {
-          const road = await roadLeg(last, home);
-          if (cancelled) return;
-          if (road) leg = { ...leg, miles: road.miles, geometry: road.geometry, approx: false };
+        const leg = await buildLeg(last, home, HOME_STOP_ID, mode, true);
+        if (cancelled) return;
+        if (leg) {
+          next.push(leg);
+          returnsHome = true;
         }
-        next.push(leg);
-        routeStops = [
-          ...stops,
-          {
-            id: HOME_STOP_ID,
-            name: `Home — ${home.city.split(',')[0]}`,
-            latitude: home.latitude,
-            longitude: home.longitude,
-            date: null,
-            notes: null,
-            travelMode: leg.mode,
-            sortOrder: stops.length,
-          },
-        ];
       }
+
+      const homeEntry = (id: string, sortOrder: number): TripStopData => ({
+        id,
+        name: `Home — ${home!.city.split(',')[0]}`,
+        latitude: home!.latitude,
+        longitude: home!.longitude,
+        date: null,
+        notes: null,
+        travelMode: null,
+        sortOrder,
+      });
+      const routeStops: TripStopData[] = [
+        ...(departsFromHome ? [homeEntry(HOME_START_STOP_ID, -1)] : []),
+        ...stops,
+        ...(returnsHome ? [homeEntry(HOME_STOP_ID, stops.length)] : []),
+      ];
 
       if (!cancelled) {
         setLegs(next);
@@ -289,13 +318,15 @@ export function TripStops({
     return () => document.removeEventListener('mousedown', onClick);
   }, []);
 
-  const createStop = async (name: string, latitude: number, longitude: number, travelMode = 'drive') => {
+  const createStop = async (name: string, latitude: number, longitude: number, travelMode?: string) => {
     setAdding(true);
     try {
       const res = await fetch(`/api/trips/${tripId}/stops`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, latitude, longitude, travelMode }),
+        // No explicit mode → leave null so the leg smart-defaults by
+        // distance (long hops read as flights, short ones as drives).
+        body: JSON.stringify({ name, latitude, longitude, ...(travelMode ? { travelMode } : {}) }),
       });
       if (res.ok) {
         const stop = await res.json();
@@ -408,6 +439,11 @@ export function TripStops({
   const homeLeg = legs.find((l) => l.toId === HOME_STOP_ID);
   const totalMiles = legs.reduce((sum, l) => sum + l.miles, 0);
   const hasApprox = legs.some((l) => l.approx);
+  // Mileage broken down by travel mode (only modes actually used)
+  const modeTotals = MODES.map((m) => ({
+    ...m,
+    miles: legs.filter((l) => l.mode === m.key).reduce((s, l) => s + l.miles, 0),
+  })).filter((m) => m.miles > 0);
   const hasSuggestions = placeResults.length > 0 || airportResults.length > 0;
 
   const formatMiles = (m: number) =>
@@ -458,6 +494,24 @@ export function TripStops({
           )}
         </div>
       </div>
+
+      {/* Mileage by mode — how much of this trip was flown vs driven */}
+      {modeTotals.length > 1 && (
+        <div className="mb-3 flex flex-wrap gap-1.5">
+          {modeTotals.map((m) => {
+            const MIcon = m.icon;
+            return (
+              <span
+                key={m.key}
+                className="inline-flex items-center gap-1.5 rounded-full bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-600 ring-1 ring-inset ring-slate-200/70"
+              >
+                <MIcon className="size-3 text-amber-500" />
+                {m.label} {formatMiles(m.miles)} mi
+              </span>
+            );
+          })}
+        </div>
+      )}
 
       {/* Search-to-add — matches places AND airports (type a city or code like HSV) */}
       <div ref={searchRef} className="relative">
@@ -549,10 +603,24 @@ export function TripStops({
         </p>
       ) : (
         <ul className="mt-3">
+          {/* Implicit departure from home — automatic when the trip doesn't start at home */}
+          {home && legs.some((l) => l.toId === stops[0]?.id) && (
+            <li>
+              <div className="flex items-center gap-2 rounded-lg px-2 py-1.5">
+                <span className="size-3.5 shrink-0" aria-hidden="true" />
+                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-violet-100">
+                  <Home className="size-3 text-violet-600" />
+                </span>
+                <span className="min-w-0 flex-1 truncate text-sm text-slate-500">
+                  Home — {home.city.split(',')[0]}
+                </span>
+              </div>
+            </li>
+          )}
           <AnimatePresence initial={false}>
             {stops.map((stop, i) => {
               const leg = legs.find((l) => l.toId === stop.id);
-              const cfg = modeConfig(stop.travelMode);
+              const cfg = modeConfig(leg?.mode ?? stop.travelMode);
               const LegIcon = cfg.icon;
               return (
                 <motion.li
@@ -562,8 +630,9 @@ export function TripStops({
                   exit={{ opacity: 0, height: 0 }}
                   transition={{ duration: 0.18 }}
                 >
-                  {/* Leg chip: how you got here + distance */}
-                  {i > 0 && (
+                  {/* Leg chip: how you got here + distance (first place gets
+                      its leg from home when home is set) */}
+                  {leg && (
                     <div className="relative ml-[21px] flex items-center gap-2 border-l-2 border-dotted border-slate-200 py-1 pl-4">
                       <button
                         type="button"
@@ -576,7 +645,7 @@ export function TripStops({
                         aria-label={`Travel mode to ${stop.name}: ${cfg.label}. Click to change.`}
                       >
                         <LegIcon className="size-3" />
-                        {leg ? `${leg.approx ? '~' : ''}${formatMiles(leg.miles)} mi` : cfg.label}
+                        {`${leg.approx ? '~' : ''}${formatMiles(leg.miles)} mi`}
                       </button>
                       {modePickerFor === stop.id && (
                         <div
@@ -585,7 +654,7 @@ export function TripStops({
                         >
                           {MODES.map((m) => {
                             const MIcon = m.icon;
-                            const active = (stop.travelMode ?? 'drive') === m.key;
+                            const active = leg.mode === m.key;
                             return (
                               <button
                                 key={m.key}
