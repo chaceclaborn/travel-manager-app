@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import prisma from '@/lib/prisma';
 import { rateLimit } from '@/lib/rate-limit';
+import { generateUniqueUsername } from '@/lib/travelmanager/username';
 
 export async function GET(request: NextRequest) {
   const rateLimitResult = rateLimit(request, 'auth');
@@ -49,6 +50,15 @@ export async function GET(request: NextRequest) {
         await tx.$executeRaw`UPDATE "TripAttachment" SET "userId" = ${user.id} WHERE "userId" = ${existing.id}`;
       });
     } else {
+      // New accounts get an auto-generated username derived from their email;
+      // existing accounts keep whatever they have (never overwrite on login).
+      const existingById = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { username: true },
+      });
+      const username = existingById?.username
+        ?? (await generateUniqueUsername(meta.full_name || email || 'user'));
+
       await prisma.user.upsert({
         where: { id: user.id },
         update: {
@@ -61,6 +71,7 @@ export async function GET(request: NextRequest) {
           email,
           name: meta.full_name ?? '',
           avatarUrl: meta.avatar_url ?? null,
+          username,
         },
       });
     }

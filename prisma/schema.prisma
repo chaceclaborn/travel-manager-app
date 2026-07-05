@@ -15,6 +15,10 @@ datasource db {
 model User {
   id        String   @id // matches Supabase auth UUID
   email     String   @unique
+  // Public handle, unique case-insensitively (enforced app-side via lowercase
+  // compare + DB unique index). Nullable so signup never blocks on it;
+  // auto-generated from email and backfilled. Used to find & add real friends.
+  username  String?  @unique
   name      String?
   avatarUrl     String?
   homeCity      String?
@@ -27,6 +31,8 @@ model User {
   vendors     Vendor[]
   clients     Client[]
   friends     Friend[]
+  sentFriendRequests     Friendship[] @relation("FriendshipRequester")
+  receivedFriendRequests Friendship[] @relation("FriendshipAddressee")
   attachments TripAttachment[]
   auditLogs   AuditLog[]
   expenses        Expense[]
@@ -316,6 +322,31 @@ model TripFriend {
   notes    String?
 
   @@unique([tripId, friendId])
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+}
+
+// A real account-to-account connection (mutual). Distinct from Friend, which
+// is a private contact. requester sends the request; addressee accepts. A row
+// with status ACCEPTED means the two users are connected (direction is only
+// historical once accepted). The @@unique prevents duplicate requests in the
+// same direction; app logic blocks the reverse duplicate.
+model Friendship {
+  id          String           @id @default(cuid())
+  requesterId String
+  requester   User             @relation("FriendshipRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  addresseeId String
+  addressee   User             @relation("FriendshipAddressee", fields: [addresseeId], references: [id], onDelete: Cascade)
+  status      FriendshipStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@unique([requesterId, addresseeId])
+  @@index([requesterId])
+  @@index([addresseeId])
 }
 
 model ItineraryItem {

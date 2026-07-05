@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { Shield, Download, FileText, Trash2, Loader2, Monitor, MapPin, X, Mail, CheckCircle2, Unlink, Wrench, PanelLeft, RotateCcw } from 'lucide-react';
+import { Shield, Download, FileText, Trash2, Loader2, Monitor, MapPin, X, Mail, CheckCircle2, Unlink, Wrench, PanelLeft, RotateCcw, AtSign } from 'lucide-react';
 import { useNavPreferences, TOGGLEABLE_NAV_ITEMS } from '@/lib/travelmanager/useNavPreferences';
 import { useGeocodingSearch, formatGeoName } from '@/lib/travelmanager/useGeocodingSearch';
 import type { GeoResult } from '@/lib/travelmanager/useGeocodingSearch';
@@ -38,6 +38,7 @@ interface UserInfo {
   homeCity: string | null;
   homeLatitude: number | null;
   homeLongitude: number | null;
+  username: string | null;
 }
 
 function parseUserAgent(ua: string): string {
@@ -119,6 +120,12 @@ export default function SettingsPage() {
   const [gmailLoading, setGmailLoading] = useState(true);
   const [gmailDisconnecting, setGmailDisconnecting] = useState(false);
   const [avatarError, setAvatarError] = useState(false);
+  const [usernameDraft, setUsernameDraft] = useState('');
+  const [usernameCheck, setUsernameCheck] = useState<{
+    status: 'idle' | 'checking' | 'available' | 'unavailable';
+    error?: string;
+  }>({ status: 'idle' });
+  const [savingUsername, setSavingUsername] = useState(false);
   const {
     query: homeQuery,
     setQuery: setHomeQuery,
@@ -132,25 +139,26 @@ export default function SettingsPage() {
     clear: clearHomeSearch,
   } = useGeocodingSearch();
 
-  useEffect(() => {
+  const loadSettings = useCallback(() => {
     fetch('/api/user')
-      .then((res) => (res.ok ? res.json() : null))
+      .then((res) => (res.ok ? (res.json() as Promise<{ user?: UserInfo }>) : null))
       .then((data) => {
         if (data?.user) {
           setUserInfo(data.user);
           if (data.user.homeCity) setHomeQuery(data.user.homeCity);
+          if (data.user.username) setUsernameDraft(data.user.username);
         }
       })
       .catch(() => setUserInfo(null));
 
     fetch('/api/user/sessions')
-      .then((res) => (res.ok ? res.json() : []))
+      .then((res) => (res.ok ? (res.json() as Promise<Session[]>) : []))
       .then((data) => setSessions(Array.isArray(data) ? data.slice(0, 10) : []))
       .catch(() => setSessions([]))
       .finally(() => setLoadingSessions(false));
 
     fetch('/api/gmail/status')
-      .then((res) => res.ok ? res.json() : { connected: false })
+      .then((res) => (res.ok ? (res.json() as Promise<{ connected: boolean }>) : { connected: false }))
       .then((data) => setGmailConnected(data.connected))
       .catch(() => setGmailConnected(false))
       .finally(() => setGmailLoading(false));
@@ -167,7 +175,63 @@ export default function SettingsPage() {
       showToast('Failed to connect Gmail', 'error');
       window.history.replaceState({}, '', '/settings');
     }
-  }, []);
+  }, [setHomeQuery, showToast]);
+
+  useEffect(() => {
+    loadSettings();
+  }, [loadSettings]);
+
+  const currentUsername = userInfo?.username ?? '';
+
+  // Debounced username availability check
+  useEffect(() => {
+    const value = usernameDraft.trim();
+    if (!value || value.toLowerCase() === currentUsername.toLowerCase()) {
+      setUsernameCheck({ status: 'idle' });
+      return;
+    }
+    setUsernameCheck({ status: 'checking' });
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/user/username?check=${encodeURIComponent(value)}`);
+        const data = await res.json();
+        if (data.error) {
+          setUsernameCheck({ status: 'unavailable', error: data.error });
+        } else if (data.available) {
+          setUsernameCheck({ status: 'available' });
+        } else {
+          setUsernameCheck({ status: 'unavailable', error: 'That username is taken' });
+        }
+      } catch {
+        setUsernameCheck({ status: 'unavailable', error: 'Could not check username' });
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [usernameDraft, currentUsername]);
+
+  async function handleSaveUsername() {
+    setSavingUsername(true);
+    try {
+      const res = await fetch('/api/user/username', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: usernameDraft.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showToast(data.error || 'Failed to update username', 'error');
+        return;
+      }
+      setUserInfo((prev) => (prev ? { ...prev, username: data.user.username } : prev));
+      setUsernameDraft(data.user.username);
+      setUsernameCheck({ status: 'idle' });
+      showToast('Username updated');
+    } catch {
+      showToast('Failed to update username', 'error');
+    } finally {
+      setSavingUsername(false);
+    }
+  }
 
   const avatarUrl = userInfo?.avatarUrl || user?.user_metadata?.avatar_url;
   const fullName = userInfo?.name || user?.user_metadata?.full_name || 'User';
@@ -319,6 +383,56 @@ export default function SettingsPage() {
             )}
           </div>
         </div>
+      </motion.div>
+
+      {/* Username */}
+      <motion.div variants={item} className="rounded-xl bg-white p-6 shadow-sm">
+        <div className="flex items-center gap-2 mb-4">
+          <AtSign className="size-5 text-amber-600" />
+          <h2 className="text-lg font-semibold text-slate-800">Username</h2>
+        </div>
+        <p className="text-xs text-slate-500 mb-3">
+          Your unique @handle lets friends find and add you.
+          {currentUsername && (
+            <>
+              {' '}Currently{' '}
+              <span className="font-medium text-slate-700">@{currentUsername}</span>.
+            </>
+          )}
+        </p>
+        <div className="flex items-start gap-2">
+          <div className="relative flex-1">
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+              @
+            </span>
+            <Input
+              value={usernameDraft}
+              onChange={(e) => setUsernameDraft(e.target.value)}
+              placeholder="username"
+              className="pl-7"
+              autoComplete="off"
+              autoCapitalize="none"
+              spellCheck={false}
+              aria-label="Username"
+            />
+          </div>
+          <Button
+            onClick={handleSaveUsername}
+            disabled={savingUsername || usernameCheck.status !== 'available'}
+            className="bg-amber-500 hover:bg-amber-600"
+          >
+            {savingUsername ? <Loader2 className="size-4 animate-spin" /> : 'Save'}
+          </Button>
+        </div>
+        {usernameCheck.status === 'checking' && (
+          <p className="mt-2 text-xs text-slate-400">Checking…</p>
+        )}
+        {usernameCheck.status === 'available' && (
+          <p className="mt-2 text-xs text-emerald-600">Available</p>
+        )}
+        {usernameCheck.status === 'unavailable' && (
+          <p className="mt-2 text-xs text-red-600">{usernameCheck.error}</p>
+        )}
       </motion.div>
 
       {/* Home Location */}

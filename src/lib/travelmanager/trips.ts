@@ -464,6 +464,8 @@ export async function deleteAllUserData(userId: string) {
   await prisma.vendor.deleteMany({ where: { userId } });
   await prisma.client.deleteMany({ where: { userId } });
   await prisma.friend.deleteMany({ where: { userId } });
+  // Account-to-account friendships (cascade on User, but explicit for order)
+  await prisma.friendship.deleteMany({ where: { OR: [{ requesterId: userId }, { addresseeId: userId }] } });
 
   // Non-trip user-owned rows
   await prisma.feedback.deleteMany({ where: { userId } });          // Feedback: no cascade on User

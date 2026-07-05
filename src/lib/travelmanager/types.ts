@@ -6,6 +6,8 @@ import type {
   TripClient,
   Friend,
   TripFriend,
+  Friendship,
+  FriendshipStatus,
   ItineraryItem,
   TripStatus,
   VendorCategory,
@@ -25,7 +27,24 @@ import type {
   Meeting,
 } from '@/lib/generated/prisma';
 
-export type { Trip, Vendor, Client, TripVendor, TripClient, Friend, TripFriend, ItineraryItem, TripStatus, VendorCategory, TripAttachment, AuditLog, User, AttachmentCategory, ExpenseCategory, BookingType, BookingStatus, Expense, Booking, ChecklistItem, TripNote, TransportMode, TripType, Meeting };
+export type { Trip, Vendor, Client, TripVendor, TripClient, Friend, TripFriend, Friendship, FriendshipStatus, ItineraryItem, TripStatus, VendorCategory, TripAttachment, AuditLog, User, AttachmentCategory, ExpenseCategory, BookingType, BookingStatus, Expense, Booking, ChecklistItem, TripNote, TransportMode, TripType, Meeting };
+
+// A connection as shown to one user: the other person + our relationship to
+// them. `direction` distinguishes an incoming request (they asked us) from an
+// outgoing one (we asked them) while status is PENDING.
+export interface PublicUserSummary {
+  id: string;
+  username: string | null;
+  name: string | null;
+  avatarUrl: string | null;
+}
+
+export interface FriendConnection {
+  friendshipId: string;
+  status: FriendshipStatus;
+  direction: 'incoming' | 'outgoing';
+  user: PublicUserSummary;
+}
 
 export interface CreateMeetingInput {
   title: string;

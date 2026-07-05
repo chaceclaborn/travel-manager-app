@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/select';
 import { FriendCard } from '@/components/travelmanager/FriendCard';
 import { TMEmptyState } from '@/components/travelmanager/TMEmptyState';
+import { ConnectionsPanel } from '@/components/travelmanager/ConnectionsPanel';
 
 interface Friend {
   id: string;
@@ -139,13 +140,21 @@ export default function FriendsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
+      <h1 className="text-2xl font-bold text-slate-800">Friends</h1>
+
+      <ConnectionsPanel />
+
+      <div className="space-y-6 border-t border-slate-100 pt-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold text-slate-800">Friends</h1>
+        <div className="flex items-center gap-2">
+          <HeartHandshake className="size-5 text-slate-400" />
+          <h2 className="text-lg font-semibold text-slate-800">Contacts</h2>
+        </div>
         <Button asChild className="bg-amber-500 hover:bg-amber-600 text-white">
           <Link href="/friends/new">
             <Plus className="mr-2 size-4" />
-            New Friend
+            New Contact
           </Link>
         </Button>
       </div>
@@ -156,8 +165,8 @@ export default function FriendsPage() {
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search friends by name, email, or phone..."
-            aria-label="Search friends"
+            placeholder="Search contacts by name, email, or phone..."
+            aria-label="Search contacts"
             className="pl-10"
           />
         </div>
@@ -175,19 +184,19 @@ export default function FriendsPage() {
 
       {friends.length > 0 && (
         <p className="text-sm text-slate-500">
-          Showing {filtered.length} of {friends.length} {friends.length === 1 ? 'friend' : 'friends'}
+          Showing {filtered.length} of {friends.length} {friends.length === 1 ? 'contact' : 'contacts'}
         </p>
       )}
 
       {filtered.length === 0 ? (
         <TMEmptyState
-          title={search ? 'No friends found' : 'No friends yet'}
+          title={search ? 'No contacts found' : 'No contacts yet'}
           description={
             search
               ? 'Try adjusting your search terms.'
               : 'Add the people you travel with, then attach them to trips.'
           }
-          actionLabel={search ? undefined : 'New Friend'}
+          actionLabel={search ? undefined : 'New Contact'}
           actionHref={search ? undefined : '/friends/new'}
           icon={HeartHandshake}
         />
@@ -214,6 +223,7 @@ export default function FriendsPage() {
           ))}
         </motion.div>
       )}
+      </div>
     </div>
   );
 }
