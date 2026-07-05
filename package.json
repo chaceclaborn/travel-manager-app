@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "dev:no-open": "next dev",
-    "build": "prisma generate && next build",
+    "build": "prisma generate && node scripts/apply-manual-migrations.mjs && next build",
     "start": "next start",
     "lint": "eslint",
     "db:generate": "prisma generate",

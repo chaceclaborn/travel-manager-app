@@ -7,6 +7,7 @@ import { geocodeDestination } from './geocode';
 const tripInclude = {
   vendors: { include: { vendor: true } },
   clients: { include: { client: true } },
+  friends: { include: { friend: true } },
   itinerary: { orderBy: [{ date: 'asc' as const }, { sortOrder: 'asc' as const }] },
 };
 
@@ -52,7 +53,7 @@ export async function getTrips(userId: string, mode: 'full' | 'minimal' = 'full'
         arrivalAirportName: true,
         arrivalAirportLat: true,
         arrivalAirportLng: true,
-        _count: { select: { vendors: true, clients: true } },
+        _count: { select: { vendors: true, clients: true, friends: true } },
       },
       orderBy: { startDate: 'asc' },
     });
@@ -190,6 +191,31 @@ export async function getTripVendors(tripId: string, userId: string) {
   return prisma.tripVendor.findMany({
     where: { tripId },
     include: { vendor: true },
+  });
+}
+
+export async function linkFriendToTrip(tripId: string, friendId: string, userId: string, notes?: string) {
+  await verifyTripOwnership(tripId, userId);
+  const friend = await prisma.friend.findFirst({ where: { id: friendId, userId } });
+  if (!friend) throw new Error('Friend not found');
+  return prisma.tripFriend.create({
+    data: { notes, trip: { connect: { id: tripId } }, friend: { connect: { id: friendId } } },
+    include: { friend: true },
+  });
+}
+
+export async function unlinkFriendFromTrip(tripId: string, friendId: string, userId: string) {
+  await verifyTripOwnership(tripId, userId);
+  return prisma.tripFriend.delete({
+    where: { tripId_friendId: { tripId, friendId } },
+  });
+}
+
+export async function getTripFriends(tripId: string, userId: string) {
+  await verifyTripOwnership(tripId, userId);
+  return prisma.tripFriend.findMany({
+    where: { tripId },
+    include: { friend: true },
   });
 }
 
@@ -382,13 +408,14 @@ export async function getUserData(userId: string) {
   });
   const vendors = await prisma.vendor.findMany({ where: { userId } });
   const clients = await prisma.client.findMany({ where: { userId } });
+  const friends = await prisma.friend.findMany({ where: { userId } });
   const expenses = await prisma.expense.findMany({ where: { userId } });
   const bookings = await prisma.booking.findMany({ where: { userId } });
   const checklistItems = await prisma.checklistItem.findMany({ where: { userId } });
   const tripNotes = await prisma.tripNote.findMany({ where: { userId } });
   const auditLogs = await prisma.auditLog.findMany({ where: { userId }, orderBy: { createdAt: 'desc' } });
 
-  return { trips, vendors, clients, expenses, bookings, checklistItems, tripNotes, auditLogs };
+  return { trips, vendors, clients, friends, expenses, bookings, checklistItems, tripNotes, auditLogs };
 }
 
 export async function deleteAllUserData(userId: string) {
@@ -422,6 +449,7 @@ export async function deleteAllUserData(userId: string) {
     await prisma.itineraryItem.deleteMany({ where: { tripId: { in: tripIds } } });
     await prisma.tripVendor.deleteMany({ where: { tripId: { in: tripIds } } });
     await prisma.tripClient.deleteMany({ where: { tripId: { in: tripIds } } });
+    await prisma.tripFriend.deleteMany({ where: { tripId: { in: tripIds } } });
   }
 
   // Standalone rows (not tied to a trip, or with their own User FK)
@@ -435,6 +463,7 @@ export async function deleteAllUserData(userId: string) {
   await prisma.trip.deleteMany({ where: { userId } });
   await prisma.vendor.deleteMany({ where: { userId } });
   await prisma.client.deleteMany({ where: { userId } });
+  await prisma.friend.deleteMany({ where: { userId } });
 
   // Non-trip user-owned rows
   await prisma.feedback.deleteMany({ where: { userId } });          // Feedback: no cascade on User

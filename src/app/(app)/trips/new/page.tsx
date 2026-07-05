@@ -21,10 +21,10 @@ function NewTripPageContent() {
   const [isLoading, setIsLoading] = useState(false);
   const prefillStartDate = searchParams.get('startDate');
 
-  const handleSubmit = async (data: Record<string, unknown> & { clientIds?: string[] }) => {
+  const handleSubmit = async (data: Record<string, unknown> & { clientIds?: string[]; friendIds?: string[] }) => {
     setIsLoading(true);
     try {
-      const { clientIds, ...tripData } = data;
+      const { clientIds, friendIds, ...tripData } = data;
       const res = await fetch('/api/trips', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -45,6 +45,18 @@ function NewTripPageContent() {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ action: 'link', clientId }),
+            })
+          )
+        );
+      }
+
+      if (friendIds && friendIds.length > 0) {
+        await Promise.allSettled(
+          friendIds.map((friendId: string) =>
+            fetch(`/api/trips/${trip.id}/friends`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'link', friendId }),
             })
           )
         );

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { motion, useReducedMotion } from 'framer-motion';
-import { MapPin, Calendar, DollarSign, Users, Building2, ChevronRight, Pencil, X, Trash2, Loader2, Briefcase } from 'lucide-react';
+import { MapPin, Calendar, DollarSign, Users, Building2, ChevronRight, Pencil, X, Trash2, Loader2, Briefcase, HeartHandshake } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,7 +29,8 @@ interface TripCardProps {
     notes?: string | null;
     vendors?: unknown[];
     clients?: unknown[];
-    _count?: { vendors: number; clients: number };
+    friends?: unknown[];
+    _count?: { vendors: number; clients: number; friends?: number };
   };
   onSaved?: () => void;
   onDeleted?: () => void;
@@ -80,6 +81,7 @@ export function TripCard({ trip, onSaved, onDeleted }: TripCardProps) {
   const days = trip.startDate && trip.endDate ? getDurationDays(trip.startDate, trip.endDate) : null;
   const vendorCount = trip._count?.vendors ?? trip.vendors?.length ?? 0;
   const clientCount = trip._count?.clients ?? trip.clients?.length ?? 0;
+  const friendCount = trip._count?.friends ?? trip.friends?.length ?? 0;
   const borderColor = statusBorderColors[trip.status] ?? 'border-l-slate-300';
 
   const startEdit = (e: React.MouseEvent) => {
@@ -239,9 +241,10 @@ export function TripCard({ trip, onSaved, onDeleted }: TripCardProps) {
               </div>
             )}
 
-            {(vendorCount > 0 || clientCount > 0 || trip.tripType === 'WORK') && (
+            {(vendorCount > 0 || clientCount > 0 || friendCount > 0 || trip.tripType === 'WORK') && (
               <div className="mt-3 flex items-center gap-1.5 flex-wrap">
                 {trip.tripType === 'WORK' && <Badge variant="secondary" className="text-[11px] gap-1 bg-sky-50 text-sky-700 ring-1 ring-inset ring-sky-200 border-0 px-2 py-0.5"><Briefcase className="size-3" />Work</Badge>}
+                {friendCount > 0 && <Badge variant="secondary" className="text-[11px] gap-1 bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200 border-0 px-2 py-0.5"><HeartHandshake className="size-3" />{friendCount} {friendCount === 1 ? 'friend' : 'friends'}</Badge>}
                 {vendorCount > 0 && <Badge variant="secondary" className="text-[11px] gap-1 bg-slate-50 text-slate-600 ring-1 ring-inset ring-slate-200 border-0 px-2 py-0.5"><Building2 className="size-3" />{vendorCount} {vendorCount === 1 ? 'vendor' : 'vendors'}</Badge>}
                 {clientCount > 0 && <Badge variant="secondary" className="text-[11px] gap-1 bg-slate-50 text-slate-600 ring-1 ring-inset ring-slate-200 border-0 px-2 py-0.5"><Users className="size-3" />{clientCount} {clientCount === 1 ? 'client' : 'clients'}</Badge>}
               </div>

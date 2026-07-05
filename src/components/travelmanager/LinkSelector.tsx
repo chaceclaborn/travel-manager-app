@@ -10,7 +10,7 @@ interface LinkSelectorProps {
   linkedIds: string[];
   onLink: (id: string) => void;
   onUnlink: (id: string) => void;
-  type: 'vendor' | 'client';
+  type: 'vendor' | 'client' | 'friend';
   isLoading?: boolean;
 }
 

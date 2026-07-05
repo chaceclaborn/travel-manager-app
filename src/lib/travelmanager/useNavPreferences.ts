@@ -6,6 +6,7 @@ import {
   MapPin,
   Building2,
   Users,
+  HeartHandshake,
   BarChart3,
   Globe,
   Plane,
@@ -36,6 +37,7 @@ export const NAV_ITEMS: NavItemDef[] = [
   { key: 'meetings', href: '/meetings', label: 'Meetings', icon: Users, shortcut: 'G E', track: 'nav:meetings', toggleable: true, description: 'Scheduled meetings' },
   { key: 'vendors', href: '/vendors', label: 'Vendors', icon: Building2, shortcut: 'G V', track: 'nav:vendors', toggleable: true, description: 'Suppliers and service providers' },
   { key: 'clients', href: '/clients', label: 'Clients', icon: Users, shortcut: 'G C', track: 'nav:clients', toggleable: true, description: 'People and companies you travel for' },
+  { key: 'friends', href: '/friends', label: 'Friends', icon: HeartHandshake, shortcut: 'G F', track: 'nav:friends', toggleable: true, description: 'People you travel with' },
   { key: 'analytics', href: '/analytics', label: 'Analytics', icon: BarChart3, shortcut: 'G A', track: 'nav:analytics', toggleable: true, description: 'Spending and travel insights' },
   { key: 'map', href: '/map', label: 'Map', icon: Globe, shortcut: 'G M', track: 'nav:map', toggleable: true, description: 'Global map of every place you\'ve been' },
 ];

@@ -4,6 +4,8 @@ import type {
   Client,
   TripVendor,
   TripClient,
+  Friend,
+  TripFriend,
   ItineraryItem,
   TripStatus,
   VendorCategory,
@@ -23,7 +25,7 @@ import type {
   Meeting,
 } from '@/lib/generated/prisma';
 
-export type { Trip, Vendor, Client, TripVendor, TripClient, ItineraryItem, TripStatus, VendorCategory, TripAttachment, AuditLog, User, AttachmentCategory, ExpenseCategory, BookingType, BookingStatus, Expense, Booking, ChecklistItem, TripNote, TransportMode, TripType, Meeting };
+export type { Trip, Vendor, Client, TripVendor, TripClient, Friend, TripFriend, ItineraryItem, TripStatus, VendorCategory, TripAttachment, AuditLog, User, AttachmentCategory, ExpenseCategory, BookingType, BookingStatus, Expense, Booking, ChecklistItem, TripNote, TransportMode, TripType, Meeting };
 
 export interface CreateMeetingInput {
   title: string;
@@ -41,6 +43,7 @@ export type UpdateMeetingInput = Partial<CreateMeetingInput>;
 export type TripWithRelations = Trip & {
   vendors: (TripVendor & { vendor: Vendor })[];
   clients: (TripClient & { client: Client })[];
+  friends: (TripFriend & { friend: Friend })[];
   itinerary: ItineraryItem[];
   expenses?: Expense[];
   bookings?: Booking[];
@@ -50,6 +53,10 @@ export type TripWithRelations = Trip & {
 
 export type VendorWithTrips = Vendor & {
   trips: (TripVendor & { trip: Trip })[];
+};
+
+export type FriendWithTrips = Friend & {
+  trips: (TripFriend & { trip: Trip })[];
 };
 
 export type ClientWithTrips = Client & {
@@ -107,6 +114,15 @@ export interface CreateClientInput {
 }
 
 export type UpdateClientInput = Partial<CreateClientInput>;
+
+export interface CreateFriendInput {
+  name: string;
+  email?: string;
+  phone?: string;
+  notes?: string;
+}
+
+export type UpdateFriendInput = Partial<CreateFriendInput>;
 
 export interface CreateItineraryItemInput {
   tripId: string;

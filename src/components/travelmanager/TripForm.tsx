@@ -23,6 +23,11 @@ interface SimpleClient {
   company?: string | null;
 }
 
+interface SimpleFriend {
+  id: string;
+  name: string;
+}
+
 interface TripFormInitialData {
   title?: string | null;
   destination?: string | null;
@@ -42,6 +47,7 @@ interface TripFormInitialData {
   arrivalAirportLat?: number | null;
   arrivalAirportLng?: number | null;
   clientIds?: string[];
+  friendIds?: string[];
 }
 
 interface TripFormProps {
@@ -250,11 +256,20 @@ export function TripForm({ initialData, onSubmit, isLoading }: TripFormProps) {
     initialData?.clientIds || []
   );
   const [clientSearch, setClientSearch] = useState('');
+  const [allFriends, setAllFriends] = useState<SimpleFriend[]>([]);
+  const [selectedFriendIds, setSelectedFriendIds] = useState<string[]>(
+    initialData?.friendIds || []
+  );
+  const [friendSearch, setFriendSearch] = useState('');
 
   useEffect(() => {
     fetch('/api/clients')
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => setAllClients(data))
+      .catch(() => {});
+    fetch('/api/friends')
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => setAllFriends(data))
       .catch(() => {});
   }, []);
 
@@ -332,6 +347,7 @@ export function TripForm({ initialData, onSubmit, isLoading }: TripFormProps) {
       arrivalAirportLat: arrivalAirport?.lat || null,
       arrivalAirportLng: arrivalAirport?.lng || null,
       clientIds: selectedClientIds,
+      friendIds: selectedFriendIds,
     });
   };
 
@@ -500,6 +516,72 @@ export function TripForm({ initialData, onSubmit, isLoading }: TripFormProps) {
             />
             {errors.arrivalAirport && <p className="text-xs text-red-500">{errors.arrivalAirport}</p>}
           </div>
+        </div>
+      )}
+
+      {allFriends.length > 0 && (
+        <div className="space-y-1.5 border-t border-slate-100 pt-4">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">Travel Companions</p>
+          <Label>Friends</Label>
+          {selectedFriendIds.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {selectedFriendIds.map((fid) => {
+                const friend = allFriends.find((f) => f.id === fid);
+                if (!friend) return null;
+                return (
+                  <Badge key={fid} variant="secondary" className="gap-1 pl-2 pr-1 py-0.5 bg-emerald-50 text-emerald-700 border-emerald-200">
+                    {friend.name}
+                    <button
+                      type="button"
+                      onClick={() => setSelectedFriendIds((prev) => prev.filter((id) => id !== fid))}
+                      className="rounded-full p-0.5 hover:bg-emerald-200/50 transition-colors"
+                    >
+                      <X className="size-3" />
+                    </button>
+                  </Badge>
+                );
+              })}
+            </div>
+          )}
+          <div className="relative">
+            <Input
+              value={friendSearch}
+              onChange={(e) => setFriendSearch(e.target.value)}
+              placeholder="Search friends to add..."
+              className="pr-8"
+            />
+            <Users className="absolute right-2 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
+          </div>
+          {friendSearch.length > 0 && (
+            <div className="border border-slate-200 rounded-lg bg-white shadow-sm max-h-[150px] overflow-y-auto">
+              {allFriends
+                .filter(
+                  (f) =>
+                    !selectedFriendIds.includes(f.id) &&
+                    f.name.toLowerCase().includes(friendSearch.toLowerCase())
+                )
+                .map((friend) => (
+                  <button
+                    key={friend.id}
+                    type="button"
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 border-b border-slate-100 last:border-b-0"
+                    onClick={() => {
+                      setSelectedFriendIds((prev) => [...prev, friend.id]);
+                      setFriendSearch('');
+                    }}
+                  >
+                    <span className="font-medium text-slate-700">{friend.name}</span>
+                  </button>
+                ))}
+              {allFriends.filter(
+                (f) =>
+                  !selectedFriendIds.includes(f.id) &&
+                  f.name.toLowerCase().includes(friendSearch.toLowerCase())
+              ).length === 0 && (
+                <p className="px-3 py-2 text-sm text-slate-400">No matching friends</p>
+              )}
+            </div>
+          )}
         </div>
       )}
 
