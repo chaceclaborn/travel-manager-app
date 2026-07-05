@@ -11,11 +11,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Full history so check-migration-consistency can diff against the
+          # base branch / previous commit.
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'yarn'
       - run: yarn install --frozen-lockfile
+      - run: node scripts/check-migration-consistency.mjs
       - run: yarn prisma generate
       - run: yarn tsc --noEmit
       - run: yarn lint
