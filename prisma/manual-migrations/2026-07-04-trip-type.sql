@@ -1,12 +1,16 @@
 -- Trip type (personal vs work) — 2026-07-04
--- Run in the Supabase dashboard SQL editor (project bsnzgcmizbonttgnxvqi).
--- This Mac has no .env, so `prisma db push` can't apply it locally;
--- schema.prisma has already been hand-edited to match this SQL.
+-- Run in the Supabase dashboard SQL editor (project bsnzgcmizbonttgnxvqi),
+-- or via `yarn db:apply-migrations` from a machine with DB_PASSWORD set.
 --
 -- IMPORTANT: the app code selects "tripType" on every Trip query, so trip
 -- pages will 500 until this migration is applied.
+--
+-- Idempotent: safe to run repeatedly.
 
-CREATE TYPE "TripType" AS ENUM ('PERSONAL', 'WORK');
+DO $$ BEGIN
+  CREATE TYPE "TripType" AS ENUM ('PERSONAL', 'WORK');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 ALTER TABLE "Trip"
-  ADD COLUMN "tripType" "TripType" NOT NULL DEFAULT 'PERSONAL';
+  ADD COLUMN IF NOT EXISTS "tripType" "TripType" NOT NULL DEFAULT 'PERSONAL';
