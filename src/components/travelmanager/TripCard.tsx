@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { motion, useReducedMotion } from 'framer-motion';
-import { MapPin, Calendar, DollarSign, Users, Building2, ChevronRight, Pencil, X, Trash2, Loader2 } from 'lucide-react';
+import { MapPin, Calendar, DollarSign, Users, Building2, ChevronRight, Pencil, X, Trash2, Loader2, Briefcase } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,6 +23,7 @@ interface TripCardProps {
     startDate?: string | null;
     endDate?: string | null;
     status: string;
+    tripType?: string | null;
     budget?: number | null;
     notes?: string | null;
     vendors?: unknown[];
@@ -68,6 +69,7 @@ export function TripCard({ trip, onSaved, onDeleted }: TripCardProps) {
     startDate: extractDate(trip.startDate),
     endDate: extractDate(trip.endDate),
     status: trip.status,
+    tripType: trip.tripType || 'PERSONAL',
     budget: trip.budget != null ? String(trip.budget) : '',
   });
   const { showToast } = useTMToast();
@@ -87,6 +89,7 @@ export function TripCard({ trip, onSaved, onDeleted }: TripCardProps) {
       startDate: extractDate(trip.startDate),
       endDate: extractDate(trip.endDate),
       status: trip.status,
+      tripType: trip.tripType || 'PERSONAL',
       budget: trip.budget != null ? String(trip.budget) : '',
     });
     setEditing(true);
@@ -106,6 +109,7 @@ export function TripCard({ trip, onSaved, onDeleted }: TripCardProps) {
           startDate: form.startDate || undefined,
           endDate: form.endDate || undefined,
           status: form.status,
+          tripType: form.tripType,
           budget: form.budget ? parseFloat(form.budget) : undefined,
         }),
       });
@@ -156,6 +160,16 @@ export function TripCard({ trip, onSaved, onDeleted }: TripCardProps) {
                 </Select>
               </div>
               <div><Label className="text-xs">Budget</Label><Input type="number" step="0.01" value={form.budget} onChange={(e) => setForm(f => ({ ...f, budget: e.target.value }))} className="h-8 text-xs" placeholder="0.00" /></div>
+              <div>
+                <Label className="text-xs">Type</Label>
+                <Select value={form.tripType} onValueChange={(v) => setForm(f => ({ ...f, tripType: v }))}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="PERSONAL">Personal</SelectItem>
+                    <SelectItem value="WORK">Work</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="flex gap-2">
               <Button type="submit" size="sm" disabled={saving} className="h-7 text-xs bg-amber-500 hover:bg-amber-600">{saving ? <><Loader2 className="size-3.5 animate-spin" />Saving...</> : 'Save'}</Button>
@@ -223,8 +237,9 @@ export function TripCard({ trip, onSaved, onDeleted }: TripCardProps) {
               </div>
             )}
 
-            {(vendorCount > 0 || clientCount > 0) && (
+            {(vendorCount > 0 || clientCount > 0 || trip.tripType === 'WORK') && (
               <div className="mt-3 flex items-center gap-1.5 flex-wrap">
+                {trip.tripType === 'WORK' && <Badge variant="secondary" className="text-[11px] gap-1 bg-sky-50 text-sky-700 ring-1 ring-inset ring-sky-200 border-0 px-2 py-0.5"><Briefcase className="size-3" />Work</Badge>}
                 {vendorCount > 0 && <Badge variant="secondary" className="text-[11px] gap-1 bg-slate-50 text-slate-600 ring-1 ring-inset ring-slate-200 border-0 px-2 py-0.5"><Building2 className="size-3" />{vendorCount} {vendorCount === 1 ? 'vendor' : 'vendors'}</Badge>}
                 {clientCount > 0 && <Badge variant="secondary" className="text-[11px] gap-1 bg-slate-50 text-slate-600 ring-1 ring-inset ring-slate-200 border-0 px-2 py-0.5"><Users className="size-3" />{clientCount} {clientCount === 1 ? 'client' : 'clients'}</Badge>}
               </div>

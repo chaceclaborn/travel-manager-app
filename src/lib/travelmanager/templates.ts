@@ -2,7 +2,7 @@
 // Designed for travel agents (B2B): multi-city leisure, all-inclusive family,
 // and short business travel.
 
-import type { TripStatus } from '@/lib/generated/prisma';
+import type { TripStatus, TripType } from '@/lib/generated/prisma';
 
 export interface TripTemplateItinerary {
   /** Days offset from the trip start date (0 = day 1). */
@@ -23,6 +23,8 @@ export interface TripTemplate {
     destination: string;
     notes: string;
     budget: number;
+    /** Defaults to PERSONAL when omitted. */
+    tripType?: TripType;
   };
   itinerary: TripTemplateItinerary[];
   checklist: string[];
@@ -112,6 +114,7 @@ export const TRIP_TEMPLATES: readonly TripTemplate[] = [
       destination: 'New York, NY',
       notes: 'Business travel — flights, hotel, ground transportation, expense tracking.',
       budget: 3500,
+      tripType: 'WORK',
     },
     itinerary: [
       { dayOffset: 0, title: 'Flight to NYC', startTime: '07:00', location: 'JFK' },
@@ -149,6 +152,7 @@ export interface InstantiatedTemplate {
     startDate: Date;
     endDate: Date;
     status: TripStatus;
+    tripType: TripType;
   };
   itinerary: Array<{
     title: string;
@@ -205,6 +209,7 @@ export function instantiateTemplate(
       startDate: start,
       endDate,
       status: 'PLANNED' as TripStatus,
+      tripType: template.trip.tripType ?? 'PERSONAL',
     },
     itinerary,
     checklist,

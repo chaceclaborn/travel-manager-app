@@ -16,9 +16,12 @@ import {
   Footprints,
   Home,
   Trash2,
+  Camera,
   type LucideIcon,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { PhotoGallery } from '@/components/travelmanager/PhotoGallery';
+import { removePhotosForParent } from '@/lib/photos/store';
 import { haversineDistance, KM_TO_MILES } from '@/lib/distance';
 
 export interface TripStopData {
@@ -70,6 +73,9 @@ interface TripStopsProps {
   tripDestination?: string | null;
   tripLatitude?: number | null;
   tripLongitude?: number | null;
+  /** Persisted opt-outs for the assumed home departure/return legs */
+  hideHomeDeparture?: boolean;
+  hideHomeReturn?: boolean;
   onRouteChange?: (stops: TripStopData[], legs: RouteLeg[]) => void;
 }
 
@@ -106,8 +112,12 @@ export function TripStops({
   tripDestination,
   tripLatitude,
   tripLongitude,
+  hideHomeDeparture = false,
+  hideHomeReturn = false,
   onRouteChange,
 }: TripStopsProps) {
+  const [hideDeparture, setHideDeparture] = useState(hideHomeDeparture);
+  const [hideReturn, setHideReturn] = useState(hideHomeReturn);
   const [stops, setStops] = useState<TripStopData[]>([]);
   const [legs, setLegs] = useState<RouteLeg[]>([]);
   const [home, setHome] = useState<{ city: string; latitude: number; longitude: number } | null>(null);
@@ -118,6 +128,7 @@ export function TripStops({
   const [searching, setSearching] = useState(false);
   const [adding, setAdding] = useState(false);
   const [modePickerFor, setModePickerFor] = useState<string | null>(null);
+  const [photosOpenFor, setPhotosOpenFor] = useState<string | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
@@ -208,10 +219,11 @@ export function TripStops({
       }
 
       // Departure leg FROM home into the first place — shown whenever home
-      // is set and the trip doesn't start where you live.
+      // is set, the trip doesn't start where you live, and the trip hasn't
+      // opted out (e.g. it began where another trip ended).
       const first = stops[0];
       const departsFromHome =
-        home && first && straightMiles(home, first) > HOME_ARRIVED_MILES;
+        !hideDeparture && home && first && straightMiles(home, first) > HOME_ARRIVED_MILES;
       if (home && first && departsFromHome) {
         const straight = straightMiles(home, first);
         const leg = await buildLeg(home, first, first.id, effectiveMode(first, straight));
@@ -228,10 +240,10 @@ export function TripStops({
       }
 
       // Implicit "back home" leg — automatic unless the route already ends
-      // near home (or home isn't set).
+      // near home, home isn't set, or the trip opted out.
       let returnsHome = false;
       const last = stops[stops.length - 1];
-      if (home && last && straightMiles(last, home) > HOME_ARRIVED_MILES) {
+      if (!hideReturn && home && last && straightMiles(last, home) > HOME_ARRIVED_MILES) {
         const straight = straightMiles(last, home);
         const mode = straight > AUTO_HOME_FLIGHT_MILES ? 'flight' : 'drive';
         const leg = await buildLeg(last, home, HOME_STOP_ID, mode, true);
@@ -268,7 +280,7 @@ export function TripStops({
     return () => {
       cancelled = true;
     };
-  }, [stops, home]);
+  }, [stops, home, hideDeparture, hideReturn]);
 
   // Debounced search: places (geocoder) + airports (IATA database) in parallel
   useEffect(() => {
@@ -363,7 +375,12 @@ export function TripStops({
     setStops(stops.filter((s) => s.id !== stopId));
     try {
       const res = await fetch(`/api/trips/${tripId}/stops/${stopId}`, { method: 'DELETE' });
-      if (!res.ok) setStops(prev);
+      if (!res.ok) {
+        setStops(prev);
+        return;
+      }
+      if (photosOpenFor === stopId) setPhotosOpenFor(null);
+      removePhotosForParent('stop', stopId);
     } catch {
       setStops(prev);
     }
@@ -385,13 +402,36 @@ export function TripStops({
     }
   };
 
+  // Persisted per trip so the opt-out survives reloads (e.g. a trip that
+  // began at another trip's endpoint rather than at home).
+  const setHomeLegHidden = async (which: 'departure' | 'return', hidden: boolean) => {
+    if (which === 'departure') setHideDeparture(hidden);
+    else setHideReturn(hidden);
+    try {
+      await fetch(`/api/trips/${tripId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(
+          which === 'departure' ? { hideHomeDeparture: hidden } : { hideHomeReturn: hidden }
+        ),
+      });
+    } catch {
+      // optimistic — server truth wins on next load
+    }
+  };
+
   const clearRoute = async () => {
     setConfirmClear(false);
     const prev = stops;
     setStops([]);
     try {
       const res = await fetch(`/api/trips/${tripId}/stops`, { method: 'DELETE' });
-      if (!res.ok) setStops(prev);
+      if (!res.ok) {
+        setStops(prev);
+        return;
+      }
+      setPhotosOpenFor(null);
+      for (const s of prev) removePhotosForParent('stop', s.id);
     } catch {
       setStops(prev);
     }
@@ -604,8 +644,8 @@ export function TripStops({
       ) : (
         <ul className="mt-3">
           {/* Implicit departure from home — automatic when the trip doesn't start at home */}
-          {home && legs.some((l) => l.toId === stops[0]?.id) && (
-            <li>
+          {home && !hideDeparture && legs.some((l) => l.toId === stops[0]?.id) && (
+            <li className="group/homestart">
               <div className="flex items-center gap-2 rounded-lg px-2 py-1.5">
                 <span className="size-3.5 shrink-0" aria-hidden="true" />
                 <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-violet-100">
@@ -614,6 +654,15 @@ export function TripStops({
                 <span className="min-w-0 flex-1 truncate text-sm text-slate-500">
                   Home — {home.city.split(',')[0]}
                 </span>
+                <button
+                  type="button"
+                  onClick={() => setHomeLegHidden('departure', true)}
+                  aria-label="Remove the assumed departure from home"
+                  title="Didn't start this trip from home? Remove this leg."
+                  className="flex size-6 shrink-0 items-center justify-center rounded-md text-slate-300 transition-colors hover:bg-red-50 hover:text-red-500 active:bg-red-50 active:text-red-500"
+                >
+                  <X className="size-3.5" />
+                </button>
               </div>
             </li>
           )}
@@ -710,6 +759,19 @@ export function TripStops({
                     </span>
                     <button
                       type="button"
+                      onClick={() => setPhotosOpenFor(photosOpenFor === stop.id ? null : stop.id)}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      aria-label={`Photos for ${stop.name}`}
+                      className={`flex size-6 shrink-0 items-center justify-center rounded-md transition-colors ${
+                        photosOpenFor === stop.id
+                          ? 'bg-amber-100 text-amber-600'
+                          : 'text-slate-300 hover:bg-amber-50 hover:text-amber-500 active:bg-amber-50 active:text-amber-500'
+                      }`}
+                    >
+                      <Camera className="size-3.5" />
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => removeStop(stop.id)}
                       aria-label={`Remove ${stop.name}`}
                       className="flex size-6 shrink-0 items-center justify-center rounded-md text-slate-300 transition-colors hover:bg-red-50 hover:text-red-500 active:bg-red-50 active:text-red-500"
@@ -717,6 +779,18 @@ export function TripStops({
                       <X className="size-3.5" />
                     </button>
                   </div>
+
+                  {/* On-device photos for this place */}
+                  {photosOpenFor === stop.id && (
+                    <div className="ml-9 mr-2 rounded-lg bg-slate-50 p-2">
+                      <PhotoGallery
+                        tripId={tripId}
+                        parentType="stop"
+                        parentId={stop.id}
+                        compact
+                      />
+                    </div>
+                  )}
                 </motion.li>
               );
             })}
@@ -742,7 +816,42 @@ export function TripStops({
                 <span className="min-w-0 flex-1 truncate text-sm text-slate-500">
                   Home — {home.city.split(',')[0]}
                 </span>
+                <button
+                  type="button"
+                  onClick={() => setHomeLegHidden('return', true)}
+                  aria-label="Remove the assumed return home"
+                  title="Didn't head home after this trip? Remove this leg."
+                  className="flex size-6 shrink-0 items-center justify-center rounded-md text-slate-300 transition-colors hover:bg-red-50 hover:text-red-500 active:bg-red-50 active:text-red-500"
+                >
+                  <X className="size-3.5" />
+                </button>
               </div>
+            </li>
+          )}
+
+          {/* Restore removed home legs */}
+          {home && stops.length > 0 && (hideDeparture || hideReturn) && (
+            <li className="mt-1 flex gap-1.5 px-2">
+              {hideDeparture && (
+                <button
+                  type="button"
+                  onClick={() => setHomeLegHidden('departure', false)}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-violet-300 bg-violet-50/50 px-2.5 py-0.5 text-[11px] font-medium text-violet-600 transition-colors hover:bg-violet-50 active:bg-violet-100"
+                >
+                  <Home className="size-3" />
+                  Show departure from home
+                </button>
+              )}
+              {hideReturn && (
+                <button
+                  type="button"
+                  onClick={() => setHomeLegHidden('return', false)}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-violet-300 bg-violet-50/50 px-2.5 py-0.5 text-[11px] font-medium text-violet-600 transition-colors hover:bg-violet-50 active:bg-violet-100"
+                >
+                  <Home className="size-3" />
+                  Show return home
+                </button>
+              )}
             </li>
           )}
         </ul>

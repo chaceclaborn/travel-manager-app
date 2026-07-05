@@ -177,3 +177,4 @@ export const EXPENSE_CATEGORY_VALUES = ['FLIGHT', 'HOTEL', 'TRANSPORT', 'FOOD', 
 export const BOOKING_TYPE_VALUES = ['FLIGHT', 'HOTEL', 'CAR_RENTAL', 'TRAIN', 'BUS', 'OTHER'] as const;
 export const ATTACHMENT_CATEGORY_VALUES = ['FLIGHT', 'HOTEL', 'CAR_RENTAL', 'OTHER'] as const;
 export const TRANSPORT_MODE_VALUES = ['FLIGHT', 'CAR'] as const;
+export const TRIP_TYPE_VALUES = ['PERSONAL', 'WORK'] as const;

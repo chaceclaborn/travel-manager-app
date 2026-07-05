@@ -97,6 +97,7 @@ export async function GET(
       details.push(`${formatDate(trip.startDate)} — ${formatDate(trip.endDate)}`);
     }
     details.push(`Status: ${trip.status.replace('_', ' ')}`);
+    details.push(`Type: ${trip.tripType === 'WORK' ? 'Work' : 'Personal'}`);
     if (trip.budget != null) details.push(`Budget: ${formatCurrency(trip.budget)}`);
     if (trip.transportMode) {
       if (trip.transportMode === 'FLIGHT' && trip.departureAirportCode && trip.arrivalAirportCode) {

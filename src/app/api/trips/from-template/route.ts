@@ -70,6 +70,7 @@ export async function POST(request: NextRequest) {
         startDate: trip.startDate,
         endDate: trip.endDate,
         status: trip.status,
+        tripType: trip.tripType,
         notes: trip.notes,
         budget: trip.budget,
         user: { connect: { id: user.id } },

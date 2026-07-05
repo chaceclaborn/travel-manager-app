@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getTripById, updateTrip, deleteTrip } from '@/lib/travelmanager/trips';
 import { requireAuth } from '@/lib/travelmanager/auth';
 import { rateLimit } from '@/lib/rate-limit';
-import { sanitizeObject, validateUUID, validateDateString, validateEnum, TRIP_STATUS_VALUES, TRANSPORT_MODE_VALUES } from '@/lib/sanitize';
+import { sanitizeObject, validateUUID, validateDateString, validateEnum, TRIP_STATUS_VALUES, TRANSPORT_MODE_VALUES, TRIP_TYPE_VALUES } from '@/lib/sanitize';
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -39,7 +39,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     const body = await request.json();
-    const sanitized = sanitizeObject(body, ['title', 'destination', 'startDate', 'endDate', 'status', 'notes', 'budget', 'transportMode', 'departureAirportCode', 'departureAirportName', 'departureAirportLat', 'departureAirportLng', 'arrivalAirportCode', 'arrivalAirportName', 'arrivalAirportLat', 'arrivalAirportLng']);
+    const sanitized = sanitizeObject(body, ['title', 'destination', 'startDate', 'endDate', 'status', 'tripType', 'notes', 'budget', 'transportMode', 'departureAirportCode', 'departureAirportName', 'departureAirportLat', 'departureAirportLng', 'arrivalAirportCode', 'arrivalAirportName', 'arrivalAirportLat', 'arrivalAirportLng', 'hideHomeDeparture', 'hideHomeReturn']);
 
     if (sanitized.status && !validateEnum(sanitized.status as string, TRIP_STATUS_VALUES)) {
       return NextResponse.json({ error: 'Invalid trip status' }, { status: 400 });
@@ -47,6 +47,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     if (sanitized.transportMode && !validateEnum(sanitized.transportMode as string, TRANSPORT_MODE_VALUES)) {
       return NextResponse.json({ error: 'Invalid transport mode' }, { status: 400 });
+    }
+
+    if (sanitized.tripType && !validateEnum(sanitized.tripType as string, TRIP_TYPE_VALUES)) {
+      return NextResponse.json({ error: 'Invalid trip type' }, { status: 400 });
     }
 
     if ((sanitized.departureAirportLat !== undefined && sanitized.departureAirportLat !== null && typeof sanitized.departureAirportLat !== 'number') ||

@@ -39,6 +39,7 @@ export async function getTrips(userId: string, mode: 'full' | 'minimal' = 'full'
         startDate: true,
         endDate: true,
         status: true,
+        tripType: true,
         budget: true,
         latitude: true,
         longitude: true,
@@ -79,6 +80,7 @@ export async function createTrip(data: CreateTripInput, userId: string) {
       startDate: data.startDate ? new Date(data.startDate) : null,
       endDate: data.endDate ? new Date(data.endDate) : null,
       status: data.status,
+      tripType: data.tripType ?? 'PERSONAL',
       notes: data.notes,
       budget: data.budget,
       transportMode: data.transportMode ?? null,
@@ -124,6 +126,10 @@ export async function updateTrip(id: string, data: UpdateTripInput, userId: stri
   if ('arrivalAirportName' in data) updateData.arrivalAirportName = data.arrivalAirportName ?? null;
   if ('arrivalAirportLat' in data) updateData.arrivalAirportLat = data.arrivalAirportLat ?? null;
   if ('arrivalAirportLng' in data) updateData.arrivalAirportLng = data.arrivalAirportLng ?? null;
+
+  // Route home-leg opt-outs — coerce to real booleans
+  if ('hideHomeDeparture' in data) updateData.hideHomeDeparture = data.hideHomeDeparture === true;
+  if ('hideHomeReturn' in data) updateData.hideHomeReturn = data.hideHomeReturn === true;
 
   if (data.destination) {
     const coords = await geocodeDestination(data.destination);

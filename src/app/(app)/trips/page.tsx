@@ -39,6 +39,12 @@ function downloadCsv(rows: string[][], filename: string) {
   URL.revokeObjectURL(url);
 }
 
+const TYPE_FILTERS = [
+  { value: 'ALL', label: 'All' },
+  { value: 'PERSONAL', label: 'Personal' },
+  { value: 'WORK', label: 'Work' },
+];
+
 const STATUS_FILTERS = [
   { value: 'ALL', label: 'All Statuses' },
   { value: 'DRAFT', label: 'Drafts' },
@@ -100,6 +106,7 @@ interface TripListItem {
   startDate?: string | null;
   endDate?: string | null;
   status: string;
+  tripType?: string | null;
   budget?: number | null;
   notes?: string | null;
   vendors?: unknown[];
@@ -116,6 +123,10 @@ function TripsPageContent() {
   const [statusFilter, setStatusFilter] = useState(() => {
     const param = searchParams.get('status')?.toUpperCase();
     return param && STATUS_FILTERS.some((f) => f.value === param) ? param : 'ALL';
+  });
+  const [typeFilter, setTypeFilter] = useState(() => {
+    const param = searchParams.get('type')?.toUpperCase();
+    return param && TYPE_FILTERS.some((f) => f.value === param) ? param : 'ALL';
   });
   const [sortBy, setSortBy] = useState('date-nearest');
   const abortRef = useRef<AbortController | null>(null);
@@ -200,7 +211,7 @@ function TripsPageContent() {
       if (!Array.isArray(full)) throw new Error('Unexpected response');
 
       const selected = (full as TripListItem[]).filter((t) => selectedIds.has(t.id));
-      const header = ['Title', 'Destination', 'Start Date', 'End Date', 'Status', 'Budget', 'Notes'];
+      const header = ['Title', 'Destination', 'Start Date', 'End Date', 'Status', 'Type', 'Budget', 'Notes'];
       const rows: string[][] = [
         header,
         ...selected.map((t) => [
@@ -209,6 +220,7 @@ function TripsPageContent() {
           t.startDate ? String(t.startDate).split('T')[0] : '',
           t.endDate ? String(t.endDate).split('T')[0] : '',
           t.status ?? '',
+          t.tripType === 'WORK' ? 'Work' : 'Personal',
           t.budget != null ? String(t.budget) : '',
           t.notes ?? '',
         ]),
@@ -231,7 +243,9 @@ function TripsPageContent() {
         (statusFilter === 'UPCOMING'
           ? ['PLANNED', 'IN_PROGRESS'].includes(trip.status) && !!trip.startDate && new Date(trip.startDate) >= new Date()
           : trip.status === statusFilter);
-      return matchesSearch && matchesStatus;
+      const matchesType =
+        typeFilter === 'ALL' || (trip.tripType || 'PERSONAL') === typeFilter;
+      return matchesSearch && matchesStatus && matchesType;
     });
 
     result.sort((a, b) => {
@@ -258,13 +272,14 @@ function TripsPageContent() {
     });
 
     return result;
-  }, [trips, search, statusFilter, sortBy]);
+  }, [trips, search, statusFilter, typeFilter, sortBy]);
 
-  const hasActiveFilters = search.length > 0 || statusFilter !== 'ALL';
+  const hasActiveFilters = search.length > 0 || statusFilter !== 'ALL' || typeFilter !== 'ALL';
 
   const clearFilters = () => {
     setSearch('');
     setStatusFilter('ALL');
+    setTypeFilter('ALL');
   };
 
   return (
@@ -328,7 +343,28 @@ function TripsPageContent() {
               </button>
             )}
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap sm:flex-nowrap">
+            <div className="flex h-10 items-center rounded-md border border-slate-200 bg-white p-1 shadow-sm" role="radiogroup" aria-label="Filter by trip type">
+              {TYPE_FILTERS.map(({ value, label }) => {
+                const active = typeFilter === value;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    onClick={() => setTypeFilter(value)}
+                    className={`h-full rounded px-3 text-sm font-medium transition-colors cursor-pointer ${
+                      active
+                        ? 'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200'
+                        : 'text-slate-500 hover:text-slate-700 active:text-slate-700'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-full sm:w-44 h-10 bg-white border-slate-200 shadow-sm" aria-label="Filter by status">
                 <div className="flex items-center gap-2">
@@ -366,6 +402,15 @@ function TripsPageContent() {
             animate={{ opacity: 1, y: 0 }}
             className="flex items-center gap-2 flex-wrap"
           >
+            {typeFilter !== 'ALL' && (
+              <button
+                onClick={() => setTypeFilter('ALL')}
+                className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-200 hover:bg-amber-100 transition-colors cursor-pointer"
+              >
+                {TYPE_FILTERS.find((f) => f.value === typeFilter)?.label} trips
+                <X className="size-3" />
+              </button>
+            )}
             {statusFilter !== 'ALL' && (
               <button
                 onClick={() => setStatusFilter('ALL')}

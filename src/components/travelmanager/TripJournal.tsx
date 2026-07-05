@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { useTMToast } from '@/components/travelmanager/TMToast';
 import { TMDeleteDialog } from '@/components/travelmanager/TMDeleteDialog';
 import { DatePicker } from '@/components/travelmanager/DatePicker';
+import { PhotoGallery } from '@/components/travelmanager/PhotoGallery';
+import { removePhotosForParent } from '@/lib/photos/store';
 import { formatDateHeading } from '@/lib/date-utils';
 
 interface Note {
@@ -151,6 +153,7 @@ export function TripJournal({ tripId }: TripJournalProps) {
     try {
       const res = await fetch(`/api/notes/${deleteTarget}`, { method: 'DELETE' });
       if (!res.ok) throw new Error();
+      removePhotosForParent('note', deleteTarget);
       showToast('Journal entry deleted');
       setDeleteTarget(null);
       fetchNotes();
@@ -336,6 +339,13 @@ export function TripJournal({ tripId }: TripJournalProps) {
                                 </button>
                               </div>
                             </div>
+                            <PhotoGallery
+                              tripId={tripId}
+                              parentType="note"
+                              parentId={note.id}
+                              compact
+                              className="mt-3"
+                            />
                             <p className="mt-2 text-xs text-slate-400">{formatTime(note.createdAt)}</p>
                           </motion.div>
                         )}

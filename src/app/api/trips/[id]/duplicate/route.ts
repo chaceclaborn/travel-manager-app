@@ -38,6 +38,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         startDate: trip.startDate,
         endDate: trip.endDate,
         status: 'DRAFT',
+        tripType: trip.tripType,
         notes: trip.notes,
         budget: trip.budget,
         latitude: trip.latitude,

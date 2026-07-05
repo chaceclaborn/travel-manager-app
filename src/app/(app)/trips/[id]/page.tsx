@@ -18,12 +18,14 @@ import {
   Plane,
   Car,
   Briefcase,
+  TreePalm,
   Users,
   Paperclip,
   Receipt,
   BookOpen,
   CheckSquare,
   BookText,
+  Images,
   Loader2,
   MoreHorizontal,
   AlertCircle,
@@ -42,6 +44,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { TripWeatherWidget } from '@/components/travelmanager/TripWeatherWidget';
 import { TripStops, type TripStopData, type RouteLeg } from '@/components/travelmanager/TripStops';
 
@@ -69,10 +79,12 @@ import { TripExpenses } from '@/components/travelmanager/TripExpenses';
 import { TripBookings } from '@/components/travelmanager/TripBookings';
 import { TripChecklist } from '@/components/travelmanager/TripChecklist';
 import { TripJournal } from '@/components/travelmanager/TripJournal';
+import { TripPhotos } from '@/components/travelmanager/TripPhotos';
 import { useTMToast } from '@/components/travelmanager/TMToast';
 import { useDeleteEntity } from '@/lib/travelmanager/useDeleteEntity';
 import { formatDateLong as formatDate } from '@/lib/date-utils';
 import { nativeShare } from '@/lib/native/share';
+import { removePhotosForTrip } from '@/lib/photos/store';
 
 const statusOrder = ['DRAFT', 'PLANNED', 'IN_PROGRESS', 'COMPLETED'];
 const statusLabels: Record<string, string> = {
@@ -84,13 +96,13 @@ const statusLabels: Record<string, string> = {
 
 const tabConfig = [
   { value: 'itinerary', label: 'Itinerary', icon: Plane },
-  { value: 'vendors', label: 'Vendors', icon: Briefcase },
-  { value: 'clients', label: 'Clients', icon: Users },
+  { value: 'people', label: 'People', icon: Users },
   { value: 'attachments', label: 'Attachments', icon: Paperclip },
   { value: 'expenses', label: 'Expenses', icon: Receipt },
   { value: 'bookings', label: 'Bookings', icon: BookOpen },
   { value: 'checklist', label: 'Checklist', icon: CheckSquare },
   { value: 'journal', label: 'Journal', icon: BookText },
+  { value: 'photos', label: 'Photos', icon: Images },
 ];
 
 const tabContentVariants = {
@@ -135,6 +147,9 @@ interface TripDetail {
   startDate?: string | null;
   endDate?: string | null;
   status: string;
+  tripType?: string | null;
+  hideHomeDeparture?: boolean;
+  hideHomeReturn?: boolean;
   budget?: number | null;
   notes?: string | null;
   transportMode?: string | null;
@@ -152,7 +167,12 @@ export default function TripDetailPage() {
   const params = useParams();
   const id = params.id as string;
   const { showToast } = useTMToast();
-  const { deleteOpen, setDeleteOpen, deleting, handleDelete } = useDeleteEntity(`/api/trips/${id}`, '/trips', 'Trip');
+  const { deleteOpen, setDeleteOpen, deleting, handleDelete } = useDeleteEntity(
+    `/api/trips/${id}`,
+    '/trips',
+    'Trip',
+    () => removePhotosForTrip(id)
+  );
 
   const [trip, setTrip] = useState<TripDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -544,6 +564,11 @@ export default function TripDetailPage() {
   const vendorLinkedIds = tripVendors.map((tv) => tv.vendor.id);
   const clientLinkedIds = tripClients.map((tc) => tc.client.id);
   const isCancelled = trip.status === 'CANCELLED';
+  // Vendors/clients are a work-trip concern — hide the People tab on
+  // personal trips (any existing links are kept, just not shown).
+  const isWorkTrip = trip.tripType === 'WORK';
+  const visibleTabs = isWorkTrip ? tabConfig : tabConfig.filter((t) => t.value !== 'people');
+  const currentTab = visibleTabs.some((t) => t.value === activeTab) ? activeTab : 'itinerary';
 
   return (
     <motion.div
@@ -591,6 +616,17 @@ export default function TripDetailPage() {
                     {trip.title}
                   </h1>
                   <TMStatusBadge status={trip.status} />
+                  {trip.tripType === 'WORK' ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-700 ring-1 ring-inset ring-sky-200">
+                      <Briefcase className="size-3" />
+                      Work
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-200">
+                      <TreePalm className="size-3" />
+                      Personal
+                    </span>
+                  )}
                 </div>
 
                 {/* Meta row */}
@@ -659,142 +695,86 @@ export default function TripDetailPage() {
                 )}
               </div>
 
-              {/* Right: Action buttons */}
-              <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
-                <div className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50/50 p-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-10 sm:h-7 gap-1.5 px-3 sm:px-2.5 text-sm sm:text-xs text-slate-600 hover:bg-white hover:text-amber-600 hover:shadow-sm transition-all duration-200 group/btn"
-                    onClick={() => setEditing(true)}
-                  >
-                    <Pencil className="size-3.5 transition-transform duration-200 group-hover/btn:rotate-[-12deg]" />
-                    Edit
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled={duplicating}
-                    className="h-10 sm:h-7 gap-1.5 px-3 sm:px-2.5 text-sm sm:text-xs text-slate-600 hover:bg-white hover:text-blue-600 hover:shadow-sm transition-all duration-200 group/btn"
-                    onClick={async () => {
-                      if (duplicating) return;
-                      setDuplicating(true);
-                      try {
-                        const res = await fetch(`/api/trips/${id}/duplicate`, { method: 'POST' });
-                        if (!res.ok) throw new Error();
-                        const newTrip = await res.json();
-                        showToast('Trip duplicated');
-                        router.push(`/trips/${newTrip.id}`);
-                      } catch {
-                        showToast('Failed to duplicate trip', 'error');
-                      } finally {
-                        setDuplicating(false);
-                      }
-                    }}
-                  >
-                    {duplicating ? (
-                      <Loader2 className="size-3.5 animate-spin" />
-                    ) : (
-                      <Copy className="size-3.5 transition-transform duration-200 group-hover/btn:scale-110" />
-                    )}
-                    Duplicate
-                  </Button>
-                </div>
-
-                {/* Share button (standalone chip) */}
+              {/* Right: Edit + Share visible, everything else in the ⋯ menu */}
+              <div className="flex items-center gap-2 shrink-0">
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
-                  className="h-10 sm:h-7 gap-1.5 rounded-lg border border-slate-200 bg-slate-50/50 px-3 sm:px-2.5 text-sm sm:text-xs text-slate-600 hover:bg-white hover:text-sky-600 hover:shadow-sm transition-all duration-200 group/btn"
+                  className="h-10 sm:h-8 gap-1.5 text-slate-600 hover:text-amber-600 active:text-amber-600"
+                  onClick={() => setEditing(true)}
+                >
+                  <Pencil className="size-3.5" />
+                  Edit
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-10 sm:h-8 gap-1.5 text-slate-600 hover:text-sky-600 active:text-sky-600"
                   onClick={() => setShareOpen(true)}
                 >
-                  <Share2 className="size-3.5 transition-transform duration-200 group-hover/btn:scale-110" />
+                  <Share2 className="size-3.5" />
                   Share
                 </Button>
-
-                {/* Desktop: Export / Report / Print as a button group */}
-                <div className="hidden sm:flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50/50 p-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 gap-1.5 px-2.5 text-xs text-slate-600 hover:bg-white hover:text-emerald-600 hover:shadow-sm transition-all duration-200 group/btn"
-                    onClick={() => window.open(`/api/trips/${id}/ical`, '_blank')}
-                  >
-                    <Download className="size-3.5 transition-transform duration-200 group-hover/btn:translate-y-[1px]" />
-                    Export
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 gap-1.5 px-2.5 text-xs text-slate-600 hover:bg-white hover:text-violet-600 hover:shadow-sm transition-all duration-200 group/btn"
-                    onClick={() => window.open(`/api/trips/${id}/report`, '_blank')}
-                  >
-                    <FileDown className="size-3.5 transition-transform duration-200 group-hover/btn:translate-y-[1px]" />
-                    Report
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 gap-1.5 px-2.5 text-xs text-slate-600 hover:bg-white hover:text-slate-800 hover:shadow-sm transition-all duration-200 group/btn"
-                    onClick={() => window.print()}
-                  >
-                    <Printer className="size-3.5 transition-transform duration-200 group-hover/btn:scale-110" />
-                    Print
-                  </Button>
-                </div>
-
-                {/* Mobile: collapse Export / Report / Print into a "More" menu */}
-                <details className="sm:hidden relative group/more">
-                  <summary className="list-none [&::-webkit-details-marker]:hidden cursor-pointer flex items-center justify-center gap-1.5 h-10 px-3 rounded-lg border border-slate-200 bg-slate-50/50 text-sm text-slate-600 hover:bg-white hover:text-slate-800 transition-all duration-200">
-                    <MoreHorizontal className="size-4" />
-                    More
-                  </summary>
-                  <div className="absolute right-0 z-20 mt-1 w-44 rounded-lg border border-slate-200 bg-white p-1 shadow-lg">
-                    <button
-                      type="button"
-                      className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-50 hover:text-emerald-600"
-                      onClick={(e) => {
-                        e.currentTarget.closest('details')?.removeAttribute('open');
-                        window.open(`/api/trips/${id}/ical`, '_blank');
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-10 w-10 sm:h-8 sm:w-8 p-0 text-slate-600"
+                      aria-label="More actions"
+                    >
+                      {duplicating ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <MoreHorizontal className="size-4" />
+                      )}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-52">
+                    <DropdownMenuItem
+                      disabled={duplicating}
+                      onClick={async () => {
+                        if (duplicating) return;
+                        setDuplicating(true);
+                        try {
+                          const res = await fetch(`/api/trips/${id}/duplicate`, { method: 'POST' });
+                          if (!res.ok) throw new Error();
+                          const newTrip = await res.json();
+                          showToast('Trip duplicated');
+                          router.push(`/trips/${newTrip.id}`);
+                        } catch {
+                          showToast('Failed to duplicate trip', 'error');
+                        } finally {
+                          setDuplicating(false);
+                        }
                       }}
                     >
-                      <Download className="size-4" />
+                      <Copy />
+                      Duplicate trip
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel className="text-xs font-medium uppercase tracking-wider text-slate-400">
                       Export
-                    </button>
-                    <button
-                      type="button"
-                      className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-50 hover:text-violet-600"
-                      onClick={(e) => {
-                        e.currentTarget.closest('details')?.removeAttribute('open');
-                        window.open(`/api/trips/${id}/report`, '_blank');
-                      }}
-                    >
-                      <FileDown className="size-4" />
-                      Report
-                    </button>
-                    <button
-                      type="button"
-                      className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-900"
-                      onClick={(e) => {
-                        e.currentTarget.closest('details')?.removeAttribute('open');
-                        window.print();
-                      }}
-                    >
-                      <Printer className="size-4" />
+                    </DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => window.open(`/api/trips/${id}/ical`, '_blank')}>
+                      <Download />
+                      Add to calendar (.ics)
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => window.open(`/api/trips/${id}/report`, '_blank')}>
+                      <FileDown />
+                      PDF report
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => window.print()}>
+                      <Printer />
                       Print
-                    </button>
-                  </div>
-                </details>
-
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-10 sm:h-7 gap-1.5 rounded-lg border border-red-200 bg-red-50/50 px-3 sm:px-2.5 text-sm sm:text-xs text-red-500 hover:bg-red-100 hover:text-red-700 transition-all duration-200 group/btn"
-                  onClick={() => setDeleteOpen(true)}
-                >
-                  <Trash2 className="size-3.5 transition-transform duration-200 group-hover/btn:scale-110" />
-                  Delete
-                </Button>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>
+                      <Trash2 />
+                      Delete trip
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
 
@@ -888,6 +868,8 @@ export default function TripDetailPage() {
               tripDestination={trip.destination}
               tripLatitude={trip.latitude}
               tripLongitude={trip.longitude}
+              hideHomeDeparture={trip.hideHomeDeparture}
+              hideHomeReturn={trip.hideHomeReturn}
               onRouteChange={(s, l) => {
                 setStops(s);
                 setRouteLegs(l);
@@ -899,12 +881,12 @@ export default function TripDetailPage() {
 
       {/* Tabs section */}
       <motion.div variants={staggerItem} transition={{ duration: 0.4, delay: 0.1 }}>
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs value={currentTab} onValueChange={setActiveTab}>
           <TabsList
             variant="line"
             className="flex w-full justify-start gap-1.5 sm:gap-1 border-b border-slate-200 px-0 h-auto sm:h-9 overflow-x-auto sm:overflow-visible -mx-1 px-1 sm:mx-0 sm:px-0"
           >
-            {tabConfig.map(({ value, label, icon: Icon }) => (
+            {visibleTabs.map(({ value, label, icon: Icon }) => (
               <TabsTrigger
                 key={value}
                 value={value}
@@ -918,7 +900,7 @@ export default function TripDetailPage() {
 
           <AnimatePresence mode="wait">
             <motion.div
-              key={activeTab}
+              key={currentTab}
               variants={tabContentVariants}
               initial="initial"
               animate="animate"
@@ -943,39 +925,44 @@ export default function TripDetailPage() {
                 </div>
               </TabsContent>
 
-              <TabsContent value="vendors" className="mt-5">
-                <div className="rounded-xl bg-white p-6 shadow-sm transition-shadow duration-300 hover:shadow-md">
-                  <h3 className="mb-4 text-lg font-semibold text-slate-800">Linked Vendors</h3>
-                  {tabErrors.vendors ? (
-                    <TabError onRetry={fetchTripVendors} />
-                  ) : (
-                    <LinkSelector
-                      items={allVendors.map((v) => ({ id: v.id, name: v.name }))}
-                      linkedIds={vendorLinkedIds}
-                      onLink={handleLinkVendor}
-                      onUnlink={handleUnlinkVendor}
-                      type="vendor"
-                      isLoading={linkingVendor}
-                    />
-                  )}
-                </div>
-              </TabsContent>
-
-              <TabsContent value="clients" className="mt-5">
-                <div className="rounded-xl bg-white p-6 shadow-sm transition-shadow duration-300 hover:shadow-md">
-                  <h3 className="mb-4 text-lg font-semibold text-slate-800">Linked Clients</h3>
-                  {tabErrors.clients ? (
-                    <TabError onRetry={fetchTripClients} />
-                  ) : (
-                    <LinkSelector
-                      items={allClients.map((c) => ({ id: c.id, name: c.name }))}
-                      linkedIds={clientLinkedIds}
-                      onLink={handleLinkClient}
-                      onUnlink={handleUnlinkClient}
-                      type="client"
-                      isLoading={linkingClient}
-                    />
-                  )}
+              <TabsContent value="people" className="mt-5">
+                <div className="grid gap-5 lg:grid-cols-2">
+                  <div className="rounded-xl bg-white p-6 shadow-sm transition-shadow duration-300 hover:shadow-md">
+                    <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-slate-800">
+                      <Briefcase className="size-4 text-slate-400" />
+                      Vendors
+                    </h3>
+                    {tabErrors.vendors ? (
+                      <TabError onRetry={fetchTripVendors} />
+                    ) : (
+                      <LinkSelector
+                        items={allVendors.map((v) => ({ id: v.id, name: v.name }))}
+                        linkedIds={vendorLinkedIds}
+                        onLink={handleLinkVendor}
+                        onUnlink={handleUnlinkVendor}
+                        type="vendor"
+                        isLoading={linkingVendor}
+                      />
+                    )}
+                  </div>
+                  <div className="rounded-xl bg-white p-6 shadow-sm transition-shadow duration-300 hover:shadow-md">
+                    <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-slate-800">
+                      <Users className="size-4 text-slate-400" />
+                      Clients
+                    </h3>
+                    {tabErrors.clients ? (
+                      <TabError onRetry={fetchTripClients} />
+                    ) : (
+                      <LinkSelector
+                        items={allClients.map((c) => ({ id: c.id, name: c.name }))}
+                        linkedIds={clientLinkedIds}
+                        onLink={handleLinkClient}
+                        onUnlink={handleUnlinkClient}
+                        type="client"
+                        isLoading={linkingClient}
+                      />
+                    )}
+                  </div>
                 </div>
               </TabsContent>
 
@@ -1006,6 +993,12 @@ export default function TripDetailPage() {
               <TabsContent value="journal" className="mt-5">
                 <div className="rounded-xl bg-white p-6 shadow-sm transition-shadow duration-300 hover:shadow-md">
                   <TripJournal tripId={id} />
+                </div>
+              </TabsContent>
+
+              <TabsContent value="photos" className="mt-5">
+                <div className="rounded-xl bg-white p-6 shadow-sm transition-shadow duration-300 hover:shadow-md">
+                  <TripPhotos tripId={id} />
                 </div>
               </TabsContent>
             </motion.div>

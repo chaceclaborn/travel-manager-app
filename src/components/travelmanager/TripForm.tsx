@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { MapPin, Loader2, Plane, Car, X, Users } from 'lucide-react';
+import { MapPin, Loader2, Plane, Car, X, Users, Briefcase, TreePalm } from 'lucide-react';
 import { DateRangePicker } from '@/components/travelmanager/DateRangePicker';
 import { AirportPicker } from '@/components/travelmanager/AirportPicker';
 import { Badge } from '@/components/ui/badge';
@@ -29,6 +29,7 @@ interface TripFormInitialData {
   startDate?: string | null;
   endDate?: string | null;
   status?: string | null;
+  tripType?: string | null;
   budget?: number | string | null;
   notes?: string | null;
   transportMode?: string | null;
@@ -48,6 +49,11 @@ interface TripFormProps {
   onSubmit: (data: Record<string, unknown>) => void;
   isLoading?: boolean;
 }
+
+const TRIP_TYPE_OPTIONS = [
+  { value: 'PERSONAL', label: 'Personal', icon: TreePalm },
+  { value: 'WORK', label: 'Work', icon: Briefcase },
+];
 
 const STATUS_OPTIONS = [
   { value: 'DRAFT', label: 'Draft' },
@@ -218,6 +224,7 @@ export function TripForm({ initialData, onSubmit, isLoading }: TripFormProps) {
   const [startDate, setStartDate] = useState(formatDateForInput(initialData?.startDate));
   const [endDate, setEndDate] = useState(formatDateForInput(initialData?.endDate));
   const [status, setStatus] = useState(initialData?.status || 'DRAFT');
+  const [tripType, setTripType] = useState(initialData?.tripType || 'PERSONAL');
   const [budget, setBudget] = useState(initialData?.budget?.toString() || '');
   const [notes, setNotes] = useState(initialData?.notes || '');
   const [transportMode, setTransportMode] = useState(initialData?.transportMode || '');
@@ -263,6 +270,7 @@ export function TripForm({ initialData, onSubmit, isLoading }: TripFormProps) {
       setStartDate(formatDateForInput(initialData.startDate));
       setEndDate(formatDateForInput(initialData.endDate));
       setStatus(initialData.status || 'PLANNED');
+      setTripType(initialData.tripType || 'PERSONAL');
       setBudget(initialData.budget?.toString() || '');
       setNotes(initialData.notes || '');
       setTransportMode(initialData.transportMode || '');
@@ -311,6 +319,7 @@ export function TripForm({ initialData, onSubmit, isLoading }: TripFormProps) {
       startDate: startDate || null,
       endDate: endDate || null,
       status,
+      tripType,
       budget: budget ? parseFloat(budget) : null,
       notes: notes.trim() || null,
       transportMode: transportMode || null,
@@ -330,7 +339,34 @@ export function TripForm({ initialData, onSubmit, isLoading }: TripFormProps) {
   const req = isDraft ? '' : ' *';
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Trip type — personal vs work */}
+      <div className="space-y-1.5">
+        <Label>Trip Type</Label>
+        <div className="grid grid-cols-2 gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1 sm:inline-grid sm:w-72" role="radiogroup" aria-label="Trip type">
+          {TRIP_TYPE_OPTIONS.map(({ value, label, icon: Icon }) => {
+            const active = tripType === value;
+            return (
+              <button
+                key={value}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                onClick={() => setTripType(value)}
+                className={`flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all duration-150 cursor-pointer ${
+                  active
+                    ? 'bg-white text-slate-800 shadow-sm ring-1 ring-slate-200'
+                    : 'text-slate-500 hover:text-slate-700 active:text-slate-700'
+                }`}
+              >
+                <Icon className={`size-4 ${active ? (value === 'WORK' ? 'text-sky-600' : 'text-emerald-600') : ''}`} />
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {isDraft && (
         <p className="text-xs text-slate-500 bg-slate-50 rounded-lg px-3 py-2">
           Draft trips only require a title. Add destination and dates when you&apos;re ready.
@@ -387,6 +423,10 @@ export function TripForm({ initialData, onSubmit, isLoading }: TripFormProps) {
           {(errors.startDate || errors.endDate) && (
             <p className="text-xs text-red-500">{errors.startDate || errors.endDate}</p>
           )}
+        </div>
+
+        <div className="sm:col-span-2 border-t border-slate-100 pt-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Trip Details</p>
         </div>
 
         <div className="space-y-1.5">
@@ -463,8 +503,9 @@ export function TripForm({ initialData, onSubmit, isLoading }: TripFormProps) {
         </div>
       )}
 
-      {allClients.length > 0 && (
-        <div className="space-y-1.5">
+      {tripType === 'WORK' && allClients.length > 0 && (
+        <div className="space-y-1.5 border-t border-slate-100 pt-4">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">Work Trip</p>
           <Label>Clients</Label>
           {selectedClientIds.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mb-2">

@@ -85,6 +85,11 @@ enum TripStatus {
   CANCELLED
 }
 
+enum TripType {
+  PERSONAL
+  WORK
+}
+
 enum VendorCategory {
   SUPPLIER
   HOTEL
@@ -143,11 +148,17 @@ model Trip {
   startDate   DateTime?
   endDate     DateTime?
   status      TripStatus      @default(DRAFT)
+  tripType    TripType        @default(PERSONAL)
   notes       String?
   budget      Float?
   shareToken      String?   @unique
   shareEnabled    Boolean   @default(false)
   shareExpiresAt  DateTime?
+  // Route home-leg opt-outs: the Route card assumes trips depart from and
+  // return to the user's home. These let a trip drop either assumption
+  // (e.g. a trip that started from another trip's endpoint).
+  hideHomeDeparture Boolean @default(false)
+  hideHomeReturn    Boolean @default(false)
   vendors     TripVendor[]
   clients     TripClient[]
   itinerary   ItineraryItem[]
