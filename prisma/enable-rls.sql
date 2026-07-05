@@ -22,6 +22,7 @@ ALTER TABLE "Feedback" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "oauth_tokens" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "Meeting" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "DeviceToken" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "TripStop" ENABLE ROW LEVEL SECURITY;
 
 -- Defense-in-depth: explicit deny-all policies on oauth_tokens.
 -- These tokens are encrypted at rest, but we add belt-and-suspenders so

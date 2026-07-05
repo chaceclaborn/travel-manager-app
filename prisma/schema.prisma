@@ -152,6 +152,7 @@ model Trip {
   clients     TripClient[]
   itinerary   ItineraryItem[]
   attachments TripAttachment[]
+  stops       TripStop[]
   latitude     Float?
   longitude    Float?
   transportMode          TransportMode?
@@ -172,6 +173,24 @@ model Trip {
   updatedAt   DateTime        @updatedAt
 
   @@index([userId])
+}
+
+// A place visited within a trip — beyond the single top-level destination.
+// e.g. flew to El Paso (destination) then drove to Marfa, White Sands, etc.
+model TripStop {
+  id        String    @id @default(cuid())
+  trip      Trip      @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  tripId    String
+  name      String
+  latitude  Float
+  longitude Float
+  date      DateTime?
+  notes     String?
+  sortOrder Int       @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([tripId, sortOrder])
 }
 
 model TripAttachment {
