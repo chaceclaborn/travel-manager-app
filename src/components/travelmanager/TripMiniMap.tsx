@@ -5,7 +5,7 @@ import { MapContainer, TileLayer, Marker, Polyline, useMap } from 'react-leaflet
 import L from 'leaflet';
 // leaflet/dist/leaflet.css is imported globally in src/app/globals.css
 import { MapPinOff } from 'lucide-react';
-import type { TripStopData, RouteLeg } from './TripStops';
+import { HOME_STOP_ID, type TripStopData, type RouteLeg } from './TripStops';
 
 interface TripMiniMapProps {
   latitude: number | null;
@@ -28,6 +28,22 @@ function createMarkerIcon() {
     className: '',
     iconSize: [22, 32],
     iconAnchor: [11, 32],
+  });
+}
+
+/**
+ * Home marker for the implicit return-home point (violet, matches the
+ * home marker style on the main travel map).
+ */
+function createHomeIcon() {
+  const html = `<div style="display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:9999px;background:#7c3aed;border:2px solid #fff;box-shadow:0 1px 3px rgba(15,23,42,.35);">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+  </div>`;
+  return L.divIcon({
+    html,
+    className: '',
+    iconSize: [22, 22],
+    iconAnchor: [11, 11],
   });
 }
 
@@ -150,7 +166,7 @@ export function TripMiniMap({
             <Marker
               key={stop.id}
               position={[stop.latitude, stop.longitude]}
-              icon={createStopIcon(i + 1)}
+              icon={stop.id === HOME_STOP_ID ? createHomeIcon() : createStopIcon(i + 1)}
               keyboard={false}
               title={stop.name}
             />
