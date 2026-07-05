@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { Shield, Download, FileText, Trash2, Loader2, Monitor, MapPin, X, Mail, CheckCircle2, Unlink, Wrench } from 'lucide-react';
+import { Shield, Download, FileText, Trash2, Loader2, Monitor, MapPin, X, Mail, CheckCircle2, Unlink, Wrench, PanelLeft, RotateCcw } from 'lucide-react';
+import { useNavPreferences, TOGGLEABLE_NAV_ITEMS } from '@/lib/travelmanager/useNavPreferences';
 import { useGeocodingSearch, formatGeoName } from '@/lib/travelmanager/useGeocodingSearch';
 import type { GeoResult } from '@/lib/travelmanager/useGeocodingSearch';
 import { Input } from '@/components/ui/input';
@@ -71,9 +72,40 @@ const item = {
   show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.25, 0.1, 0.25, 1] as const } },
 };
 
+function NavToggle({
+  checked,
+  onChange,
+  label,
+}: {
+  checked: boolean;
+  onChange: (next: boolean) => void;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={`${checked ? 'Hide' : 'Show'} ${label} in sidebar`}
+      onClick={() => onChange(!checked)}
+      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:ring-offset-2 ${
+        checked ? 'bg-amber-500' : 'bg-slate-300'
+      }`}
+    >
+      <span
+        className={`inline-block size-4 transform rounded-full bg-white shadow transition-transform ${
+          checked ? 'translate-x-6' : 'translate-x-1'
+        }`}
+      />
+    </button>
+  );
+}
+
 export default function SettingsPage() {
   const { user } = useAuth();
   const { showToast } = useTMToast();
+  const { isHidden, setHidden, reset: resetNav, hydrated: navHydrated } = useNavPreferences();
+  const hiddenCount = TOGGLEABLE_NAV_ITEMS.filter((i) => isHidden(i.key)).length;
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loadingSessions, setLoadingSessions] = useState(true);
@@ -355,6 +387,53 @@ export default function SettingsPage() {
           <p className="text-xs text-green-600 mt-2">
             Home set to: {userInfo.homeCity}
           </p>
+        )}
+      </motion.div>
+
+      {/* Sidebar Customization */}
+      <motion.div variants={item} className="rounded-xl bg-white p-6 shadow-sm">
+        <div className="flex items-center justify-between gap-2 mb-1">
+          <div className="flex items-center gap-2">
+            <PanelLeft className="size-5 text-amber-600" />
+            <h2 className="text-lg font-semibold text-slate-800">Sidebar</h2>
+          </div>
+          {hiddenCount > 0 && (
+            <button
+              type="button"
+              onClick={() => { resetNav(); showToast('Sidebar reset — all sections shown'); }}
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-amber-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 rounded px-1.5 py-1"
+            >
+              <RotateCcw className="size-3.5" />
+              Show all
+            </button>
+          )}
+        </div>
+        <p className="text-xs text-slate-500 mb-4">
+          Choose which sections appear in your sidebar. Turn off anything you don&apos;t use to keep it tidy — this is saved on this device, and hidden sections stay reachable by search or keyboard shortcut.
+        </p>
+        <div className="divide-y divide-slate-100">
+          {TOGGLEABLE_NAV_ITEMS.map(({ key, label, icon: Icon, description }) => {
+            const visible = !isHidden(key);
+            return (
+              <div key={key} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
+                <div className={`flex size-9 shrink-0 items-center justify-center rounded-lg transition-colors ${visible ? 'bg-amber-50 text-amber-600' : 'bg-slate-100 text-slate-400'}`}>
+                  <Icon className="size-[18px]" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className={`text-sm font-medium ${visible ? 'text-slate-800' : 'text-slate-400'}`}>{label}</p>
+                  {description && <p className="text-xs text-slate-400 truncate">{description}</p>}
+                </div>
+                <NavToggle
+                  checked={visible}
+                  onChange={(next) => setHidden(key, !next)}
+                  label={label}
+                />
+              </div>
+            );
+          })}
+        </div>
+        {!navHydrated && (
+          <p className="mt-3 text-xs text-slate-300">Loading your preferences…</p>
         )}
       </motion.div>
 

@@ -3,28 +3,8 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
-import {
-  LayoutDashboard,
-  MapPin,
-  Building2,
-  Users,
-  BarChart3,
-  Globe,
-  Settings,
-  Plane,
-  ShieldCheck,
-} from 'lucide-react';
-
-const navItems = [
-  { href: '/', label: 'Dashboard', icon: LayoutDashboard, shortcut: 'G D', track: 'nav:dashboard' },
-  { href: '/trips', label: 'Trips', icon: MapPin, shortcut: 'G T', track: 'nav:trips' },
-  { href: '/bookings', label: 'Bookings', icon: Plane, shortcut: 'G B', track: 'nav:bookings' },
-  { href: '/meetings', label: 'Meetings', icon: Users, shortcut: 'G E', track: 'nav:meetings' },
-  { href: '/vendors', label: 'Vendors', icon: Building2, shortcut: 'G V', track: 'nav:vendors' },
-  { href: '/clients', label: 'Clients', icon: Users, shortcut: 'G C', track: 'nav:clients' },
-  { href: '/analytics', label: 'Analytics', icon: BarChart3, shortcut: 'G A', track: 'nav:analytics' },
-  { href: '/map', label: 'Map', icon: Globe, shortcut: 'G M', track: 'nav:map' },
-];
+import { Settings, ShieldCheck } from 'lucide-react';
+import { useNavPreferences } from '@/lib/travelmanager/useNavPreferences';
 
 function NavItem({
   href,
@@ -98,6 +78,7 @@ function NavItem({
 
 export function TMSidebar({ isAdmin }: { isAdmin?: boolean }) {
   const pathname = usePathname();
+  const { visibleItems } = useNavPreferences();
 
   const bottomNavItems = [
     { href: '/settings', label: 'Settings', icon: Settings, shortcut: 'G S', track: 'nav:settings' },
@@ -113,7 +94,7 @@ export function TMSidebar({ isAdmin }: { isAdmin?: boolean }) {
 
       {/* Main nav items */}
       <div className="flex flex-col gap-0.5">
-        {navItems.map(({ href, label, icon, shortcut, track }) => {
+        {visibleItems.map(({ href, label, icon, shortcut, track }) => {
           const isActive =
             href === '/'
               ? pathname === '/'
