@@ -15,7 +15,12 @@ function createPrismaClient(): PrismaClient {
   if (!globalForPrisma.pool) {
     globalForPrisma.pool = new pg.Pool({
       host: 'aws-1-us-east-2.pooler.supabase.com',
-      port: 5432,
+      // Transaction-mode pooler (6543), NOT session mode (5432). Session mode
+      // pins one server connection per client for the client's lifetime — with
+      // ~15 pooled server slots on the free-tier nano, a burst of serverless
+      // instances (especially during deploy rollover) held every slot idle and
+      // 500'd the whole API. Transaction mode multiplexes slots per statement.
+      port: 6543,
       database: 'postgres',
       user: 'postgres.bsnzgcmizbonttgnxvqi',
       password: process.env.DB_PASSWORD,
