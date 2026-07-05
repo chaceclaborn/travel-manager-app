@@ -117,6 +117,7 @@ export default function TravelManagerLayout({
       'g+e': '/meetings',
       'g+v': '/vendors',
       'g+c': '/clients',
+      'g+f': '/friends',
       'g+a': '/analytics',
       'g+m': '/map',
       'g+s': '/settings',

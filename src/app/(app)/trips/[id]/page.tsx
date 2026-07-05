@@ -19,6 +19,7 @@ import {
   Car,
   Briefcase,
   TreePalm,
+  HeartHandshake,
   Users,
   Paperclip,
   Receipt,
@@ -204,6 +205,9 @@ export default function TripDetailPage() {
   const [allClients, setAllClients] = useState<Array<{ id: string; name: string; company?: string | null }>>([]);
   const [linkingVendor, setLinkingVendor] = useState(false);
   const [linkingClient, setLinkingClient] = useState(false);
+  const [tripFriends, setTripFriends] = useState<Array<{ friend: { id: string; name: string; [key: string]: unknown } }>>([]);
+  const [allFriends, setAllFriends] = useState<Array<{ id: string; name: string }>>([]);
+  const [linkingFriend, setLinkingFriend] = useState(false);
   const [tabErrors, setTabErrors] = useState<Record<string, boolean>>({});
 
   // Share dialog state. The backend is being built by a parallel agent —
@@ -261,6 +265,18 @@ export default function TripDetailPage() {
     }
   }, [id]);
 
+  const fetchTripFriends = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/trips/${id}/friends`);
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setTripFriends(Array.isArray(data) ? data : []);
+      setTabErrors((prev) => ({ ...prev, friends: false }));
+    } catch {
+      setTabErrors((prev) => ({ ...prev, friends: true }));
+    }
+  }, [id]);
+
   const fetchAllVendors = useCallback(async () => {
     try {
       const res = await fetch('/api/vendors');
@@ -281,14 +297,26 @@ export default function TripDetailPage() {
     } catch {}
   }, []);
 
+  const fetchAllFriends = useCallback(async () => {
+    try {
+      const res = await fetch('/api/friends');
+      if (res.ok) {
+        const data = await res.json();
+        setAllFriends(Array.isArray(data) ? data : []);
+      }
+    } catch {}
+  }, []);
+
   useEffect(() => {
     fetchTrip();
     fetchItinerary();
     fetchTripVendors();
     fetchTripClients();
+    fetchTripFriends();
     fetchAllVendors();
     fetchAllClients();
-  }, [fetchTrip, fetchItinerary, fetchTripVendors, fetchTripClients, fetchAllVendors, fetchAllClients]);
+    fetchAllFriends();
+  }, [fetchTrip, fetchItinerary, fetchTripVendors, fetchTripClients, fetchTripFriends, fetchAllVendors, fetchAllClients, fetchAllFriends]);
 
   // Auto-open edit mode if ?edit=true is in the URL (from trip card edit button)
   useEffect(() => {
@@ -390,6 +418,42 @@ export default function TripDetailPage() {
       showToast('Failed to unlink client', 'error');
     } finally {
       setLinkingClient(false);
+    }
+  };
+
+  const handleLinkFriend = async (friendId: string) => {
+    setLinkingFriend(true);
+    try {
+      const res = await fetch(`/api/trips/${id}/friends`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ friendId }),
+      });
+      if (!res.ok) throw new Error();
+      showToast('Friend added to trip');
+      fetchTripFriends();
+    } catch {
+      showToast('Failed to add friend', 'error');
+    } finally {
+      setLinkingFriend(false);
+    }
+  };
+
+  const handleUnlinkFriend = async (friendId: string) => {
+    setLinkingFriend(true);
+    try {
+      const res = await fetch(`/api/trips/${id}/friends`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ friendId, action: 'unlink' }),
+      });
+      if (!res.ok) throw new Error();
+      showToast('Friend removed from trip');
+      fetchTripFriends();
+    } catch {
+      showToast('Failed to remove friend', 'error');
+    } finally {
+      setLinkingFriend(false);
     }
   };
 
@@ -563,12 +627,12 @@ export default function TripDetailPage() {
 
   const vendorLinkedIds = tripVendors.map((tv) => tv.vendor.id);
   const clientLinkedIds = tripClients.map((tc) => tc.client.id);
+  const friendLinkedIds = tripFriends.map((tf) => tf.friend.id);
   const isCancelled = trip.status === 'CANCELLED';
-  // Vendors/clients are a work-trip concern — hide the People tab on
-  // personal trips (any existing links are kept, just not shown).
+  // The People tab shows friends on every trip; vendors/clients are a
+  // work-trip concern, so those panels only render on work trips (any
+  // existing links are kept, just not shown).
   const isWorkTrip = trip.tripType === 'WORK';
-  const visibleTabs = isWorkTrip ? tabConfig : tabConfig.filter((t) => t.value !== 'people');
-  const currentTab = visibleTabs.some((t) => t.value === activeTab) ? activeTab : 'itinerary';
 
   return (
     <motion.div
@@ -881,12 +945,12 @@ export default function TripDetailPage() {
 
       {/* Tabs section */}
       <motion.div variants={staggerItem} transition={{ duration: 0.4, delay: 0.1 }}>
-        <Tabs value={currentTab} onValueChange={setActiveTab}>
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList
             variant="line"
             className="flex w-full justify-start gap-1.5 sm:gap-1 border-b border-slate-200 px-0 h-auto sm:h-9 overflow-x-auto sm:overflow-visible -mx-1 px-1 sm:mx-0 sm:px-0"
           >
-            {visibleTabs.map(({ value, label, icon: Icon }) => (
+            {tabConfig.map(({ value, label, icon: Icon }) => (
               <TabsTrigger
                 key={value}
                 value={value}
@@ -900,7 +964,7 @@ export default function TripDetailPage() {
 
           <AnimatePresence mode="wait">
             <motion.div
-              key={currentTab}
+              key={activeTab}
               variants={tabContentVariants}
               initial="initial"
               animate="animate"
@@ -927,42 +991,64 @@ export default function TripDetailPage() {
 
               <TabsContent value="people" className="mt-5">
                 <div className="grid gap-5 lg:grid-cols-2">
-                  <div className="rounded-xl bg-white p-6 shadow-sm transition-shadow duration-300 hover:shadow-md">
+                  <div className={`rounded-xl bg-white p-6 shadow-sm transition-shadow duration-300 hover:shadow-md ${isWorkTrip ? '' : 'lg:col-span-2'}`}>
                     <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-slate-800">
-                      <Briefcase className="size-4 text-slate-400" />
-                      Vendors
+                      <HeartHandshake className="size-4 text-slate-400" />
+                      Friends
                     </h3>
-                    {tabErrors.vendors ? (
-                      <TabError onRetry={fetchTripVendors} />
+                    {tabErrors.friends ? (
+                      <TabError onRetry={fetchTripFriends} />
                     ) : (
                       <LinkSelector
-                        items={allVendors.map((v) => ({ id: v.id, name: v.name }))}
-                        linkedIds={vendorLinkedIds}
-                        onLink={handleLinkVendor}
-                        onUnlink={handleUnlinkVendor}
-                        type="vendor"
-                        isLoading={linkingVendor}
+                        items={allFriends.map((f) => ({ id: f.id, name: f.name }))}
+                        linkedIds={friendLinkedIds}
+                        onLink={handleLinkFriend}
+                        onUnlink={handleUnlinkFriend}
+                        type="friend"
+                        isLoading={linkingFriend}
                       />
                     )}
                   </div>
-                  <div className="rounded-xl bg-white p-6 shadow-sm transition-shadow duration-300 hover:shadow-md">
-                    <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-slate-800">
-                      <Users className="size-4 text-slate-400" />
-                      Clients
-                    </h3>
-                    {tabErrors.clients ? (
-                      <TabError onRetry={fetchTripClients} />
-                    ) : (
-                      <LinkSelector
-                        items={allClients.map((c) => ({ id: c.id, name: c.name }))}
-                        linkedIds={clientLinkedIds}
-                        onLink={handleLinkClient}
-                        onUnlink={handleUnlinkClient}
-                        type="client"
-                        isLoading={linkingClient}
-                      />
-                    )}
-                  </div>
+                  {isWorkTrip && (
+                    <>
+                      <div className="rounded-xl bg-white p-6 shadow-sm transition-shadow duration-300 hover:shadow-md">
+                        <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-slate-800">
+                          <Briefcase className="size-4 text-slate-400" />
+                          Vendors
+                        </h3>
+                        {tabErrors.vendors ? (
+                          <TabError onRetry={fetchTripVendors} />
+                        ) : (
+                          <LinkSelector
+                            items={allVendors.map((v) => ({ id: v.id, name: v.name }))}
+                            linkedIds={vendorLinkedIds}
+                            onLink={handleLinkVendor}
+                            onUnlink={handleUnlinkVendor}
+                            type="vendor"
+                            isLoading={linkingVendor}
+                          />
+                        )}
+                      </div>
+                      <div className="rounded-xl bg-white p-6 shadow-sm transition-shadow duration-300 hover:shadow-md">
+                        <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-slate-800">
+                          <Users className="size-4 text-slate-400" />
+                          Clients
+                        </h3>
+                        {tabErrors.clients ? (
+                          <TabError onRetry={fetchTripClients} />
+                        ) : (
+                          <LinkSelector
+                            items={allClients.map((c) => ({ id: c.id, name: c.name }))}
+                            linkedIds={clientLinkedIds}
+                            onLink={handleLinkClient}
+                            onUnlink={handleUnlinkClient}
+                            type="client"
+                            isLoading={linkingClient}
+                          />
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
               </TabsContent>
 

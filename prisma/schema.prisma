@@ -26,6 +26,7 @@ model User {
   trips       Trip[]
   vendors     Vendor[]
   clients     Client[]
+  friends     Friend[]
   attachments TripAttachment[]
   auditLogs   AuditLog[]
   expenses        Expense[]
@@ -161,6 +162,7 @@ model Trip {
   hideHomeReturn    Boolean @default(false)
   vendors     TripVendor[]
   clients     TripClient[]
+  friends     TripFriend[]
   itinerary   ItineraryItem[]
   attachments TripAttachment[]
   stops       TripStop[]
@@ -286,6 +288,34 @@ model TripClient {
   notes    String?
 
   @@unique([tripId, clientId])
+}
+
+// A personal travel companion — the leisure-side counterpart to Client.
+// Friends are user-owned contacts that can be attached to any trip.
+model Friend {
+  id     String  @id @default(cuid())
+  userId String
+  user   User    @relation(fields: [userId], references: [id])
+  name   String
+  email  String?
+  phone  String?
+  notes  String?
+  trips          TripFriend[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model TripFriend {
+  id       String @id @default(cuid())
+  trip     Trip   @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  tripId   String
+  friend   Friend @relation(fields: [friendId], references: [id], onDelete: Cascade)
+  friendId String
+  notes    String?
+
+  @@unique([tripId, friendId])
 }
 
 model ItineraryItem {
