@@ -22,7 +22,9 @@ const publicUserSelect = {
 
 /**
  * Case-insensitive username search, excluding the current user. Returns up to
- * 10 public summaries. An empty/blank query yields no results.
+ * 10 public summaries. An empty/blank query yields no results. Accounts that
+ * opted out of discoverability (`isPublic === false`) are excluded — they can
+ * still be added directly by anyone who knows their exact @handle.
  */
 export async function searchUsers(currentUserId: string, q: string): Promise<PublicUserSummary[]> {
   const query = q.trim();
@@ -31,6 +33,7 @@ export async function searchUsers(currentUserId: string, q: string): Promise<Pub
   const users = await prisma.user.findMany({
     where: {
       id: { not: currentUserId },
+      isPublic: true,
       username: { contains: query, mode: 'insensitive' },
     },
     select: publicUserSelect,

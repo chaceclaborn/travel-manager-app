@@ -1,6 +1,18 @@
 'use client';
 import { useEffect, useRef } from 'react';
 
+// Users can opt out of first-party usage analytics from Settings. The flag is
+// stored per-device in localStorage and checked before any event is recorded.
+export const ANALYTICS_OPTOUT_KEY = 'tm-analytics-optout';
+
+function analyticsOptedOut(): boolean {
+  try {
+    return localStorage.getItem(ANALYTICS_OPTOUT_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
 const INTERACTIVE = new Set(['A','BUTTON','INPUT','SELECT','TEXTAREA','LABEL']);
 
 function isInteractive(el: Element | null): boolean {
@@ -38,6 +50,7 @@ export function ClickTracker() {
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
+      if (analyticsOptedOut()) return;
       const target = e.target as Element;
       const trackLabel = getTrackLabel(target);
       if (trackLabel) {

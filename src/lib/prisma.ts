@@ -59,7 +59,7 @@ function getPrismaClient(): PrismaClient {
   if (globalForPrisma.prisma) {
     // Validate that the cached client has new models — if it was cached
     // before a schema change, `.expense` etc. would be undefined.
-    if (typeof (globalForPrisma.prisma as unknown as Record<string, unknown>).oAuthToken === 'undefined') {
+    if (typeof (globalForPrisma.prisma as unknown as Record<string, unknown>).deviceToken === 'undefined') {
       globalForPrisma.pool?.end().catch(() => {});
       globalForPrisma.prisma = undefined;
       globalForPrisma.pool = undefined;

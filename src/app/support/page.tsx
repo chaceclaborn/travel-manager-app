@@ -75,12 +75,6 @@ const faqs: Faq[] = [
   },
   {
     icon: HelpCircle,
-    question: 'How do I connect Gmail for automatic booking import?',
-    answer:
-      'Go to Settings \u2192 Connections \u2192 Gmail. You\u2019ll be redirected to Google to grant read-only access. Travel Manager only scans for booking confirmations and you review every parsed result before it\u2019s saved. You can disconnect any time.',
-  },
-  {
-    icon: HelpCircle,
     question: 'What does it cost?',
     answer:
       'Travel Manager is free during the early access period. Pro features (team collaboration, white-label client portals) will be available later via in-app subscription. Existing users will be notified well in advance of any pricing changes.',

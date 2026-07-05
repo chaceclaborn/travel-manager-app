@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
+import { setStoredToken, clearStoredToken } from '@/lib/mobile-auth';
 import type { User } from '@supabase/supabase-js';
 
 export function useAuth() {
@@ -56,11 +57,43 @@ export function useAuth() {
     });
   }
 
+  /**
+   * Email + password sign-in. This is the reliable auth path *inside the
+   * native (Capacitor) shell* — the OAuth buttons redirect through
+   * `/auth/callback`, a route that only exists on the Vercel web deploy and
+   * is not part of the static export bundled in the iOS app. It is also the
+   * demo path we hand to App Review (Apple's reviewer signs in with the demo
+   * credentials rather than fighting a third-party OAuth challenge).
+   *
+   * On success we persist the access token via `setStoredToken` so the
+   * native Bearer-auth path (`apiFetch`) can call the Vercel API cross-origin,
+   * where cookies don't round-trip.
+   *
+   * Requires the Email provider (password auth) enabled in Supabase.
+   * Returns an error string on failure, or null on success.
+   */
+  async function signInWithEmail(email: string, password: string): Promise<string | null> {
+    if (!supabase?.auth) {
+      return 'Sign-in is unavailable right now. Please try again later.';
+    }
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      return error.message || 'Invalid email or password.';
+    }
+    const token = data.session?.access_token;
+    if (token) {
+      await setStoredToken(token);
+    }
+    window.location.href = '/';
+    return null;
+  }
+
   async function signOut() {
     if (!supabase?.auth) return;
+    await clearStoredToken();
     await supabase.auth.signOut();
     window.location.href = '/tour';
   }
 
-  return { user, loading, signInWithGoogle, signInWithApple, signOut };
+  return { user, loading, signInWithGoogle, signInWithApple, signInWithEmail, signOut };
 }
