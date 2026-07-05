@@ -40,6 +40,13 @@ export async function PATCH(request: NextRequest) {
       data.homeCity = body.homeCity ? sanitizeString(String(body.homeCity)) : null;
     }
 
+    if ('isPublic' in body) {
+      if (typeof body.isPublic !== 'boolean') {
+        return NextResponse.json({ error: 'isPublic must be a boolean' }, { status: 400 });
+      }
+      data.isPublic = body.isPublic;
+    }
+
     if ('homeLatitude' in body) {
       if (body.homeLatitude === null) {
         data.homeLatitude = null;

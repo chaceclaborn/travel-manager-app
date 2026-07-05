@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { Shield, Download, FileText, Trash2, Loader2, Monitor, MapPin, X, Mail, CheckCircle2, Unlink, Wrench, PanelLeft, RotateCcw, AtSign } from 'lucide-react';
+import { Shield, Download, FileText, Trash2, Loader2, Monitor, MapPin, X, Mail, Wrench, PanelLeft, RotateCcw, AtSign, BarChart3 } from 'lucide-react';
 import { useNavPreferences, TOGGLEABLE_NAV_ITEMS } from '@/lib/travelmanager/useNavPreferences';
 import { useGeocodingSearch, formatGeoName } from '@/lib/travelmanager/useGeocodingSearch';
 import type { GeoResult } from '@/lib/travelmanager/useGeocodingSearch';
@@ -20,6 +20,7 @@ import {
 import { TMBreadcrumb } from '@/components/travelmanager/TMBreadcrumb';
 import { useTMToast } from '@/components/travelmanager/TMToast';
 import { CurrencyConverter } from '@/components/travelmanager/CurrencyConverter';
+import { ANALYTICS_OPTOUT_KEY } from '@/components/travelmanager/ClickTracker';
 import { useAuth } from '@/lib/travelmanager/useAuth';
 
 interface Session {
@@ -39,6 +40,7 @@ interface UserInfo {
   homeLatitude: number | null;
   homeLongitude: number | null;
   username: string | null;
+  isPublic: boolean;
 }
 
 function parseUserAgent(ua: string): string {
@@ -116,9 +118,7 @@ export default function SettingsPage() {
   const [exportingData, setExportingData] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState<string | null>(null);
   const [isSavingHome, setIsSavingHome] = useState(false);
-  const [gmailConnected, setGmailConnected] = useState(false);
-  const [gmailLoading, setGmailLoading] = useState(true);
-  const [gmailDisconnecting, setGmailDisconnecting] = useState(false);
+  const [analyticsOptOut, setAnalyticsOptOut] = useState(false);
   const [avatarError, setAvatarError] = useState(false);
   const [usernameDraft, setUsernameDraft] = useState('');
   const [usernameCheck, setUsernameCheck] = useState<{
@@ -126,6 +126,7 @@ export default function SettingsPage() {
     error?: string;
   }>({ status: 'idle' });
   const [savingUsername, setSavingUsername] = useState(false);
+  const [savingPublic, setSavingPublic] = useState(false);
   const {
     query: homeQuery,
     setQuery: setHomeQuery,
@@ -157,25 +158,10 @@ export default function SettingsPage() {
       .catch(() => setSessions([]))
       .finally(() => setLoadingSessions(false));
 
-    fetch('/api/gmail/status')
-      .then((res) => (res.ok ? (res.json() as Promise<{ connected: boolean }>) : { connected: false }))
-      .then((data) => setGmailConnected(data.connected))
-      .catch(() => setGmailConnected(false))
-      .finally(() => setGmailLoading(false));
-
-    // Handle Gmail OAuth callback redirect
-    const params = new URLSearchParams(window.location.search);
-    const gmailParam = params.get('gmail');
-    if (gmailParam === 'connected') {
-      showToast('Gmail connected successfully');
-      setGmailConnected(true);
-      setGmailLoading(false);
-      window.history.replaceState({}, '', '/settings');
-    } else if (gmailParam === 'error') {
-      showToast('Failed to connect Gmail', 'error');
-      window.history.replaceState({}, '', '/settings');
-    }
-  }, [setHomeQuery, showToast]);
+    try {
+      setAnalyticsOptOut(localStorage.getItem(ANALYTICS_OPTOUT_KEY) === '1');
+    } catch { /* localStorage unavailable */ }
+  }, [setHomeQuery]);
 
   useEffect(() => {
     loadSettings();
@@ -230,6 +216,30 @@ export default function SettingsPage() {
       showToast('Failed to update username', 'error');
     } finally {
       setSavingUsername(false);
+    }
+  }
+
+  async function handleTogglePublic(next: boolean) {
+    if (!userInfo || savingPublic) return;
+    const previous = userInfo.isPublic;
+    // Optimistic — flip immediately, roll back on failure.
+    setUserInfo((prev) => (prev ? { ...prev, isPublic: next } : prev));
+    setSavingPublic(true);
+    try {
+      const res = await fetch('/api/user', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isPublic: next }),
+      });
+      if (!res.ok) throw new Error('Failed to save');
+      const data = await res.json();
+      setUserInfo(data.user);
+      showToast(next ? 'You now appear in friend search' : "You're hidden from friend search");
+    } catch {
+      setUserInfo((prev) => (prev ? { ...prev, isPublic: previous } : prev));
+      showToast('Failed to update privacy setting', 'error');
+    } finally {
+      setSavingPublic(false);
     }
   }
 
@@ -433,6 +443,34 @@ export default function SettingsPage() {
         {usernameCheck.status === 'unavailable' && (
           <p className="mt-2 text-xs text-red-600">{usernameCheck.error}</p>
         )}
+
+        {/* Discoverability */}
+        <div className="mt-5 flex items-start justify-between gap-4 border-t border-slate-100 pt-4">
+          <div className="flex-1">
+            <p className="text-sm font-medium text-slate-800">Show me in friend search</p>
+            <p className="mt-0.5 text-xs text-slate-500">
+              When on, others can find you by searching your @handle. When off, you stay out of
+              search results — friends can still add you if they know your exact username.
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={userInfo?.isPublic ?? true}
+            aria-label="Show me in friend search"
+            disabled={!userInfo || savingPublic}
+            onClick={() => handleTogglePublic(!(userInfo?.isPublic ?? true))}
+            className={`relative mt-0.5 inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:ring-offset-2 disabled:opacity-50 ${
+              (userInfo?.isPublic ?? true) ? 'bg-amber-500' : 'bg-slate-300'
+            }`}
+          >
+            <span
+              className={`inline-block size-4 transform rounded-full bg-white shadow transition-transform ${
+                (userInfo?.isPublic ?? true) ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </button>
+        </div>
       </motion.div>
 
       {/* Home Location */}
@@ -563,78 +601,45 @@ export default function SettingsPage() {
         <CurrencyConverter />
       </motion.div>
 
-      {/* Connected Accounts */}
+      {/* Privacy */}
       <motion.div variants={item} className="rounded-xl bg-white p-6 shadow-sm">
         <div className="flex items-center gap-2 mb-4">
-          <Mail className="size-5 text-amber-600" />
-          <h2 className="text-lg font-semibold text-slate-800">Connected Accounts</h2>
+          <BarChart3 className="size-5 text-amber-600" />
+          <h2 className="text-lg font-semibold text-slate-800">Privacy</h2>
         </div>
-        <div className="flex items-center justify-between rounded-lg border border-slate-100 p-4">
-          <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-full bg-red-50 ring-2 ring-red-100">
-              <Mail className="size-5 text-red-500" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-slate-800">Gmail</p>
-              {gmailLoading ? (
-                <p className="text-xs text-slate-400">Checking...</p>
-              ) : gmailConnected ? (
-                <p className="flex items-center gap-1 text-xs text-green-600">
-                  <CheckCircle2 className="size-3" /> Connected — read-only access
-                </p>
-              ) : (
-                <p className="text-xs text-slate-400">Import bookings from email confirmations</p>
-              )}
-            </div>
+        <div className="flex items-center justify-between gap-4 rounded-lg border border-slate-100 p-4">
+          <div>
+            <p className="text-sm font-medium text-slate-800">Usage analytics</p>
+            <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
+              First-party only: which features you click and pages you visit, used to fix bugs and
+              improve the app. Never sold or shared with anyone. Turn this off to stop all analytics
+              on this device.
+            </p>
           </div>
-          {gmailLoading ? (
-            <Loader2 className="size-4 animate-spin text-slate-300" />
-          ) : gmailConnected ? (
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={gmailDisconnecting}
-              onClick={async () => {
-                setGmailDisconnecting(true);
-                try {
-                  const res = await fetch('/api/gmail/disconnect', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                  });
-                  if (res.ok) {
-                    setGmailConnected(false);
-                    showToast('Gmail disconnected');
-                  } else {
-                    showToast('Failed to disconnect', 'error');
-                  }
-                } catch {
-                  showToast('Failed to disconnect', 'error');
-                } finally {
-                  setGmailDisconnecting(false);
-                }
-              }}
-              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-            >
-              {gmailDisconnecting ? <Loader2 className="mr-1 size-3 animate-spin" /> : <Unlink className="mr-1 size-3" />}
-              Disconnect
-            </Button>
-          ) : (
-            <Button
-              size="sm"
-              onClick={async () => {
-                try {
-                  const res = await fetch('/api/gmail/connect');
-                  const data = await res.json();
-                  if (data.url) window.location.href = data.url;
-                } catch {
-                  showToast('Failed to start Gmail connection', 'error');
-                }
-              }}
-              className="bg-amber-500 hover:bg-amber-600"
-            >
-              Connect Gmail
-            </Button>
-          )}
+          <button
+            type="button"
+            role="switch"
+            aria-checked={!analyticsOptOut}
+            aria-label={`${analyticsOptOut ? 'Enable' : 'Disable'} usage analytics`}
+            onClick={() => {
+              const nextOptOut = !analyticsOptOut;
+              try {
+                if (nextOptOut) localStorage.setItem(ANALYTICS_OPTOUT_KEY, '1');
+                else localStorage.removeItem(ANALYTICS_OPTOUT_KEY);
+              } catch { /* localStorage unavailable */ }
+              setAnalyticsOptOut(nextOptOut);
+              showToast(nextOptOut ? 'Usage analytics turned off' : 'Usage analytics turned on');
+            }}
+            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:ring-offset-2 ${
+              analyticsOptOut ? 'bg-slate-300' : 'bg-amber-500'
+            }`}
+          >
+            <span
+              className={`inline-block size-4 transform rounded-full bg-white shadow transition-transform ${
+                analyticsOptOut ? 'translate-x-1' : 'translate-x-6'
+              }`}
+            />
+          </button>
         </div>
       </motion.div>
 
@@ -749,6 +754,49 @@ export default function SettingsPage() {
               ))}
             </div>
           </div>
+        </div>
+      </motion.div>
+
+      {/* About & Legal */}
+      <motion.div variants={item} className="rounded-xl bg-white p-6 shadow-sm">
+        <div className="flex items-center gap-2 mb-4">
+          <Shield className="size-5 text-amber-600" />
+          <h2 className="text-lg font-semibold text-slate-800">About &amp; Legal</h2>
+        </div>
+        <p className="text-xs text-slate-500 mb-4">
+          Review how Travel Manager handles your data and the terms of using the app.
+        </p>
+        <div className="flex flex-col divide-y divide-slate-100 border border-slate-100 rounded-lg overflow-hidden">
+          <a
+            href="/privacy"
+            className="flex items-center justify-between px-4 py-3 text-sm text-slate-700 active:bg-slate-50 hover:bg-slate-50 transition-colors"
+          >
+            <span className="flex items-center gap-2">
+              <Shield className="size-4 text-slate-400" />
+              Privacy Policy
+            </span>
+            <span className="text-slate-300">›</span>
+          </a>
+          <a
+            href="/terms"
+            className="flex items-center justify-between px-4 py-3 text-sm text-slate-700 active:bg-slate-50 hover:bg-slate-50 transition-colors"
+          >
+            <span className="flex items-center gap-2">
+              <FileText className="size-4 text-slate-400" />
+              Terms of Service
+            </span>
+            <span className="text-slate-300">›</span>
+          </a>
+          <a
+            href="/support"
+            className="flex items-center justify-between px-4 py-3 text-sm text-slate-700 active:bg-slate-50 hover:bg-slate-50 transition-colors"
+          >
+            <span className="flex items-center gap-2">
+              <Mail className="size-4 text-slate-400" />
+              Support
+            </span>
+            <span className="text-slate-300">›</span>
+          </a>
         </div>
       </motion.div>
 

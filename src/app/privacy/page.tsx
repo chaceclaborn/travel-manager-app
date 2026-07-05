@@ -5,6 +5,7 @@ import {
   Ban,
   Server,
   Users,
+  UserPlus,
   Plug,
   UserCheck,
   Baby,
@@ -46,11 +47,12 @@ const sections: Section[] = [
     ],
     items: [
       'Account information: your email address (required for sign-in) and, optionally, your name and profile photo.',
+      'Username: a unique @handle, auto-generated from your email and editable at any time. It lets other users find and add you as a friend. See “Friends & Connections” below for how it is shared and how to stay out of search.',
       'Home location: if you enter a home city, we geocode it to latitude and longitude so the map view can center on it. This is never pulled from your device\u2019s GPS \u2014 you type it in manually.',
       'Your business data: the trips, clients, vendors, bookings, meetings, itinerary items, expenses, checklists, and notes that you create in the app. This data is yours. We treat it as confidential and process it only to provide the service you\u2019re paying for (or using free during beta).',
       'Attachments: any files you upload (receipts, booking confirmations, etc.).',
       'Push notification tokens: if you enable notifications, we store an Apple Push Notification Service (APNs) token so we can send you the alerts you requested.',
-      'Usage analytics: we log in-app clicks and page visits to understand which features are used and to fix bugs. This is linked to your account but is never sold or shared with advertisers.',
+      'Usage analytics: we log in-app clicks and page visits to understand which features are used and to fix bugs. This is first-party only, linked to your account, and never sold or shared with advertisers. You can turn it off at any time from Settings → Privacy.',
       'Audit log: sign-in, sign-out, data export, and account deletion events are logged with IP address and user agent for security.',
     ],
   },
@@ -61,6 +63,8 @@ const sections: Section[] = [
       'We do not track you across other apps or websites.',
       'We do not use the iOS advertising identifier (IDFA).',
       'We do not sell or share your data with data brokers or ad networks.',
+      'We do not read your email. Travel Manager does not connect to Gmail or any other mailbox.',
+      'We do not send your business data or any other personal data to a third-party AI service.',
       'We do not access your device\u2019s contacts, photos, camera, microphone, or location without an explicit in-app request and your permission.',
     ],
   },
@@ -70,7 +74,7 @@ const sections: Section[] = [
     items: [
       'Database and authentication: Supabase (PostgreSQL), US region.',
       'Web hosting: Vercel, US region.',
-      'Encryption: data is encrypted in transit (TLS) and at rest. OAuth tokens (e.g., Gmail) are additionally encrypted with AES-256-GCM before being stored in our database.',
+      'Encryption: data is encrypted in transit (TLS) and at rest.',
     ],
   },
   {
@@ -79,7 +83,21 @@ const sections: Section[] = [
     items: [
       'You. Always. You can view, edit, export, and delete everything from inside the app.',
       'Chace Claborn (developer/operator), only when required to resolve a support request you have opened or to investigate a security incident.',
+      'Other Travel Manager users, but only the limited public profile (username, name, and profile photo) described in “Friends & Connections” below — never your trips, clients, bookings, or any other business data.',
       'No one else. We do not have a sales team, a marketing data warehouse, or an analytics vendor that touches your business data.',
+    ],
+  },
+  {
+    icon: UserPlus,
+    title: 'Friends & Connections',
+    paragraphs: [
+      'Travel Manager lets you connect with other users as friends. To make this work, a limited public profile is visible to other users:',
+    ],
+    items: [
+      'Your public profile is only your username (@handle), your name, and your profile photo. Your trips, clients, vendors, bookings, expenses, notes, home location, and email address are never exposed to other users.',
+      'Discoverability is on by default: your @handle can appear in other users’ friend-search results so they can add you. You can turn this off at any time from Settings — when off, you no longer appear in search, though someone who already knows your exact @handle can still send you a request.',
+      'Adding a friend requires both sides: a request must be sent and then accepted before you are connected. Either person can remove the connection at any time.',
+      'We do not import your phone or email contacts, and we do not suggest friends based on any address book.',
     ],
   },
   {
@@ -92,7 +110,6 @@ const sections: Section[] = [
       'Supabase \u2014 database and authentication provider (processor).',
       'Vercel \u2014 web hosting (processor).',
       'Apple Push Notification Service \u2014 push delivery, if you enable it.',
-      'Google Gmail API \u2014 read-only mailbox access, only if you choose to connect Gmail for the booking-import feature. You can disconnect at any time from the in-app settings.',
       'Open-Meteo \u2014 weather forecasts. We send only the latitude and longitude of the trip destination. No user identity is transmitted.',
       'Frankfurter \u2014 currency exchange rates. We send only currency codes.',
     ],
@@ -105,7 +122,7 @@ const sections: Section[] = [
       'Access and export all your data. Use the in-app export feature (available at /api/user/export) to download a complete JSON archive of your account.',
       'Correct any information by editing it inside the app.',
       'Delete your account and all associated data at any time. Use the in-app delete-account feature (available at /api/user/delete). Deletion is permanent and cannot be undone.',
-      'Withdraw consent for optional features (Gmail import, push notifications, home location) from settings at any time.',
+      'Withdraw consent for optional features (push notifications, home location), hide yourself from friend search, and turn off usage analytics from settings at any time.',
       'We comply with GDPR and CCPA to the extent they apply.',
     ],
   },
@@ -147,7 +164,7 @@ export default function PrivacyPolicyPage() {
           <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
             Privacy Policy
           </h1>
-          <p className="mt-2 text-sm text-slate-500">Effective date: April 6, 2026</p>
+          <p className="mt-2 text-sm text-slate-500">Effective date: July 5, 2026</p>
         </header>
 
         <div className="mb-6 rounded-xl bg-white p-6 shadow-sm">

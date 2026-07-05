@@ -151,7 +151,7 @@ These are the non-obvious choices. Any agent revisiting this code should underst
 
 7. **Rate limiter is in-memory (`src/lib/rate-limit.ts`).** Acceptable for Vercel's per-region warm instances at current scale. Will need Redis/Upstash when the app goes multi-instance or when an attacker can trigger cold-start resets at will. Noted in SECURITY_AUDIT.md as INFO-level.
 
-8. **Email parser uses chrono-node + cheerio, not Gemini.** Replacing the Gemini call removed API cost and non-determinism. chrono-node handles natural-language date parsing; cheerio extracts structured fields from HTML emails. The Gemini path is kept for hard cases but hard-rejects promo emails first.
+8. **Email parser uses chrono-node + cheerio, no third-party AI.** Parsing is fully deterministic and runs on our own servers: Schema.org metadata, then HTML key-value extraction, then chrono-node/cheerio regex on the text. The Gemini path (parsing *and* classification) was removed entirely for privacy — no email content is sent to any third-party AI. Email classification for the import UI is done client-side by sender-domain + subject scoring in `GmailImportModal`.
 
 9. **`useDeleteEntity` hook over repeated boilerplate.** Every detail page had the same 4-state delete pattern. Extracting to a hook removed ~30 lines per page and made the behavior uniform (confirm → DELETE → redirect → toast).
 

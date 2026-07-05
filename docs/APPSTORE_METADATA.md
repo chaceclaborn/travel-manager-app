@@ -4,16 +4,18 @@ Everything you'll paste into App Store Connect when submitting Travel Manager. E
 
 > **How to use this file:** Open the section you need, copy the fenced block, paste it into the matching App Store Connect field. Fields marked "updateable" can be edited post-submission without a new build review.
 
-> **⚠️ Feature-reality check before you submit (last updated 2026-04-14):**
-> The Review Notes in §5 claim several native features. Confirm each is actually shipping in the build you're submitting — reviewers will test them. Current status:
-> - ✅ Native bottom tab bar / sidebar navigation — shipped
-> - ✅ Native iOS share sheet (`@capacitor/share`) — shipped 2026-04-14 on Trip detail page
-> - ⚠️ Push notifications — client-side wired (`src/lib/push.ts`), server dispatch stubbed (certs not provisioned). Honest claim: "Push notification registration is supported; active dispatch launches with first update after App Store approval."
-> - ❌ Face ID / Touch ID unlock — NOT YET IMPLEMENTED. Either ship it or strike the bullet.
-> - ❌ Offline cache — NOT YET IMPLEMENTED. Either ship it or strike the bullet.
-> - ⚠️ Native file picker / document scanner — uses standard HTML file input today. Strike "document scanner" unless you wire `@capacitor/camera`.
+> **⚠️ Feature-reality check before you submit (last updated 2026-07-05):**
+> The Review Notes in §5 have been trimmed to only what actually ships. Current status:
+> - ✅ Native navigation shell (bottom tab bar on iPhone / sidebar wider) — shipped
+> - ✅ Native iOS share sheet (`@capacitor/share`) — shipped on Trip detail page
+> - ✅ Custom offline screen + service worker (`public/offline.html`, `public/sw.js`) — shipped
+> - ✅ In-app Privacy Policy / Terms / Support links (Settings → About & Legal) — shipped 2026-07-05
+> - ⚠️ Push notifications — registration + permission flow wired (`src/lib/push.ts`); server *dispatch* stubbed (APNs cert not provisioned). §5 now states honestly that active dispatch ships in the first post-approval update.
+> - ❌ Face ID / Touch ID unlock — NOT implemented and NO LONGER claimed in §5. (Optional post-launch polish; requires `@capgo/capacitor-native-biometric`.)
+> - ❌ On-device offline *data cache* of trips — NOT implemented and NO LONGER claimed. (The offline *screen* above is shipped; caching the last 7 days of trip data is a separate post-launch item.)
+> - ❌ Document scanner — NOT implemented and NO LONGER claimed. Attachments use the standard file input.
 >
-> Apple Guideline 4.2 specifically rejects wrappers that claim native features they don't deliver. Trim the Review Notes list to what's real before pasting.
+> Apple Guideline 4.2/2.1 rejects wrappers that claim native features they don't deliver. §5 is now accurate — do not re-add struck bullets unless you actually ship them.
 
 ---
 
@@ -237,7 +239,7 @@ Apple requires you to answer a questionnaire in App Store Connect. Here are your
 ```markdown
 # Privacy Policy
 
-**Effective Date: April 6, 2026**
+**Effective Date: July 5, 2026**
 
 Travel Manager ("the App", "we", "us") is operated by Chace Claborn as an
 independent developer. This policy explains what data we collect, why we
@@ -249,6 +251,9 @@ When you use Travel Manager, we collect and store the following on your behalf:
 
 - **Account information:** your email address (required for sign-in) and,
   optionally, your name and profile photo.
+- **Username:** a unique @handle, auto-generated from your email and editable
+  at any time. It lets other users find and add you as a friend. See "Friends
+  & Connections" below for how it is shared and how to stay out of search.
 - **Home location:** if you enter a home city, we geocode it to latitude and
   longitude so the map view can center on it. This is never pulled from your
   device's GPS — you type it in manually.
@@ -288,8 +293,29 @@ When you use Travel Manager, we collect and store the following on your behalf:
   inside the app.
 - **Chace Claborn** (developer/operator), only when required to resolve a
   support request you have opened or to investigate a security incident.
+- **Other Travel Manager users**, but only the limited public profile
+  (username, name, and profile photo) described in "Friends & Connections"
+  below — never your trips, clients, bookings, or any other business data.
 - **No one else.** We do not have a sales team, a marketing data warehouse,
   or an analytics vendor that touches your business data.
+
+## Friends & Connections
+
+Travel Manager lets you connect with other users as friends. To make this
+work, a limited public profile is visible to other users:
+
+- Your public profile is only your username (@handle), your name, and your
+  profile photo. Your trips, clients, vendors, bookings, expenses, notes,
+  home location, and email address are never exposed to other users.
+- Discoverability is on by default: your @handle can appear in other users'
+  friend-search results so they can add you. You can turn this off at any
+  time from Settings — when off, you no longer appear in search, though
+  someone who already knows your exact @handle can still send you a request.
+- Adding a friend requires both sides: a request must be sent and then
+  accepted before you are connected. Either person can remove the connection
+  at any time.
+- We do not import your phone or email contacts, and we do not suggest
+  friends based on any address book.
 
 ## Third-Party Services
 
@@ -317,7 +343,8 @@ You have the right to:
   in-app delete-account feature (available at `/api/user/delete`). Deletion
   is permanent and cannot be undone.
 - **Withdraw consent** for optional features (Gmail import, push
-  notifications, home location) from settings at any time.
+  notifications, home location), hide yourself from friend search, and turn
+  off usage analytics from settings at any time.
 
 We comply with GDPR and CCPA to the extent they apply.
 
@@ -451,20 +478,29 @@ small travel agencies. It is not a consumer travel-booking app — users are
 travel professionals who manage their own clients, vendors, and bookings as
 part of running their business.
 
-DEMO CREDENTIALS
+SIGN-IN METHOD
+Sign-in uses OAuth via Supabase. Two options are offered on the sign-in
+screen, side by side:
+- Sign in with Apple
+- Continue with Google
+There is no email/password or one-time-code flow. We recommend testing with
+"Sign in with Apple" using your reviewer Apple ID, or with the demo Google
+account below.
+
+DEMO CREDENTIALS (Google account for review)
 Email:    [FILL IN BEFORE SUBMISSION]
 Password: [FILL IN BEFORE SUBMISSION]
-(Sign-in is email OTP via Supabase. Use the one-time code sent to the demo
-email above — we will monitor the inbox during the review window and can
-provide the code on request via Resolution Center if the OTP flow is
-unclear.)
+This Google account is pre-populated with sample trips, clients, vendors, and
+bookings. If Google blocks the OAuth sign-in from your environment (2FA / "verify
+it's you" challenge), please contact us via Resolution Center and we will
+provide a same-day workaround or an alternate demo path. We monitor the inbox
+throughout the review window.
 
 SIGN-IN FLOW
 1. Launch the app.
-2. Enter the demo email.
-3. Tap "Send code".
-4. Check the demo email inbox for the 6-digit OTP.
-5. Enter the code to sign in.
+2. Tap "Sign in with Apple" (or "Continue with Google").
+3. Complete the OAuth consent screen.
+4. You are returned to the app dashboard, signed in.
 
 WHAT TO TEST (SUGGESTED FLOW)
 1. Dashboard: shows stats, upcoming trips, calendar, and Quick Actions.
@@ -474,17 +510,21 @@ WHAT TO TEST (SUGGESTED FLOW)
    this is a headline feature that distinguishes the app from a generic CRM.
 5. Bookings tab: add a booking with commission and verify the commission
    dashboard updates.
-6. Settings > Account: verify "Export my data" and "Delete my account"
-   both work end-to-end. (Guideline 5.1.1(v) compliance.)
+6. Settings > Data Management: verify "Export as JSON" downloads your data.
+7. Settings > Danger Zone: "Delete Account" removes the account and all data
+   (Guideline 5.1.1(v) compliance). Settings > About & Legal links to the
+   in-app Privacy Policy and Terms.
 
 NATIVE iOS FEATURES
-This is not a "wrapped website." The iOS app provides:
-- Native bottom tab bar navigation
-- Push notifications (APNs) for upcoming trips and meetings
-- Face ID / Touch ID unlock for the app
-- Offline cache for viewing trips without connectivity
-- Native iOS share sheet integration for client share links
-- Native file picker and document scanner for attachments
+This is not a "wrapped website." The UI is bundled in the app (static export),
+not loaded from a remote URL, and the app provides:
+- Native navigation shell (bottom tab bar on iPhone / sidebar on larger widths)
+- Native iOS share sheet integration for client share links (@capacitor/share)
+- Custom offline screen (not the default WKWebView error) when connectivity
+  drops, backed by an app service worker
+- Push notification registration (APNs). Note: automated push *dispatch* for
+  trip and meeting reminders ships in the first update after approval; the
+  registration and permission flow are present in this build.
 
 OPTIONAL FEATURES THAT REQUIRE EXTERNAL ACCOUNTS
 - Gmail Import (Settings > Connections): uses Google OAuth read-only scope

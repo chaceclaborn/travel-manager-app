@@ -19,6 +19,10 @@ model User {
   // compare + DB unique index). Nullable so signup never blocks on it;
   // auto-generated from email and backfilled. Used to find & add real friends.
   username  String?  @unique
+  // When true (default), this account appears in friend search so others can
+  // find & add it by @handle. Turn off to stay out of search results; the
+  // account can still be added by anyone who knows the exact username.
+  isPublic  Boolean  @default(true)
   name      String?
   avatarUrl     String?
   homeCity      String?
@@ -41,25 +45,8 @@ model User {
   tripNotes       TripNote[]
   clickEvents     ClickEvent[]
   feedbacks       Feedback[]
-  oauthTokens     OAuthToken[]
   meetings        Meeting[]
   deviceTokens    DeviceToken[]
-}
-
-model OAuthToken {
-  id           String   @id @default(cuid())
-  userId       String
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  provider     String   // "google", "microsoft", etc.
-  accessToken  String   // AES-256-GCM encrypted (base64)
-  refreshToken String?  // AES-256-GCM encrypted (base64)
-  keyVersion   Int      @default(1)
-  expiresAt    DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  @@unique([userId, provider])
-  @@map("oauth_tokens")
 }
 
 model AuditLog {

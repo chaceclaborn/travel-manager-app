@@ -115,7 +115,7 @@ describe('proxy — Content-Type CSRF protection', () => {
 
   // Bodyless mutations (no Content-Length) should pass without Content-Type
   it('allows bodyless POST without Content-Type', async () => {
-    const req = createRequest('POST', '/api/gmail/disconnect');
+    const req = createRequest('POST', '/api/auth/visit');
     const res = await proxy(req);
     expect(res.status).toBe(200);
   });

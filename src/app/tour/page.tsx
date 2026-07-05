@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -18,8 +18,11 @@ import {
   Trash2,
   Plane,
   AlertCircle,
+  Mail,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { CookieBanner } from '@/components/travelmanager/CookieBanner';
 import { useAuth } from '@/lib/travelmanager/useAuth';
 
@@ -101,6 +104,80 @@ export default function TourPage() {
   );
 }
 
+/**
+ * Email + password sign-in. Kept understated (revealed behind a link) because
+ * the product's primary sign-in is OAuth. Two reasons it exists:
+ *  1. It's the reliable auth path inside the native iOS shell, where the OAuth
+ *     redirect to /auth/callback isn't part of the bundled static export.
+ *  2. It's the demo path we hand to App Review so the reviewer never has to
+ *     clear a third-party OAuth (Google) challenge.
+ */
+function EmailSignIn() {
+  const { signInWithEmail } = useAuth();
+  const [open, setOpen] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (submitting) return;
+    setError(null);
+    setSubmitting(true);
+    const err = await signInWithEmail(email.trim(), password);
+    if (err) {
+      setError(err);
+      setSubmitting(false); // on success we navigate away, so only reset on error
+    }
+  }
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="mt-1 text-sm text-slate-400 underline-offset-2 hover:text-slate-600 hover:underline active:text-slate-600"
+      >
+        Sign in with email
+      </button>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="mt-2 flex w-64 flex-col gap-2">
+      <Input
+        type="email"
+        inputMode="email"
+        autoComplete="email"
+        placeholder="Email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        required
+        aria-label="Email"
+      />
+      <Input
+        type="password"
+        autoComplete="current-password"
+        placeholder="Password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        required
+        aria-label="Password"
+      />
+      {error && <p className="text-xs text-red-600">{error}</p>}
+      <Button
+        type="submit"
+        disabled={submitting}
+        className="w-full gap-2 bg-slate-800 text-white hover:bg-slate-900 active:bg-slate-900"
+      >
+        {submitting ? <Loader2 className="size-4 animate-spin" /> : <Mail className="size-4" />}
+        {submitting ? 'Signing in…' : 'Sign in'}
+      </Button>
+    </form>
+  );
+}
+
 function TourPageContent() {
   const { signInWithGoogle, signInWithApple } = useAuth();
   const searchParams = useSearchParams();
@@ -162,6 +239,7 @@ function TourPageContent() {
               <AppleLogo className="size-5" />
               Sign in with Apple
             </Button>
+            <EmailSignIn />
           </div>
         </motion.div>
 

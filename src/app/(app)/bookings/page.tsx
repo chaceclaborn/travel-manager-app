@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plane, Trash2, Plus, X, MapPin,
-  Clock, Hash, Armchair, Search, Link2, Loader2, ExternalLink, Pencil, Mail, Ban, RotateCcw,
+  Clock, Hash, Armchair, Search, Link2, Loader2, ExternalLink, Pencil, Ban, RotateCcw,
   AlertCircle, RefreshCw, Check, Download, CheckSquare,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -25,8 +25,6 @@ import { DatePicker } from '@/components/travelmanager/DatePicker';
 import { formatDate, formatDateTime } from '@/lib/date-utils';
 import { type BookingType, BOOKING_TYPES, typeConfig, typeLabels, emptyBookingForm, getBookingFormHelpers } from '@/lib/travelmanager/booking-config';
 import type { BookingStatus } from '@/lib/travelmanager/types';
-import { GmailImportModal } from '@/components/travelmanager/GmailImportModal';
-import type { ParsedBooking } from '@/lib/travelmanager/email-parser';
 
 interface BookingTrip {
   id: string;
@@ -544,8 +542,6 @@ export default function BookingsPage() {
   const [lookupLoading, setLookupLoading] = useState(false);
   const [lookupError, setLookupError] = useState('');
   const [lookupFallbackUrl, setLookupFallbackUrl] = useState('');
-  const [gmailConnected, setGmailConnected] = useState(false);
-  const [showGmailModal, setShowGmailModal] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
@@ -570,10 +566,6 @@ export default function BookingsPage() {
     fetch('/api/trips?fields=minimal')
       .then((res) => res.json())
       .then((data) => setTrips(Array.isArray(data) ? data : []))
-      .catch(() => {});
-    fetch('/api/gmail/status')
-      .then((res) => res.ok ? res.json() : { connected: false })
-      .then((data) => setGmailConnected(data.connected))
       .catch(() => {});
   }, [fetchBookings]);
 
@@ -817,21 +809,6 @@ export default function BookingsPage() {
     }
   };
 
-  const handleGmailImport = (parsed: ParsedBooking) => {
-    setForm((prev) => ({
-      ...prev,
-      type: parsed.type || prev.type,
-      provider: parsed.provider || prev.provider,
-      confirmationNum: parsed.confirmationNum || prev.confirmationNum,
-      startDateTime: parsed.startDateTime ? parsed.startDateTime.slice(0, 16) : prev.startDateTime,
-      endDateTime: parsed.endDateTime ? parsed.endDateTime.slice(0, 16) : prev.endDateTime,
-      location: parsed.location || prev.location,
-      endLocation: parsed.endLocation || prev.endLocation,
-      seat: parsed.seat || prev.seat,
-    }));
-    setShowForm(true);
-    showToast('Booking details imported — review and save');
-  };
 
   const { showEndLocation, showSeat, dateOnly } = getBookingFormHelpers(form.type);
   const formTypeConfig = typeConfig[form.type];
@@ -930,27 +907,6 @@ export default function BookingsPage() {
             <CheckSquare className="mr-2 size-4" />
             {selectMode ? 'Cancel' : 'Select'}
           </Button>
-          {gmailConnected ? (
-            <Button
-              variant="outline"
-              onClick={() => setShowGmailModal(true)}
-              className="w-full sm:w-auto text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
-            >
-              <Mail className="mr-2 size-4" />
-              Import from Gmail
-            </Button>
-          ) : (
-            <Button
-              variant="outline"
-              asChild
-              className="w-full sm:w-auto text-slate-500 hover:text-red-600 hover:bg-red-50 border-slate-200 hover:border-red-200"
-            >
-              <Link href="/settings">
-                <Mail className="mr-2 size-4" />
-                Connect Gmail
-              </Link>
-            </Button>
-          )}
           <Button
             onClick={() => setShowForm(true)}
             className="w-full sm:w-auto bg-amber-500 hover:bg-amber-600 text-white"
@@ -1307,15 +1263,10 @@ export default function BookingsPage() {
           title={bookings.length === 0 ? 'No bookings yet' : 'No matching bookings'}
           description={
             bookings.length === 0
-              ? 'Create your first booking or import from your email. Connect Gmail in Settings to automatically pull in flight, hotel, and car rental confirmations.'
+              ? 'Create your first booking to track flights, hotels, and car rentals.'
               : 'Try adjusting your search or filters.'
           }
           icon={Plane}
-          {...(bookings.length === 0 && !gmailConnected
-            ? { secondaryAction: { label: 'Connect Gmail to import bookings →', onClick: () => window.location.assign('/settings') } }
-            : bookings.length === 0 && gmailConnected
-            ? { secondaryAction: { label: 'Import from Gmail →', onClick: () => setShowGmailModal(true) } }
-            : {})}
         />
       ) : (
         <motion.div
@@ -1434,12 +1385,6 @@ export default function BookingsPage() {
           </motion.div>
         </div>
       )}
-
-      <GmailImportModal
-        open={showGmailModal}
-        onClose={() => setShowGmailModal(false)}
-        onImport={handleGmailImport}
-      />
     </div>
   );
 }

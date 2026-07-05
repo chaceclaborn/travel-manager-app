@@ -422,17 +422,9 @@ export async function deleteAllUserData(userId: string) {
   // Apple Guideline 5.1.1(v) — account deletion must wipe ALL user data.
   // Order matters: delete leaf rows first, then parents, then the User row.
   // Models with `onDelete: Cascade` on the User relation (ClickEvent,
-  // DeviceToken, OAuthToken, and trip-scoped rows via Trip cascade) would
-  // clean up automatically when User is deleted, but we delete them
-  // explicitly for predictability and to keep audit/error surfaces tight.
-
-  // Revoke Gmail tokens remotely before we drop the row (so Google forgets us)
-  try {
-    const { revokeGmailAccess } = await import('@/lib/travelmanager/gmail');
-    await revokeGmailAccess(userId);
-  } catch {
-    // Best-effort revocation — continue with deletion
-  }
+  // DeviceToken, and trip-scoped rows via Trip cascade) would clean up
+  // automatically when User is deleted, but we delete them explicitly for
+  // predictability and to keep audit/error surfaces tight.
 
   const trips = await prisma.trip.findMany({ where: { userId }, select: { id: true } });
   const tripIds = trips.map(t => t.id);
@@ -472,7 +464,6 @@ export async function deleteAllUserData(userId: string) {
   await prisma.auditLog.deleteMany({ where: { userId } });          // AuditLog: no cascade on User
   await prisma.clickEvent.deleteMany({ where: { userId } });        // cascades, but explicit
   await prisma.deviceToken.deleteMany({ where: { userId } });       // cascades, but explicit
-  await prisma.oAuthToken.deleteMany({ where: { userId } });        // cascades; also revoked above
 
   // Finally drop the Prisma User row itself. The Supabase auth user is
   // deleted by the caller (src/app/api/user/delete/route.ts) via the
