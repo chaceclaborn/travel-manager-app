@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
-import { setStoredToken, clearStoredToken } from '@/lib/mobile-auth';
+import { setStoredToken, clearStoredToken, isNativePlatform } from '@/lib/mobile-auth';
 import type { User } from '@supabase/supabase-js';
 
 export function useAuth() {
@@ -23,8 +23,22 @@ export function useAuth() {
     init();
 
     const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event: string, session: { user: User } | null) => {
+      (event: string, session: { user: User; access_token?: string } | null) => {
         setUser(session?.user ?? null);
+        // Keep the NATIVE Bearer token fresh. The Supabase JS SDK silently
+        // auto-rotates the in-webview access token (roughly hourly). Without
+        // re-persisting it, getStoredToken() stays frozen at the original
+        // sign-in JWT; once that expires the rewritten /api requests in
+        // native-fetch.ts send an expired token and requireAuth() returns 401
+        // with no cookie fallback, breaking all native data loading until the
+        // user signs out and back in. Persist every refreshed/new token, and
+        // clear it on sign-out. Web is untouched (isNativePlatform() is false).
+        if (!isNativePlatform()) return;
+        if (event === 'SIGNED_OUT') {
+          void clearStoredToken();
+        } else if (session?.access_token) {
+          void setStoredToken(session.access_token);
+        }
       }
     );
 

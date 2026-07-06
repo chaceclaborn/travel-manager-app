@@ -19,6 +19,18 @@ const config: CapacitorConfig = {
     contentInset: 'always',
   },
   plugins: {
+    // NOTE: We deliberately do NOT set `CapacitorHttp: { enabled: true }`.
+    // That flag makes the Capacitor bridge auto-patch window.fetch AND
+    // XMLHttpRequest for ALL cross-origin traffic, which would reroute the
+    // already-working Supabase login/token-refresh and other third-party calls
+    // through the native HTTP layer and change their transport (a regression
+    // risk). Instead, the native `/api` cross-origin routing is done
+    // SELECTIVELY in src/lib/travelmanager/native-fetch.ts, which calls
+    // `CapacitorHttp.request()` for `/api` requests only. That plugin method
+    // works on native independently of this flag — the flag only governs the
+    // global auto-patch — so every other request keeps using the untouched
+    // browser fetch. No server-side CORS/OPTIONS work is needed because native
+    // requests bypass WKWebView CORS and carry no browser Origin header.
     SplashScreen: {
       launchShowDuration: 2000,
       launchAutoHide: true,

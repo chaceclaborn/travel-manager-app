@@ -15,6 +15,15 @@ import { ServiceWorkerRegister } from '@/components/travelmanager/ServiceWorkerR
 import { PushRegister } from '@/components/travelmanager/PushRegister';
 import { OfflineIndicator } from '@/components/travelmanager/OfflineIndicator';
 import { useAuth } from '@/lib/travelmanager/useAuth';
+import { installNativeApiFetchPatch } from '@/lib/travelmanager/native-fetch';
+
+// Install the native-only global fetch interceptor at MODULE-EVALUATION scope
+// (not in a useEffect) so relative `/api/*` calls are rewritten to the
+// production origin + Bearer token BEFORE this layout renders, before any child
+// renders, and before any effect (including this layout's own is-admin/visit
+// fetches) fires. Self-gates to native inside the function, so on web this is a
+// no-op and browser same-origin cookie auth is untouched.
+if (typeof window !== 'undefined') installNativeApiFetchPatch();
 
 export default function TravelManagerLayout({
   children,

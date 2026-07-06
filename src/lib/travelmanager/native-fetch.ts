@@ -1,0 +1,363 @@
+/**
+ * Native (Capacitor / iOS) global fetch interceptor.
+ *
+ * WHY THIS EXISTS
+ * ---------------
+ * The iOS app is a Capacitor shell that loads the Next.js static export from
+ * `capacitor://localhost` (server.url is intentionally NOT set — Apple flags
+ * remote-webview wrappers under Guideline 4.2). All the app's data fetches use
+ * RELATIVE URLs like `fetch('/api/trips')`. Inside the native webview those
+ * resolve against the document origin to `capacitor://localhost/api/trips` —
+ * where no server exists — so every data call fails.
+ *
+ * This module installs a single global `window.fetch` wrapper, NATIVE ONLY,
+ * that rewrites those relative `/api/*` requests to the production origin
+ * (https://travels-manager.com) and attaches the stored Bearer token. Every
+ * other request — absolute cross-origin URLs (Supabase auth, map tiles,
+ * geocoders) and same-origin non-`/api` paths (static assets, `_next/*`) —
+ * passes through the ORIGINAL browser `fetch` completely untouched.
+ *
+ * HOW CORS IS HANDLED (and why the third-party regression is avoided)
+ * -------------------------------------------------------------------
+ * A bare cross-origin browser fetch from `capacitor://localhost` to
+ * https://travels-manager.com would be blocked by WKWebView CORS AND rejected
+ * by the server's Origin-based CSRF check in src/proxy.ts. Rather than open the
+ * production API up with CORS/preflight (and weaken that CSRF check) we route
+ * the rewritten `/api` request through Capacitor's native HTTP plugin
+ * (`CapacitorHttp.request`), which performs the request via the native
+ * URLSession layer. Native requests are NOT subject to WKWebView CORS and do
+ * NOT carry a browser `Origin` header, so the server's CSRF Origin check treats
+ * them like a normal server-to-server call and the Bearer token authenticates
+ * them. No server-side CORS, no OPTIONS preflight, and no CSRF changes needed.
+ *
+ * IMPORTANT: we do NOT set `plugins.CapacitorHttp.enabled = true` in
+ * capacitor.config.ts. That flag makes the Capacitor bridge auto-patch
+ * `window.fetch` AND `XMLHttpRequest` for ALL cross-origin traffic, which would
+ * reroute the already-working Supabase login/token-refresh, geocoders, and any
+ * fetch-based third-party calls through the native layer and change their
+ * transport. Instead we invoke `CapacitorHttp.request()` SELECTIVELY, for `/api`
+ * requests only. `CapacitorHttp.request()` works on native independently of the
+ * `enabled` flag — the flag only governs the global auto-patch. Everything else
+ * keeps using the untouched browser `fetch`, so there is zero regression risk to
+ * Supabase or any other external service.
+ *
+ * ORDERING
+ * --------
+ * This is installed at MODULE-EVALUATION scope from src/app/(app)/layout.tsx —
+ * NOT inside a useEffect — so the patch lands before the layout renders, before
+ * any child component renders, and before any effect (including the layout's own
+ * is-admin/visit fetches) runs. React effects fire child-first, so a
+ * useEffect-based install would lose the race against child fetches.
+ *
+ * WEB
+ * ---
+ * On the web, `isNativePlatform()` is false, so `installNativeApiFetchPatch()`
+ * returns immediately and never touches `window.fetch`. Browser behavior is
+ * byte-for-byte unchanged and continues to use same-origin cookie auth. The
+ * `@capacitor/core` import is dynamic and only reached on native, so it never
+ * loads on the web.
+ */
+
+import { isNativePlatform, getStoredToken } from '@/lib/mobile-auth';
+
+// Production API origin. Relative `/api/*` calls are rewritten to hit this.
+const API_ORIGIN = 'https://travels-manager.com';
+
+// Minimal local shapes for the @capacitor/core HTTP plugin. We avoid importing
+// the real types statically so this module type-checks and tree-shakes cleanly
+// on the web, where the plugin is never loaded.
+interface NativeHttpResponse {
+  data: unknown;
+  status: number;
+  headers: Record<string, string>;
+  url: string;
+}
+interface NativeHttpRequestOptions {
+  url: string;
+  method: string;
+  headers?: Record<string, string>;
+  data?: unknown;
+  // 'json' | 'text' | 'formData' | 'file' at runtime; typed loosely because the
+  // typed `request()` signature only advertises a subset but the native layer
+  // accepts the full set (this mirrors Capacitor's own auto-patch behavior).
+  dataType?: string;
+}
+interface CapacitorHttpLike {
+  request(options: NativeHttpRequestOptions): Promise<NativeHttpResponse>;
+}
+
+// Module-level guard so the patch installs exactly once, even across Fast
+// Refresh, double-mounts, or repeated imports. Also prevents recursion: we
+// capture the original fetch once and never re-wrap our own wrapper.
+let installed = false;
+
+// Lazily-resolved native HTTP plugin. Loaded once, native-only.
+let capacitorHttpPromise: Promise<CapacitorHttpLike | null> | null = null;
+function loadCapacitorHttp(): Promise<CapacitorHttpLike | null> {
+  if (!capacitorHttpPromise) {
+    capacitorHttpPromise = import('@capacitor/core')
+      .then((mod) => (mod.CapacitorHttp as unknown as CapacitorHttpLike) ?? null)
+      .catch(() => null);
+  }
+  return capacitorHttpPromise;
+}
+
+/**
+ * Base64-encode a Blob/File. CapacitorHttp transfers binary parts as base64
+ * across the native bridge. Mirrors the encoding the Capacitor auto-patch uses.
+ */
+function readFileAsBase64(file: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = reader.result as string;
+      // readAsDataURL yields "data:<mime>;base64,<payload>" — keep just the payload.
+      const comma = result.indexOf(',');
+      resolve(comma >= 0 ? result.slice(comma + 1) : result);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+/**
+ * Serialize a multipart FormData body into the array-of-entries shape the
+ * native bridge expects (files as base64, everything else as strings). Mirrors
+ * Capacitor's own `convertFormData`.
+ */
+async function convertFormData(formData: FormData): Promise<unknown> {
+  const entries: Array<Record<string, unknown>> = [];
+  for (const [key, value] of formData.entries()) {
+    if (value instanceof File) {
+      entries.push({
+        key,
+        value: await readFileAsBase64(value),
+        type: 'base64File',
+        contentType: value.type,
+        fileName: value.name,
+      });
+    } else {
+      entries.push({ key, value, type: 'string' });
+    }
+  }
+  return entries;
+}
+
+/**
+ * Convert a fetch body into the { data, dataType } pair CapacitorHttp needs.
+ * Mutates `headers` for the FormData case (drops Content-Type so the native
+ * layer sets the multipart boundary itself — matches the Capacitor auto-patch).
+ * Mirrors Capacitor's own `convertBody` for the body shapes this app produces
+ * (JSON strings and FormData); other shapes fall back sensibly.
+ */
+async function convertBody(
+  body: BodyInit | null | undefined,
+  headers: Headers
+): Promise<{ data: unknown; dataType?: string }> {
+  if (body == null) return { data: undefined, dataType: undefined };
+  if (body instanceof FormData) {
+    headers.delete('Content-Type');
+    headers.delete('content-type');
+    return { data: await convertFormData(body), dataType: 'formData' };
+  }
+  if (typeof body === 'string') {
+    // Matches the auto-patch: a raw string body (our JSON payloads) is sent as
+    // dataType 'json'; the native layer forwards it verbatim as the request body.
+    return { data: body, dataType: 'json' };
+  }
+  if (body instanceof URLSearchParams) {
+    return { data: body.toString(), dataType: undefined };
+  }
+  if (body instanceof Blob) {
+    return { data: await readFileAsBase64(body), dataType: 'file' };
+  }
+  if (body instanceof ArrayBuffer) {
+    return { data: new TextDecoder().decode(new Uint8Array(body)), dataType: 'json' };
+  }
+  if (ArrayBuffer.isView(body)) {
+    return { data: new TextDecoder().decode(body as ArrayBufferView), dataType: 'json' };
+  }
+  // Last resort (e.g. ReadableStream — not used by this app): hand it through.
+  return { data: body, dataType: 'json' };
+}
+
+/**
+ * CapacitorHttp.request has no AbortSignal support. To preserve caller
+ * semantics (debounced search, page re-fetch guards, unmount cancellation),
+ * race the native request against the signal and reject with an AbortError when
+ * it fires. The underlying native request still completes in the background,
+ * but its result is discarded — which is exactly what callers expect from an
+ * aborted fetch.
+ */
+function raceAbort<T>(promise: Promise<T>, signal?: AbortSignal | null): Promise<T> {
+  if (!signal) return promise;
+  if (signal.aborted) {
+    return Promise.reject(new DOMException('The operation was aborted.', 'AbortError'));
+  }
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () =>
+      reject(new DOMException('The operation was aborted.', 'AbortError'));
+    signal.addEventListener('abort', onAbort, { once: true });
+    promise.then(
+      (value) => {
+        signal.removeEventListener('abort', onAbort);
+        resolve(value);
+      },
+      (error) => {
+        signal.removeEventListener('abort', onAbort);
+        reject(error);
+      }
+    );
+  });
+}
+
+/**
+ * Install the native-only global fetch interceptor. Idempotent and a pure
+ * no-op on web (and during SSR / static-export prerender, where there is no
+ * `window`).
+ */
+export function installNativeApiFetchPatch(): void {
+  if (installed) return;
+  if (typeof window === 'undefined') return;
+  if (!isNativePlatform()) return;
+  installed = true;
+
+  // Capture the ORIGINAL browser fetch once. Every non-/api request is
+  // delegated straight to this, so third-party transport is byte-for-byte
+  // unchanged. We never re-enter our own wrapper.
+  const originalFetch = window.fetch.bind(window);
+
+  window.fetch = async function nativeApiFetch(
+    input: RequestInfo | URL,
+    init?: RequestInit
+  ): Promise<Response> {
+    // Derive the raw URL string regardless of input shape (string | URL | Request).
+    const rawUrl =
+      typeof input === 'string'
+        ? input
+        : input instanceof URL
+          ? input.toString()
+          : input instanceof Request
+            ? input.url
+            : String(input);
+
+    // Resolve against the document origin (capacitor://localhost on native) so
+    // relative URLs become absolute and we can inspect origin + pathname.
+    let resolved: URL;
+    try {
+      resolved = new URL(rawUrl, window.location.origin);
+    } catch {
+      // Un-parseable input — leave it entirely alone.
+      return originalFetch(input as RequestInfo, init);
+    }
+
+    // Decide whether this request targets OUR origin (i.e. was written as a
+    // relative URL such as `/api/trips`).
+    //
+    // We deliberately do NOT compare `resolved.origin === window.location.origin`.
+    // `capacitor://` is a non-special scheme, so per the WHATWG URL standard its
+    // parsed origin is opaque and serializes to the string "null"
+    // (verified: `new URL('/api/x','capacitor://localhost').origin` === 'null'),
+    // whereas WebKit reports `window.location.origin` as the tuple
+    // "capacitor://localhost". Those two never compare equal, so an origin-based
+    // predicate would be ALWAYS false on device and silently no-op the entire
+    // fix. Instead we detect a same-origin request from components that parse
+    // consistently:
+    //   1. A root-relative URL string ("/api/...", but not protocol-relative
+    //      "//host/...") — this is how all 132 call sites are written.
+    //   2. An already-absolute URL (e.g. a Request whose .url resolved to
+    //      capacitor://localhost/api/...) whose protocol+host match ours.
+    // `protocol` and `host` are simple parsed components (not the opaque origin),
+    // so they match consistently across both computation paths.
+    const isRootRelative = rawUrl.startsWith('/') && !rawUrl.startsWith('//');
+    const isSameOriginAbsolute =
+      resolved.protocol === window.location.protocol &&
+      resolved.host === window.location.host;
+    const shouldRewrite =
+      (isRootRelative || isSameOriginAbsolute) &&
+      resolved.pathname.startsWith('/api');
+
+    if (!shouldRewrite) {
+      return originalFetch(input as RequestInfo, init);
+    }
+
+    // Preserve path + query + hash exactly — many endpoints (weather, distance,
+    // road, route, geocode) depend on the query string.
+    const target = API_ORIGIN + resolved.pathname + resolved.search + resolved.hash;
+
+    const req = input instanceof Request ? input : null;
+
+    // Method: init wins over a Request's method, defaulting to GET.
+    const method = (init?.method ?? req?.method ?? 'GET').toUpperCase();
+
+    // Merge headers: start from the Request's headers, then let init headers
+    // extend/override (matches native `fetch(request, init)` semantics).
+    const headers = new Headers(req?.headers);
+    if (init?.headers) {
+      new Headers(init.headers).forEach((value, key) => headers.set(key, value));
+    }
+    if (!headers.has('Authorization')) {
+      const token = await getStoredToken();
+      if (token) headers.set('Authorization', `Bearer ${token}`);
+    }
+
+    const signal = init?.signal ?? req?.signal ?? undefined;
+
+    // Resolve the body. Prefer init.body; otherwise pull it off the Request
+    // (clone so the caller could still read it). GET/HEAD never have a body.
+    let rawBody: BodyInit | null | undefined = init?.body;
+    if (rawBody == null && req && method !== 'GET' && method !== 'HEAD') {
+      const contentType = headers.get('Content-Type') ?? '';
+      if (contentType.includes('multipart/form-data')) {
+        rawBody = await req.clone().formData();
+      } else {
+        const text = await req.clone().text();
+        rawBody = text.length > 0 ? text : undefined;
+      }
+    }
+
+    const capacitorHttp = await loadCapacitorHttp();
+
+    // Fallback: if the native plugin can't be loaded for some reason, do a
+    // best-effort rewritten browser fetch. On a correctly built iOS app this
+    // branch is never taken; it exists so the wrapper degrades instead of
+    // throwing during the async import.
+    if (!capacitorHttp) {
+      return originalFetch(target, { ...init, method, headers, body: rawBody, signal });
+    }
+
+    const { data, dataType } = await convertBody(rawBody, headers);
+
+    const nativeRequest = capacitorHttp.request({
+      url: target,
+      method,
+      headers: Object.fromEntries(headers.entries()),
+      data,
+      dataType,
+    });
+
+    const nativeResponse = await raceAbort(nativeRequest, signal);
+
+    // Reconstruct a standard Response. When the response is JSON the native
+    // layer hands back a parsed object, so re-stringify it for `.json()`/`.text()`.
+    const responseContentType =
+      nativeResponse.headers['Content-Type'] ?? nativeResponse.headers['content-type'];
+    let responseBody: BodyInit | null =
+      responseContentType?.startsWith('application/json')
+        ? JSON.stringify(nativeResponse.data)
+        : (nativeResponse.data as BodyInit);
+    // 204/205 responses must have a null body or the Response constructor throws.
+    if (nativeResponse.status === 204 || nativeResponse.status === 205) {
+      responseBody = null;
+    }
+
+    const response = new Response(responseBody, {
+      status: nativeResponse.status,
+      headers: nativeResponse.headers,
+    });
+    // Response.url is a read-only inherited getter — define it so callers that
+    // read response.url (redirect detection, cordova-style plugins) see the real URL.
+    Object.defineProperty(response, 'url', { value: nativeResponse.url });
+    return response;
+  };
+}
