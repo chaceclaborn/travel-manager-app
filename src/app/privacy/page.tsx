@@ -84,7 +84,7 @@ const sections: Section[] = [
       'You. Always. You can view, edit, export, and delete everything from inside the app.',
       'Chace Claborn (developer/operator), only when required to resolve a support request you have opened or to investigate a security incident.',
       'Other Travel Manager users, but only the limited public profile (username, name, and profile photo) described in “Friends & Connections” below — never your trips, clients, bookings, or any other business data.',
-      'No one else. We do not have a sales team, a marketing data warehouse, or an analytics vendor that touches your business data.',
+      'Beyond the infrastructure and utility processors listed under “Third-Party Services” below, no one else. We do not sell your data, and we have no marketing data warehouse or advertising/analytics vendor that touches your business data.',
     ],
   },
   {
@@ -112,6 +112,10 @@ const sections: Section[] = [
       'Apple Push Notification Service \u2014 push delivery, if you enable it.',
       'Open-Meteo \u2014 weather forecasts. We send only the latitude and longitude of the trip destination. No user identity is transmitted.',
       'Frankfurter \u2014 currency exchange rates. We send only currency codes.',
+      'OpenStreetMap Nominatim \u2014 place search / geocoding. We send the place text you type when searching for a destination or address.',
+      'OSRM (Open Source Routing Machine) \u2014 driving distances and routes. We send only trip waypoint coordinates.',
+      'AeroDataBox (via RapidAPI) \u2014 flight lookups, if you use flight search. We send the flight number and date you enter.',
+      'GitHub and Resend \u2014 used only to deliver the in-app feedback/support messages you choose to send. They receive the message text and your account identifier so we can follow up.',
     ],
   },
   {

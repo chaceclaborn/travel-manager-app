@@ -41,7 +41,7 @@ const faqs: Faq[] = [
     icon: LogIn,
     question: 'How do I sign in?',
     answer:
-      'Enter your email on the sign-in screen and we\u2019ll send a 6-digit code to your inbox. Enter the code to sign in. There\u2019s no password to remember.',
+      'On the sign-in screen, enter your email and password and tap \u201cSign in\u201d. On the web you can also use \u201cSign in with Google\u201d or \u201cSign in with Apple\u201d.',
   },
   {
     icon: MapPinned,
