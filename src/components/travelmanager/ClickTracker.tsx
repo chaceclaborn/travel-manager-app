@@ -44,8 +44,30 @@ export function ClickTracker() {
   const flush = () => {
     if (queue.current.length === 0) return;
     const events = queue.current.splice(0);
-    const blob = new Blob([JSON.stringify({ events })], { type: 'application/json' });
-    navigator.sendBeacon('/api/events', blob);
+    const body = JSON.stringify({ events });
+    // `navigator.sendBeacon` only accepts http(s) URLs. In the native shell the
+    // origin is `capacitor://localhost`, so sendBeacon throws
+    // "Beacons can only be sent over HTTP(S)" — an uncaught error that can blank
+    // the screen. Use sendBeacon only on real http(s) origins (web); on native
+    // fall back to fetch, which native-fetch.ts rewrites to production + Bearer.
+    // Everything is guarded so analytics can never break the app.
+    try {
+      const isHttp =
+        typeof window !== 'undefined' && window.location.protocol.startsWith('http');
+      if (isHttp && typeof navigator !== 'undefined' && navigator.sendBeacon) {
+        const blob = new Blob([body], { type: 'application/json' });
+        navigator.sendBeacon('/api/events', blob);
+      } else {
+        void fetch('/api/events', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body,
+          keepalive: true,
+        }).catch(() => {});
+      }
+    } catch {
+      // Never let usage analytics throw into the app.
+    }
   };
 
   useEffect(() => {
