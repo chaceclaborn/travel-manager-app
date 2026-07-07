@@ -59,9 +59,19 @@
  */
 
 import { isNativePlatform, getStoredToken } from '@/lib/mobile-auth';
+// STATIC import (not dynamic): when CapacitorHttp is enabled it patches fetch to
+// go through the native layer, and a dynamic import('@capacitor/core') would then
+// try to load its webpack chunk via that native fetch — which cannot read
+// capacitor://localhost chunk URLs, so the import hangs forever and stalls every
+// /api request. Importing it statically bundles it into the main chunk.
+import { CapacitorHttp } from '@capacitor/core';
 
 // Production API origin. Relative `/api/*` calls are rewritten to hit this.
-const API_ORIGIN = 'https://travels-manager.com';
+// MUST be the canonical www host: the apex `travels-manager.com` 307-redirects
+// to `www.travels-manager.com`, and CapacitorHttp (native URLSession) drops the
+// Authorization header / stalls across that cross-host redirect, so every /api
+// request would hang and the app would sit on loading skeletons forever.
+const API_ORIGIN = 'https://www.travels-manager.com';
 
 // Minimal local shapes for the @capacitor/core HTTP plugin. We avoid importing
 // the real types statically so this module type-checks and tree-shakes cleanly
@@ -82,25 +92,12 @@ interface NativeHttpRequestOptions {
   // accepts the full set (this mirrors Capacitor's own auto-patch behavior).
   dataType?: string;
 }
-interface CapacitorHttpLike {
-  request(options: NativeHttpRequestOptions): Promise<NativeHttpResponse>;
-}
 
 // Module-level guard so the patch installs exactly once, even across Fast
 // Refresh, double-mounts, or repeated imports. Also prevents recursion: we
 // capture the original fetch once and never re-wrap our own wrapper.
 let installed = false;
 
-// Lazily-resolved native HTTP plugin. Loaded once, native-only.
-let capacitorHttpPromise: Promise<CapacitorHttpLike | null> | null = null;
-function loadCapacitorHttp(): Promise<CapacitorHttpLike | null> {
-  if (!capacitorHttpPromise) {
-    capacitorHttpPromise = import('@capacitor/core')
-      .then((mod) => (mod.CapacitorHttp as unknown as CapacitorHttpLike) ?? null)
-      .catch(() => null);
-  }
-  return capacitorHttpPromise;
-}
 
 /**
  * Base64-encode a Blob/File. CapacitorHttp transfers binary parts as base64
@@ -289,7 +286,6 @@ export function installNativeApiFetchPatch(): void {
 
     // Method: init wins over a Request's method, defaulting to GET.
     const method = (init?.method ?? req?.method ?? 'GET').toUpperCase();
-    console.log('[TM] api→', method, resolved.pathname);
 
     // Merge headers: start from the Request's headers, then let init headers
     // extend/override (matches native `fetch(request, init)` semantics).
@@ -300,7 +296,6 @@ export function installNativeApiFetchPatch(): void {
     if (!headers.has('Authorization')) {
       const token = await getStoredToken();
       if (token) headers.set('Authorization', `Bearer ${token}`);
-      else console.log('[TM] api→ NO TOKEN for', resolved.pathname);
     }
 
     const signal = init?.signal ?? req?.signal ?? undefined;
@@ -318,28 +313,28 @@ export function installNativeApiFetchPatch(): void {
       }
     }
 
-    const capacitorHttp = await loadCapacitorHttp();
+    const capacitorHttp = CapacitorHttp;
 
-    // Fallback: if the native plugin can't be loaded for some reason, do a
-    // best-effort rewritten browser fetch. On a correctly built iOS app this
-    // branch is never taken; it exists so the wrapper degrades instead of
-    // throwing during the async import.
-    if (!capacitorHttp) {
-      return originalFetch(target, { ...init, method, headers, body: rawBody, signal });
-    }
-
-    const { data, dataType } = await convertBody(rawBody, headers);
-
-    const nativeRequest = capacitorHttp.request({
+    const requestOptions: NativeHttpRequestOptions = {
       url: target,
       method,
       headers: Object.fromEntries(headers.entries()),
-      data,
-      dataType,
-    });
+    };
+    // Only attach data/dataType when the request actually has a body. Passing
+    // `data: undefined` / `dataType: undefined` on a bodyless GET/HEAD stalls the
+    // native CapacitorHttp request (it never resolves) — which hung every /api
+    // read and left the app on loading skeletons.
+    if (rawBody != null) {
+      const { data, dataType } = await convertBody(rawBody, headers);
+      requestOptions.data = data;
+      requestOptions.dataType = dataType;
+    }
+
+    const nativeRequest = capacitorHttp.request(
+      requestOptions as unknown as Parameters<typeof capacitorHttp.request>[0]
+    ) as unknown as Promise<NativeHttpResponse>;
 
     const nativeResponse = await raceAbort(nativeRequest, signal);
-    console.log('[TM] api←', nativeResponse.status, resolved.pathname);
 
     // Reconstruct a standard Response. When the response is JSON the native
     // layer hands back a parsed object, so re-stringify it for `.json()`/`.text()`.

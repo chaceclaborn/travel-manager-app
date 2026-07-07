@@ -1,54 +1,22 @@
 /**
  * Mobile / Capacitor auth helpers.
  *
- * - On iOS / Capacitor native runtime, the session token is stored in
- *   @capacitor/preferences (which is Keychain-backed on iOS).
- * - On the web, this file is a no-op for storage in the normal case —
- *   the Supabase cookie flow is still the primary auth path in the browser.
- *   localStorage is used only as a fallback so this module degrades safely.
+ * The native session (Bearer) token is stored in localStorage. localStorage is
+ * synchronous and reliable inside the iOS WKWebView (capacitor://localhost) and
+ * persists across launches; it is also where the Supabase session already lives.
  *
- * @capacitor/preferences is loaded via dynamic import so the package is
- * effectively optional — if it isn't installed yet (or we're in a web
- * build), the import simply fails and we fall back to web storage.
+ * We intentionally do NOT use @capacitor/preferences (Keychain) here: its async
+ * get() could hang inside the webview, and because the native fetch interceptor
+ * awaits getStoredToken() before EVERY /api request, one hung read stalled all
+ * native data loading (the app sat on loading skeletons forever).
  */
-
-// Minimal local shape for the subset of @capacitor/preferences we use.
-// We avoid importing the real types here so this file type-checks even
-// before the package is installed (another agent handles the Capacitor
-// install step). At runtime the plugin's real API matches this shape.
-interface PreferencesLike {
-  get(options: { key: string }): Promise<{ value: string | null }>;
-  set(options: { key: string; value: string }): Promise<void>;
-  remove(options: { key: string }): Promise<void>;
-}
-
-let preferencesPlugin: PreferencesLike | null = null;
-let preferencesLoadAttempted = false;
-
-async function getPreferences(): Promise<PreferencesLike | null> {
-  if (typeof window === 'undefined') return null;
-  if (preferencesPlugin) return preferencesPlugin;
-  if (preferencesLoadAttempted) return null;
-  preferencesLoadAttempted = true;
-
-  if (!isNativePlatform()) return null;
-
-  try {
-    const mod = await import('@capacitor/preferences');
-    preferencesPlugin = mod.Preferences as PreferencesLike;
-    return preferencesPlugin;
-  } catch {
-    // @capacitor/preferences not installed (yet) — gracefully degrade.
-    return null;
-  }
-}
 
 const SESSION_KEY = 'tm_session_token';
 
 export function isNativePlatform(): boolean {
   if (typeof window === 'undefined') return false;
-  // Capacitor injects a global at runtime; it's untyped here so we access
-  // it defensively.
+  // Capacitor injects a global at runtime; it's untyped here so we access it
+  // defensively.
   const cap = (window as unknown as {
     Capacitor?: { isNativePlatform?: () => boolean };
   }).Capacitor;
@@ -56,49 +24,42 @@ export function isNativePlatform(): boolean {
 }
 
 export async function getStoredToken(): Promise<string | null> {
-  const prefs = await getPreferences();
-  if (prefs) {
-    const { value } = await prefs.get({ key: SESSION_KEY });
-    return value || null;
-  }
-  if (typeof localStorage !== 'undefined') {
-    return localStorage.getItem(SESSION_KEY);
+  try {
+    if (typeof localStorage !== 'undefined') {
+      return localStorage.getItem(SESSION_KEY);
+    }
+  } catch {
+    // ignore storage access errors
   }
   return null;
 }
 
 export async function setStoredToken(token: string): Promise<void> {
-  const prefs = await getPreferences();
-  if (prefs) {
-    await prefs.set({ key: SESSION_KEY, value: token });
-    return;
-  }
-  if (typeof localStorage !== 'undefined') {
-    localStorage.setItem(SESSION_KEY, token);
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(SESSION_KEY, token);
+    }
+  } catch {
+    // ignore storage access errors
   }
 }
 
 export async function clearStoredToken(): Promise<void> {
-  const prefs = await getPreferences();
-  if (prefs) {
-    await prefs.remove({ key: SESSION_KEY });
-    return;
-  }
-  if (typeof localStorage !== 'undefined') {
-    localStorage.removeItem(SESSION_KEY);
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(SESSION_KEY);
+    }
+  } catch {
+    // ignore storage access errors
   }
 }
 
 /**
  * Fetch wrapper that injects `Authorization: Bearer <token>` on native
- * (Capacitor) runtimes. On web it is a pass-through to `fetch()` so the
- * existing cookie-based auth flow continues to work unchanged.
- *
- * This is the PREFERRED fetch for any feature code that needs to run in
- * both web (cookie auth) and mobile (Bearer auth) contexts. Existing
- * `fetch()` call sites do not need to be migrated immediately — they will
- * keep working on web via cookies. Migrate to `apiFetch` incrementally as
- * features are touched.
+ * (Capacitor) runtimes. On web it is a pass-through to `fetch()` so the existing
+ * cookie-based auth flow continues to work unchanged. (Most native /api calls
+ * are also covered by the global interceptor in native-fetch.ts; this remains
+ * for the few call sites that import it directly, e.g. PushRegister.)
  */
 export async function apiFetch(
   input: RequestInfo | URL,

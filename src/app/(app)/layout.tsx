@@ -393,7 +393,7 @@ export default function TravelManagerLayout({
           </AnimatePresence>
 
           {/* Main Content */}
-          <main id="main-content" className="flex-1 min-w-0 md:ml-64 mt-16 md:mt-0 overflow-x-hidden safe-area-bottom">
+          <main id="main-content" className="flex-1 min-w-0 md:ml-64 mt-[calc(4rem+var(--safe-area-top))] md:mt-0 overflow-x-hidden safe-area-bottom">
             <div className="p-4 md:p-8 max-w-full">{children}</div>
           </main>
         </div>
