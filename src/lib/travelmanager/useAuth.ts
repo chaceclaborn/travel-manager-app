@@ -17,6 +17,9 @@ export function useAuth() {
 
     async function init() {
       const { data } = await supabase.auth.getUser();
+      if (isNativePlatform()) {
+        console.log('[TM] init getUser →', (data as { user: User | null }).user?.email ?? 'null');
+      }
       setUser((data as { user: User | null }).user);
       setLoading(false);
     }
@@ -24,6 +27,9 @@ export function useAuth() {
 
     const { data: listener } = supabase.auth.onAuthStateChange(
       (event: string, session: { user: User; access_token?: string } | null) => {
+        if (isNativePlatform()) {
+          console.log('[TM] auth event', event, '→', session?.user?.email ?? 'null');
+        }
         setUser(session?.user ?? null);
         // Keep the NATIVE Bearer token fresh. The Supabase JS SDK silently
         // auto-rotates the in-webview access token (roughly hourly). Without
@@ -92,9 +98,11 @@ export function useAuth() {
     }
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
+      if (isNativePlatform()) console.log('[TM] signIn ERROR', error.message);
       return error.message || 'Invalid email or password.';
     }
     const token = data.session?.access_token;
+    if (isNativePlatform()) console.log('[TM] signIn OK — token?', Boolean(token));
     if (token) {
       await setStoredToken(token);
     }

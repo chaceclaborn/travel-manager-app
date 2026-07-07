@@ -289,6 +289,7 @@ export function installNativeApiFetchPatch(): void {
 
     // Method: init wins over a Request's method, defaulting to GET.
     const method = (init?.method ?? req?.method ?? 'GET').toUpperCase();
+    console.log('[TM] api→', method, resolved.pathname);
 
     // Merge headers: start from the Request's headers, then let init headers
     // extend/override (matches native `fetch(request, init)` semantics).
@@ -299,6 +300,7 @@ export function installNativeApiFetchPatch(): void {
     if (!headers.has('Authorization')) {
       const token = await getStoredToken();
       if (token) headers.set('Authorization', `Bearer ${token}`);
+      else console.log('[TM] api→ NO TOKEN for', resolved.pathname);
     }
 
     const signal = init?.signal ?? req?.signal ?? undefined;
@@ -337,6 +339,7 @@ export function installNativeApiFetchPatch(): void {
     });
 
     const nativeResponse = await raceAbort(nativeRequest, signal);
+    console.log('[TM] api←', nativeResponse.status, resolved.pathname);
 
     // Reconstruct a standard Response. When the response is JSON the native
     // layer hands back a parsed object, so re-stringify it for `.json()`/`.text()`.
