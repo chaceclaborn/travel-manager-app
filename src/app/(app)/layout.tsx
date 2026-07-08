@@ -13,6 +13,7 @@ import { FeedbackModal } from '@/components/travelmanager/FeedbackWidget';
 import { ClickTracker } from '@/components/travelmanager/ClickTracker';
 import { ServiceWorkerRegister } from '@/components/travelmanager/ServiceWorkerRegister';
 import { PushRegister } from '@/components/travelmanager/PushRegister';
+import { NotificationOptInCard } from '@/components/travelmanager/NotificationOptInCard';
 import { OfflineIndicator } from '@/components/travelmanager/OfflineIndicator';
 import { useAuth } from '@/lib/travelmanager/useAuth';
 import { installNativeApiFetchPatch } from '@/lib/travelmanager/native-fetch';
@@ -60,7 +61,13 @@ export default function TravelManagerLayout({
     // exist on the server, so they can't be useState initializers.
     const dismissedAt = localStorage.getItem('tm-demo-dismissed');
     const weekMs = 7 * 24 * 60 * 60 * 1000;
-    const dismissed = dismissedAt ? Date.now() - Number(dismissedAt) < weekMs : false;
+    // Never surface the "demo — not a production tool" pill in production/native
+    // builds (it's a local-dev affordance only). On a reviewer's fresh install the
+    // dismissed key is absent, so without this gate the pill would render and invite
+    // an App Review 4.2/2.1 rejection.
+    const dismissed = process.env.NODE_ENV === 'production'
+      ? true
+      : (dismissedAt ? Date.now() - Number(dismissedAt) < weekMs : false);
     // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time client hydration, not a render cascade
     setDemoDismissed(dismissed);
     if (!navigator.platform.includes('Mac')) {
@@ -256,8 +263,10 @@ export default function TravelManagerLayout({
         )}
 
         {/* PushRegister must live inside TMToastProvider because it calls
-            useTMToast() to surface foreground pushes as in-app toasts. */}
+            useTMToast() to surface foreground pushes as in-app toasts. The
+            opt-in card primes the user before the OS permission dialog. */}
         <PushRegister />
+        <NotificationOptInCard />
         <OfflineIndicator />
 
         <div className="flex min-h-screen max-w-[100vw] overflow-x-hidden">

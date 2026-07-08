@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -25,6 +25,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { CookieBanner } from '@/components/travelmanager/CookieBanner';
 import { useAuth } from '@/lib/travelmanager/useAuth';
+import { isNativePlatform } from '@/lib/mobile-auth';
 
 const errorMessages: Record<string, string> = {
   session_expired: 'Your session expired. Please sign in again.',
@@ -115,6 +116,9 @@ export default function TourPage() {
 function EmailSignIn() {
   const { signInWithEmail } = useAuth();
   const [open, setOpen] = useState(false);
+  // In the native shell OAuth is hidden, so email is the only sign-in path —
+  // reveal the form by default there.
+  useEffect(() => { if (isNativePlatform()) setOpen(true); }, []);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -180,6 +184,12 @@ function EmailSignIn() {
 
 function TourPageContent() {
   const { signInWithGoogle, signInWithApple } = useAuth();
+  // In the native iOS shell the OAuth redirect target (/auth/callback) isn't part
+  // of the bundled static export, so Google/Apple sign-in can't complete — hide
+  // those buttons and use email/password (which works natively). Detected after
+  // mount so the first render still matches the prerendered (web) HTML.
+  const [native, setNative] = useState(false);
+  useEffect(() => { setNative(isNativePlatform()); }, []);
   const searchParams = useSearchParams();
   const errorCode = searchParams.get('error');
   const errorMessage = errorCode ? errorMessages[errorCode] ?? errorMessages.auth : null;
@@ -224,21 +234,25 @@ function TourPageContent() {
             Plan trips, manage vendors, track clients — all in one place
           </p>
           <div className="mt-8 flex flex-col items-center gap-3">
-            <Button
-              onClick={signInWithGoogle}
-              size="lg"
-              className="bg-amber-500 hover:bg-amber-600 text-white px-8 text-base w-64"
-            >
-              Sign in with Google
-            </Button>
-            <Button
-              onClick={signInWithApple}
-              size="lg"
-              className="bg-black hover:bg-neutral-800 text-white px-8 text-base w-64 gap-2"
-            >
-              <AppleLogo className="size-5" />
-              Sign in with Apple
-            </Button>
+            {!native && (
+              <>
+                <Button
+                  onClick={signInWithGoogle}
+                  size="lg"
+                  className="bg-amber-500 hover:bg-amber-600 text-white px-8 text-base w-64"
+                >
+                  Sign in with Google
+                </Button>
+                <Button
+                  onClick={signInWithApple}
+                  size="lg"
+                  className="bg-black hover:bg-neutral-800 text-white px-8 text-base w-64 gap-2"
+                >
+                  <AppleLogo className="size-5" />
+                  Sign in with Apple
+                </Button>
+              </>
+            )}
             <EmailSignIn />
           </div>
         </motion.div>
@@ -295,27 +309,29 @@ function TourPageContent() {
           </p>
         </motion.div>
 
-        {/* Footer CTA */}
-        <motion.div variants={item} className="mt-16 pb-8 text-center">
-          <div className="flex flex-col items-center gap-3">
-            <Button
-              onClick={signInWithGoogle}
-              size="lg"
-              className="bg-amber-500 hover:bg-amber-600 text-white px-8 text-base w-64"
-            >
-              Sign in with Google
-            </Button>
-            <Button
-              onClick={signInWithApple}
-              size="lg"
-              className="bg-black hover:bg-neutral-800 text-white px-8 text-base w-64 gap-2"
-            >
-              <AppleLogo className="size-5" />
-              Sign in with Apple
-            </Button>
-          </div>
-          <p className="mt-3 text-sm text-slate-400">Secure sign-in with your Google or Apple account</p>
-        </motion.div>
+        {/* Footer CTA — hidden in the native shell (OAuth redirect isn't in the static export; email is the native path) */}
+        {!native && (
+          <motion.div variants={item} className="mt-16 pb-8 text-center">
+            <div className="flex flex-col items-center gap-3">
+              <Button
+                onClick={signInWithGoogle}
+                size="lg"
+                className="bg-amber-500 hover:bg-amber-600 text-white px-8 text-base w-64"
+              >
+                Sign in with Google
+              </Button>
+              <Button
+                onClick={signInWithApple}
+                size="lg"
+                className="bg-black hover:bg-neutral-800 text-white px-8 text-base w-64 gap-2"
+              >
+                <AppleLogo className="size-5" />
+                Sign in with Apple
+              </Button>
+            </div>
+            <p className="mt-3 text-sm text-slate-400">Secure sign-in with your Google or Apple account</p>
+          </motion.div>
+        )}
       </motion.div>
     </div>
   );

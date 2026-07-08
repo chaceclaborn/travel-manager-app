@@ -47,6 +47,7 @@ model User {
   feedbacks       Feedback[]
   meetings        Meeting[]
   deviceTokens    DeviceToken[]
+  notificationLogs NotificationLog[]
 }
 
 model AuditLog {
@@ -501,6 +502,24 @@ model DeviceToken {
   platform  String   // "ios" | "web"
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// Records that a specific notification was sent, so the daily reminder cron
+// never double-sends. `dedupKey` is a deterministic string per (event, entity,
+// lead-time) — e.g. `trip_reminder:<tripId>:3` — and is globally unique, so a
+// second attempt to log the same key throws P2002 and the cron skips dispatch.
+// This is an at-most-once guarantee: a missed reminder is preferable to a
+// duplicate one waking a user twice for the same trip.
+model NotificationLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String   // trip_reminder | meeting_reminder | booking_confirmation
+  dedupKey  String   @unique
+  entityId  String?  // the Trip/Meeting/Booking id this notification is about
+  sentAt    DateTime @default(now())
 
   @@index([userId])
 }

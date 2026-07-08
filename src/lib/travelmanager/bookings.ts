@@ -1,4 +1,6 @@
+import { after } from 'next/server';
 import prisma from '@/lib/prisma';
+import { notifyBookingConfirmed } from '@/lib/push/dispatch';
 import type { CreateBookingInput, UpdateBookingInput } from './types';
 
 async function verifyTripOwnership(tripId: string, userId: string) {
@@ -38,7 +40,7 @@ export async function createBooking(data: CreateBookingInput, userId: string) {
   if (data.tripId) {
     await verifyTripOwnership(data.tripId, userId);
   }
-  return prisma.booking.create({
+  const booking = await prisma.booking.create({
     data: {
       type: data.type,
       provider: data.provider,
@@ -58,6 +60,26 @@ export async function createBooking(data: CreateBookingInput, userId: string) {
       user: { connect: { id: userId } },
     },
   });
+
+  // "Booking confirmed" push to the owner's devices. Runs AFTER the response
+  // is sent (never adds APNs latency to the save); no-op when APNs isn't
+  // configured; never throws. after() requires a request scope — outside one
+  // (unit tests, scripts) fall back to fire-and-forget.
+  const fireConfirmation = () =>
+    notifyBookingConfirmed({
+      userId,
+      type: booking.type,
+      provider: booking.provider,
+      confirmationNum: booking.confirmationNum,
+      tripId: booking.tripId,
+    });
+  try {
+    after(fireConfirmation);
+  } catch {
+    void fireConfirmation();
+  }
+
+  return booking;
 }
 
 export async function updateBooking(id: string, data: UpdateBookingInput, userId: string) {
