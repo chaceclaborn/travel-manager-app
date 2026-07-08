@@ -13,6 +13,7 @@ import { FeedbackModal } from '@/components/travelmanager/FeedbackWidget';
 import { ClickTracker } from '@/components/travelmanager/ClickTracker';
 import { ServiceWorkerRegister } from '@/components/travelmanager/ServiceWorkerRegister';
 import { PushRegister } from '@/components/travelmanager/PushRegister';
+import { NotificationOptInCard } from '@/components/travelmanager/NotificationOptInCard';
 import { OfflineIndicator } from '@/components/travelmanager/OfflineIndicator';
 import { useAuth } from '@/lib/travelmanager/useAuth';
 import { installNativeApiFetchPatch } from '@/lib/travelmanager/native-fetch';
@@ -262,8 +263,10 @@ export default function TravelManagerLayout({
         )}
 
         {/* PushRegister must live inside TMToastProvider because it calls
-            useTMToast() to surface foreground pushes as in-app toasts. */}
+            useTMToast() to surface foreground pushes as in-app toasts. The
+            opt-in card primes the user before the OS permission dialog. */}
         <PushRegister />
+        <NotificationOptInCard />
         <OfflineIndicator />
 
         <div className="flex min-h-screen max-w-[100vw] overflow-x-hidden">

@@ -68,3 +68,40 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+/**
+ * DELETE /api/push/register
+ *
+ * Unregisters device tokens for the authenticated user — used when they turn
+ * notifications off. Body: { token?: string }. With a token, only that device
+ * is removed; without one, all of the user's tokens are cleared. Scoped to the
+ * caller's own rows so it can never delete another user's tokens.
+ */
+export async function DELETE(request: NextRequest) {
+  try {
+    const rateLimited = rateLimit(request, 'write');
+    if (rateLimited) return rateLimited;
+
+    const { user, response } = await requireAuth();
+    if (!user) return response;
+
+    const body = await request.json().catch(() => ({}));
+    const clean = sanitizeObject(body, ['token']);
+    const token = typeof clean.token === 'string' ? clean.token : '';
+
+    const { count } = await prisma.deviceToken.deleteMany({
+      where: token ? { userId: user.id, token } : { userId: user.id },
+    });
+
+    return NextResponse.json({ ok: true, removed: count });
+  } catch (error) {
+    console.error(
+      'Error unregistering push token:',
+      error instanceof Error ? error.message : error
+    );
+    return NextResponse.json(
+      { error: 'Failed to unregister device token' },
+      { status: 500 }
+    );
+  }
+}
