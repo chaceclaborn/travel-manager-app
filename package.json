@@ -18,7 +18,8 @@
     "test:coverage": "vitest run --coverage",
     "audit:static": "node scripts/audit-static-export.mjs",
     "build:mobile": "node scripts/build-mobile.mjs",
-    "cap:sync": "yarn build:mobile && npx cap sync",
+    "cap:sync": "yarn build:mobile && node scripts/verify-mobile-bundle.mjs && npx cap sync",
+    "verify:mobile": "node scripts/verify-mobile-bundle.mjs",
     "cap:ios": "yarn cap:sync && npx cap open ios",
     "mobile:init": "npx cap add ios"
   },

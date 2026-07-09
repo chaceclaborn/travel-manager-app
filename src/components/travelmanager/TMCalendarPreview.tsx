@@ -1,4 +1,5 @@
 'use client';
+import { detailHref } from '@/lib/travelmanager/detail-routes';
 
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
@@ -369,7 +370,7 @@ export function TMCalendarPreview({ trips, meetings = [] }: TMCalendarPreviewPro
                     return (
                       <Link
                         key={info.trip.id}
-                        href={`/trips/${info.trip.id}`}
+                        href={detailHref('trips', info.trip.id)}
                         className={`absolute left-0 right-0 h-[18px] flex items-center overflow-hidden transition-all duration-150 hover:brightness-95 ${bg} ${
                           info.isSingle ? 'mx-0.5 rounded-md' :
                           info.isStart && info.isEnd ? 'rounded-md mx-0.5' :

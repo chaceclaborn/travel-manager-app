@@ -1,4 +1,5 @@
 'use client';
+import { detailHref } from '@/lib/travelmanager/detail-routes';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
@@ -300,7 +301,7 @@ function BookingCard({
             <p className="text-sm font-medium text-slate-700">Edit {editConfig.label}</p>
           </div>
         ) : (
-          <Link href={`/bookings/${booking.id}`} className="flex items-center gap-2.5 min-w-0 flex-1">
+          <Link href={detailHref('bookings', booking.id)} className="flex items-center gap-2.5 min-w-0 flex-1">
             <span className={`flex items-center justify-center rounded-xl p-2.5 ring-2 ${config.iconBg}`}>{config.icon}</span>
             <div>
               <p className={`font-semibold transition-colors ${isCancelled ? 'text-slate-500 line-through' : 'text-slate-800 hover:text-amber-600'}`}>{booking.provider}</p>

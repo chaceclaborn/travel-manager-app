@@ -1,4 +1,5 @@
 'use client';
+import { detailHref } from '@/lib/travelmanager/detail-routes';
 
 import { useState } from 'react';
 import Link from 'next/link';
@@ -186,7 +187,7 @@ export function TripCard({ trip, onSaved, onDeleted }: TripCardProps) {
 
   return (
     <>
-      <Link href={`/trips/${trip.id}`} className="block outline-none group">
+      <Link href={detailHref('trips', trip.id)} className="block outline-none group">
         <motion.div
           tabIndex={-1}
           whileHover={reducedMotion ? undefined : { y: -3, transition: { duration: 0.2, ease: 'easeOut' } }}

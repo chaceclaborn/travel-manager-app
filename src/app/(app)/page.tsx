@@ -1,4 +1,5 @@
 'use client';
+import { detailHref } from '@/lib/travelmanager/detail-routes';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
@@ -324,7 +325,7 @@ export default function TravelManagerDashboard() {
         </motion.div>
         {daysUntilNext !== null && (
           <motion.div variants={statsItem}>
-            <TMStatsCard title="Days to Next Trip" value={daysUntilNext} icon={Plane} color="red" href={upcoming[0] ? `/trips/${upcoming[0].id}` : '/trips'} />
+            <TMStatsCard title="Days to Next Trip" value={daysUntilNext} icon={Plane} color="red" href={upcoming[0] ? detailHref('trips', upcoming[0].id) : '/trips'} />
           </motion.div>
         )}
       </motion.div>
@@ -429,7 +430,7 @@ export default function TravelManagerDashboard() {
               {upcoming.map((trip) => (
                 <Link
                   key={trip.id}
-                  href={`/trips/${trip.id}`}
+                  href={detailHref('trips', trip.id)}
                   className="flex items-center justify-between p-3 rounded-lg hover:bg-slate-50 transition-colors group"
                 >
                   <div className="min-w-0 flex-1">
@@ -487,7 +488,7 @@ export default function TravelManagerDashboard() {
               {recent.map((trip) => (
                 <Link
                   key={trip.id}
-                  href={`/trips/${trip.id}`}
+                  href={detailHref('trips', trip.id)}
                   className="flex items-center justify-between p-3 rounded-lg hover:bg-slate-50 transition-colors group"
                 >
                   <div className="min-w-0 flex-1">

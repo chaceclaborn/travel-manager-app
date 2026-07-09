@@ -1,4 +1,5 @@
 'use client';
+import { detailHref } from '@/lib/travelmanager/detail-routes';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
@@ -412,7 +413,7 @@ function MeetingCard({
           <div className="mb-2 flex flex-wrap gap-1.5">
             {meeting.trip && (
               <Link
-                href={`/trips/${meeting.trip.id}`}
+                href={detailHref('trips', meeting.trip.id)}
                 className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100"
               >
                 <MapPin className="size-3" />
@@ -421,7 +422,7 @@ function MeetingCard({
             )}
             {meeting.client && (
               <Link
-                href={`/clients/${meeting.client.id}`}
+                href={detailHref('clients', meeting.client.id)}
                 className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-100"
               >
                 <Building2 className="size-3" />

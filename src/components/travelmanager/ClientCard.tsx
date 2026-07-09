@@ -1,4 +1,5 @@
 'use client';
+import { detailHref } from '@/lib/travelmanager/detail-routes';
 
 import { useState } from 'react';
 import Link from 'next/link';
@@ -103,7 +104,7 @@ export function ClientCard({ client, onSaved, onDeleted }: ClientCardProps) {
       <motion.div whileHover={reducedMotion ? undefined : { y: -2 }} whileTap={reducedMotion ? undefined : { scale: 0.98 }} transition={{ duration: 0.2 }}>
         <Card className="bg-white p-5 border border-slate-100 hover:shadow-md hover:border-slate-200 transition-all rounded-xl group">
           <div className="flex items-start justify-between">
-            <Link href={`/clients/${client.id}`} className="min-w-0 flex-1">
+            <Link href={detailHref('clients', client.id)} className="min-w-0 flex-1">
               <h3 className="font-semibold text-lg text-slate-800 hover:text-amber-600 transition-colors" title={client.name}>{client.name}</h3>
               {client.company && <p className="text-sm text-slate-500 mt-0.5">{client.company}</p>}
             </Link>
@@ -113,7 +114,7 @@ export function ClientCard({ client, onSaved, onDeleted }: ClientCardProps) {
             </div>
           </div>
 
-          <Link href={`/clients/${client.id}`}>
+          <Link href={detailHref('clients', client.id)}>
             <div className="mt-3 space-y-1.5">
               {client.email && (
                 <div className="flex items-center gap-2 text-sm text-slate-600">

@@ -1,4 +1,5 @@
 'use client';
+import { detailHref } from '@/lib/travelmanager/detail-routes';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -27,7 +28,7 @@ export default function NewVendorPage() {
 
       const vendor = await res.json();
       showToast('Vendor created successfully');
-      router.push(`/vendors/${vendor.id}`);
+      router.push(detailHref('vendors', vendor.id));
     } catch (error) {
       showToast(error instanceof Error ? error.message : 'Failed to create vendor', 'error');
     } finally {

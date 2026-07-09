@@ -6,6 +6,7 @@ import { registerPushListeners, registerForPush } from '@/lib/push';
 import { isNativePlatform, apiFetch } from '@/lib/mobile-auth';
 import { useTMToast } from '@/components/travelmanager/TMToast';
 import { usePushNotifications, PUSH_TOKEN_KEY } from '@/lib/travelmanager/usePushNotifications';
+import { normalizeDeepLink } from '@/lib/travelmanager/detail-routes';
 
 /**
  * Activates native push once the user has opted in (see the priming card /
@@ -82,7 +83,10 @@ export function PushRegister() {
             // meetings). Only internal absolute paths are honored.
             const url = typeof msg.data?.url === 'string' ? msg.data.url : '';
             if (url.startsWith('/')) {
-              routerRef.current.push(url);
+              // The server sends canonical web paths (/trips/<id>). On native
+              // those dynamic routes don't exist in the static bundle, so
+              // rewrite them to the /trips/detail?id=<id> form.
+              routerRef.current.push(normalizeDeepLink(url));
             } else {
               toastRef.current(msg.title || 'Notification opened', 'info');
             }

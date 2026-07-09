@@ -479,28 +479,24 @@ travel professionals who manage their own clients, vendors, and bookings as
 part of running their business.
 
 SIGN-IN METHOD
-Sign-in uses OAuth via Supabase. Two options are offered on the sign-in
-screen, side by side:
-- Sign in with Apple
-- Continue with Google
-There is no email/password or one-time-code flow. We recommend testing with
-"Sign in with Apple" using your reviewer Apple ID, or with the demo Google
-account below.
+In the iOS app, sign-in is email + password: tap "Sign in with email" on the
+welcome screen and enter the demo credentials below. (Apple/Google OAuth
+buttons are offered on the companion web app only, alongside the same email
+option; the iOS build uses the email flow.)
 
-DEMO CREDENTIALS (Google account for review)
-Email:    [FILL IN BEFORE SUBMISSION]
+DEMO CREDENTIALS
+Email:    appreview@travels-manager.com
 Password: [FILL IN BEFORE SUBMISSION]
-This Google account is pre-populated with sample trips, clients, vendors, and
-bookings. If Google blocks the OAuth sign-in from your environment (2FA / "verify
-it's you" challenge), please contact us via Resolution Center and we will
-provide a same-day workaround or an alternate demo path. We monitor the inbox
-throughout the review window.
+This account is pre-populated with sample trips, clients, vendors, and
+bookings. If anything blocks sign-in from your environment, please contact us
+via Resolution Center and we will provide a same-day workaround. We monitor
+the inbox throughout the review window.
 
 SIGN-IN FLOW
 1. Launch the app.
-2. Tap "Sign in with Apple" (or "Continue with Google").
-3. Complete the OAuth consent screen.
-4. You are returned to the app dashboard, signed in.
+2. Tap "Sign in with email" on the welcome screen.
+3. Enter the demo email and password above and submit.
+4. You land on the app dashboard, signed in.
 
 WHAT TO TEST (SUGGESTED FLOW)
 1. Dashboard: shows stats, upcoming trips, calendar, and Quick Actions.
@@ -522,9 +518,8 @@ not loaded from a remote URL, and the app provides:
 - Native iOS share sheet integration for client share links (@capacitor/share)
 - Custom offline screen (not the default WKWebView error) when connectivity
   drops, backed by an app service worker
-- Push notification registration (APNs). Note: automated push *dispatch* for
-  trip and meeting reminders ships in the first update after approval; the
-  registration and permission flow are present in this build.
+- Push notifications (APNs): opt-in registration plus server-dispatched trip
+  and meeting reminders (delivered via a scheduled backend job).
 
 OPTIONAL FEATURES THAT REQUIRE EXTERNAL ACCOUNTS
 - Gmail Import (Settings > Connections): uses Google OAuth read-only scope

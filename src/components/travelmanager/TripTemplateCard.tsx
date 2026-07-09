@@ -1,4 +1,5 @@
 'use client';
+import { detailHref } from '@/lib/travelmanager/detail-routes';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -48,7 +49,7 @@ export function TripTemplateCard({ template }: TripTemplateCardProps) {
       const data = (await res.json()) as { id: string };
       showToast(`${template.name} created`, 'success');
       setOpen(false);
-      router.push(`/trips/${data.id}`);
+      router.push(detailHref('trips', data.id));
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Failed to create trip', 'error');
     } finally {

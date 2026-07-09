@@ -1,4 +1,5 @@
 'use client';
+import { detailHref } from '@/lib/travelmanager/detail-routes';
 
 import { useState } from 'react';
 import Link from 'next/link';
@@ -142,7 +143,7 @@ export function VendorCard({ vendor, onSaved, onDeleted }: VendorCardProps) {
       >
         <Card className="p-5 bg-white border border-slate-100 hover:shadow-md hover:border-slate-200 transition-all rounded-xl group">
           <div className="flex items-start justify-between gap-2 mb-3">
-            <Link href={`/vendors/${vendor.id}`} className="min-w-0 flex-1">
+            <Link href={detailHref('vendors', vendor.id)} className="min-w-0 flex-1">
               <h3 className="font-semibold text-lg text-slate-800 truncate hover:text-amber-600 transition-colors" title={vendor.name}>{vendor.name}</h3>
             </Link>
             <div className="flex items-center gap-1 shrink-0">
@@ -152,7 +153,7 @@ export function VendorCard({ vendor, onSaved, onDeleted }: VendorCardProps) {
             </div>
           </div>
 
-          <Link href={`/vendors/${vendor.id}`}>
+          <Link href={detailHref('vendors', vendor.id)}>
             {location && <div className="flex items-center gap-1.5 text-sm text-slate-500 mb-2"><MapPin className="size-3.5" /><span>{location}</span></div>}
             {vendor.email && <div className="flex items-center gap-1.5 text-sm text-slate-500 mb-1"><Mail className="size-3.5" /><span className="truncate">{vendor.email}</span></div>}
             {vendor.phone && <div className="flex items-center gap-1.5 text-sm text-slate-500 mb-1"><Phone className="size-3.5" /><span>{vendor.phone}</span></div>}

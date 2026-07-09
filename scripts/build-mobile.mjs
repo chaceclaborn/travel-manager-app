@@ -10,10 +10,15 @@
  *      from 'use client' pages
  *
  * Solution: temporarily hide both src/app/api and all [id] directories
- * during the build, then restore them. The Capacitor app navigates to
- * detail pages via client-side routing (never direct URL), so they don't
- * need pre-rendered HTML — the JS chunks are still included because the
- * parent list pages import them via <Link>.
+ * during the build, then restore them. IMPORTANT: this means the [id]
+ * routes DO NOT EXIST in the export at all — not even for client-side
+ * navigation (the router hard-navigates to the unknown URL, which 404s and
+ * Capacitor falls back to index.html → user lands on the dashboard). The
+ * native app must reach detail pages via the static query-param routes
+ * (/trips/detail?id=<id> etc.) through detailHref() in
+ * src/lib/travelmanager/detail-routes.ts. scripts/verify-mobile-bundle.mjs
+ * (run by `yarn cap:sync`) and src/lib/mobile-export/static-routes.test.ts
+ * enforce this.
  *
  * Usage:  yarn build:mobile
  */

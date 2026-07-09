@@ -30,16 +30,18 @@
  * them like a normal server-to-server call and the Bearer token authenticates
  * them. No server-side CORS, no OPTIONS preflight, and no CSRF changes needed.
  *
- * IMPORTANT: we do NOT set `plugins.CapacitorHttp.enabled = true` in
- * capacitor.config.ts. That flag makes the Capacitor bridge auto-patch
- * `window.fetch` AND `XMLHttpRequest` for ALL cross-origin traffic, which would
- * reroute the already-working Supabase login/token-refresh, geocoders, and any
- * fetch-based third-party calls through the native layer and change their
- * transport. Instead we invoke `CapacitorHttp.request()` SELECTIVELY, for `/api`
- * requests only. `CapacitorHttp.request()` works on native independently of the
- * `enabled` flag — the flag only governs the global auto-patch. Everything else
- * keeps using the untouched browser `fetch`, so there is zero regression risk to
- * Supabase or any other external service.
+ * IMPORTANT: `plugins.CapacitorHttp.enabled = true` IS set in
+ * capacitor.config.ts and is REQUIRED — without it, `CapacitorHttp.request()`
+ * never resolves on iOS and the app hangs on loading skeletons (this was one
+ * of the six native data-layer bugs fixed in PR #11; see the comment in
+ * capacitor.config.ts). The flag also makes the Capacitor bridge auto-patch
+ * `window.fetch`/`XMLHttpRequest` for cross-origin traffic, which reroutes
+ * Supabase login/token-refresh, geocoders, and map tiles through the native
+ * URLSession layer — verified working in that configuration. On top of that
+ * auto-patch, this module still rewrites relative `/api` URLs to the
+ * production origin and attaches the Bearer token, which the auto-patch alone
+ * would not do. Do NOT turn the flag off "for safety": that regresses every
+ * native data load.
  *
  * ORDERING
  * --------
@@ -72,6 +74,14 @@ import { CapacitorHttp } from '@capacitor/core';
 // Authorization header / stalls across that cross-host redirect, so every /api
 // request would hang and the app would sit on loading skeletons forever.
 const API_ORIGIN = 'https://www.travels-manager.com';
+
+/**
+ * Canonical public web origin. Use this whenever the app builds a URL that
+ * leaves the device (share links, emails): inside the Capacitor shell
+ * window.location.origin is capacitor://localhost, which is a dead link for
+ * any recipient.
+ */
+export const WEB_ORIGIN = API_ORIGIN;
 
 // Minimal local shapes for the @capacitor/core HTTP plugin. We avoid importing
 // the real types statically so this module type-checks and tree-shakes cleanly

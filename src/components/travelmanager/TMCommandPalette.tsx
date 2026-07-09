@@ -1,4 +1,5 @@
 'use client';
+import { detailHref } from '@/lib/travelmanager/detail-routes';
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import Link from 'next/link';
@@ -73,7 +74,7 @@ function flattenResults(results: SearchResults): ResultItem[] {
       id: t.id,
       label: t.title,
       sublabel: t.destination,
-      href: `/trips/${t.id}`,
+      href: detailHref('trips', t.id),
     });
   }
   for (const b of results.bookings) {
@@ -82,7 +83,7 @@ function flattenResults(results: SearchResults): ResultItem[] {
       id: b.id,
       label: b.provider,
       sublabel: b.location ?? b.type,
-      href: `/bookings/${b.id}`,
+      href: detailHref('bookings', b.id),
     });
   }
   for (const m of results.meetings) {
@@ -100,7 +101,7 @@ function flattenResults(results: SearchResults): ResultItem[] {
       id: v.id,
       label: v.name,
       sublabel: v.contactName ?? v.category,
-      href: `/vendors/${v.id}`,
+      href: detailHref('vendors', v.id),
     });
   }
   for (const c of results.clients) {
@@ -109,7 +110,7 @@ function flattenResults(results: SearchResults): ResultItem[] {
       id: c.id,
       label: c.name,
       sublabel: c.company ?? c.email,
-      href: `/clients/${c.id}`,
+      href: detailHref('clients', c.id),
     });
   }
   for (const i of results.itinerary) {
@@ -118,7 +119,7 @@ function flattenResults(results: SearchResults): ResultItem[] {
       id: i.id,
       label: i.title,
       sublabel: i.location ?? i.trip.title,
-      href: `/trips/${i.tripId}`,
+      href: detailHref('trips', i.tripId),
     });
   }
   return items;

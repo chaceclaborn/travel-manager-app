@@ -1,4 +1,5 @@
 'use client';
+import { detailHref } from '@/lib/travelmanager/detail-routes';
 
 import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -63,7 +64,7 @@ function NewTripPageContent() {
       }
 
       showToast('Trip created successfully');
-      router.push(`/trips/${trip.id}`);
+      router.push(detailHref('trips', trip.id));
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Failed to create trip', 'error');
     } finally {

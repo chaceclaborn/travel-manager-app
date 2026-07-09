@@ -1,4 +1,5 @@
 'use client';
+import { detailHref } from '@/lib/travelmanager/detail-routes';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -28,7 +29,7 @@ export default function NewClientPage() {
       if (!res.ok) throw new Error('Failed to create client');
       const client = await res.json();
       showToast('Client created successfully');
-      router.push(`/clients/${client.id}`);
+      router.push(detailHref('clients', client.id));
     } catch {
       showToast('Failed to create client', 'error');
     } finally {
