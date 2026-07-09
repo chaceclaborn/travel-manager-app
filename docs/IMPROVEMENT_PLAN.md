@@ -183,4 +183,147 @@ point of a client-facing share. Revisit as an opt-in per share (§3.3).
 | Approval week | Physical-device push test → 1.0.1 resilience build (§3.1) |
 | Weeks 2–4 | Features 1–2 (inline edit, commissions) + §3.3 deletion/duplicate fixes |
 | Month 2 | Features 3–4 (search, share polish) + rate-limiter/Sentry infra |
-| Month 3+ | iPad, monetization design, CSP nonce work |
+| Month 3+ | iPad, monetization design, CSP nonce work, first §6 flagship feature |
+
+---
+
+## 6. "Premium features at a lower charge" — the differentiator playbook
+
+**Product thesis (Chace's mission):** build for common people — deliver the
+capabilities that established players lock behind $50–150/mo (TravelJoy,
+Tern, Travefy) at a price a solo agent or a hobbyist trip-planner will
+actually pay ($10–20/mo). The way to do that is **architectural cost
+control**, not doing less: small cached AI models, free-tier external APIs,
+and metered usage so the free tier gives a real taste. Every idea below is
+scoped so the *marginal cost per user is cents, not dollars* — that headroom
+is what lets us undercut on price.
+
+### 6.0 The enabling architecture (build this once, reuse for every AI feature)
+
+A single **AI service layer** every feature calls, so cost control lives in
+one place:
+
+- **Vercel AI Gateway** with plain `"provider/model"` strings (per platform
+  guidance) — default model **Claude Haiku** (cheap, fast) and escalate to
+  Sonnet only for the itinerary-draft feature. Gateway gives us per-model
+  fallback, spend observability, and zero-data-retention out of the box.
+- **`src/lib/ai/gateway.ts`**: one `runModel({task, input, schema})` helper
+  using the AI SDK's `generateObject` with a Zod schema per task, so every
+  feature gets *validated structured output* (no brittle string parsing —
+  the same reliability win we got from the route-firewall).
+- **Prompt caching + a response cache** keyed on a hash of the input
+  (Vercel Runtime Cache or a `AiCache` table): identical confirmation emails
+  / identical itinerary prompts cost $0 the second time.
+- **A metering table** `AiUsage(userId, feature, tokensIn, tokensOut, month)`
+  — powers both the free-tier quota ("5 smart imports/month free") and the
+  eventual paid-tier unlock. This is the billing spine; build it with the
+  first AI feature even if the free quota is generous at launch.
+- **Native note:** all of this lives behind `/api/ai/*` routes, so it runs
+  on Vercel and reaches the iOS app through the existing `apiFetch` Bearer
+  path — no model keys ever ship in the static bundle.
+
+### 6.1 Flagship ideas, ranked by (differentiation × affordability)
+
+**1. AI Smart Import — "forward a confirmation, get a booking."** ★ top pick
+The single feature premium competitors charge the most for. The agent pastes
+(or, later, forwards to a dedicated inbox) an airline/hotel confirmation
+email; AI extracts provider, confirmation #, times, locations, seat into a
+pre-filled Booking the user confirms.
+- *Architecture:* `POST /api/ai/import` → `runModel` with a `BookingDraft`
+  Zod schema (`generateObject`, Haiku) → return draft → user reviews in the
+  existing booking form → normal `POST /api/bookings`. We already ship
+  `chrono-node` + `cheerio`, so a **deterministic pre-parse** strips HTML and
+  pulls obvious dates *before* the model runs — cheaper and more accurate,
+  and it degrades gracefully to rules-only if the AI quota is spent.
+- *Cost:* ~1–3K tokens/import on Haiku ≈ $0.001. Free tier: 5/mo. Paid:
+  unlimited + the forward-to-inbox mailhook (Postmark/Resend inbound → the
+  same route). *This alone justifies the paid tier.*
+
+**2. AI Itinerary Draft Builder — "describe it, edit the draft."**
+"10-day Italy honeymoon, mid-range, arrive Rome" → a structured multi-day
+`ItineraryItem[]` + suggested `TripStop[]` the agent refines. Turns a blank
+trip into an 80%-done one.
+- *Architecture:* `POST /api/ai/itinerary` → `generateObject` (Sonnet here —
+  quality matters) against an `ItineraryDraft` schema → bulk-create through
+  the existing itinerary/stops APIs inside one transaction. Stream tokens to
+  a preview pane (AI SDK `streamObject`) so it feels alive. Cache by
+  normalized prompt so demo/repeat prompts are free.
+- *Cost:* ~4–8K tokens ≈ $0.02–0.05 on Sonnet. Free tier: 1 draft/mo as the
+  "wow" hook; paid: unlimited. Reuses trip-template infra already in
+  `templates.ts`.
+
+**3. Live Client Itinerary — the share link that feels premium.**
+Upgrade the existing `/share/[token]` page from static to *live*: real-time
+flight status (delayed/on-time/gate), destination weather, a countdown, and
+a map. This is what makes a client say "my agent is high-tech" — and every
+view is a travels-manager.com impression (our only organic growth loop).
+- *Architecture:* the share page is already web-only (never in the iOS
+  bundle). Add a client component that polls `/api/flights/status?flight=`
+  → **AviationStack / AeroDataBox free tier** (100–500 calls/day), cached in
+  Runtime Cache with a short TTL so many client views share one upstream
+  call. Weather reuses the existing `/api/weather` proxy. Flight numbers come
+  from booking data we already store.
+- *Cost:* free API tiers + caching ≈ $0 at launch. Gate "live status" as a
+  paid share-toggle; free shares stay static. No AI, so no model spend.
+
+**4. Travel Document Vault + expiry reminders.** ★ cheapest premium-feeling win
+Store passport / visa / insurance / loyalty numbers per client with expiry
+dates, and push "Client X's passport expires in 90 days — most countries
+require 6 months' validity." A genuinely valuable, near-zero-cost feature —
+the whole pipeline already exists.
+- *Architecture:* new `TravelDocument(clientId, type, number(encrypted),
+  expiresAt, notes)` — encrypt the number with the **same AES-256-GCM helper
+  already used for `oauth_tokens`**. A daily check folds into the **existing
+  reminder cron** (`/api/cron/reminders`) and the **live APNs push pipeline**
+  — no new infra. Attachments (scans) reuse the attachment upload flow.
+- *Cost:* ~$0. Free tier: store docs. Paid: the proactive expiry reminders.
+
+**5. AI Trip Assistant — chat over your own data (RAG).**
+"What did I book for the Hendersons?" / "Which trips have unpaid commission?"
+A chat that answers from the agent's own records — the "premium concierge"
+feel, grounded so it can't hallucinate bookings.
+- *Architecture:* `POST /api/ai/assistant` with **tool-calling** (AI SDK
+  `tools`), NOT vector RAG — the tools are our own scoped query functions
+  (`getTrips`, `getBookings`, `getCommissionSummary`), each already
+  user-filtered, so the model retrieves live truth and can't leak across
+  tenants. Stream the answer. This is the highest-effort item; ships after
+  commission tracking exists so there's something worth asking about.
+- *Cost:* ~2–5K tokens/turn on Haiku ≈ $0.002. Free tier: 10 msgs/mo; paid:
+  unlimited. The metering table (6.0) already handles this.
+
+### 6.2 Lighter delighters (low effort, good screenshots)
+
+- **Smart packing / prep checklists**: AI-seed a checklist from trip type +
+  destination + season (one Haiku call, reuses `ChecklistItem`).
+- **Multi-currency expense entry** with live rates via the existing
+  `/api/currency` — show the agent's home-currency total on foreign expenses.
+- **Trip cost-splitter / deposit-vs-balance tracker** (pairs with commission;
+  a daily-check surface for agents).
+- **"On this day" / trip memories** resurfacing past trips — retention candy,
+  pure client-side over data we already have.
+
+### 6.3 How this maps to the pricing model
+
+The §4.3 web-billed Stripe freemium plan is what makes "premium at low cost"
+real: **iOS app stays free and never mentions external purchase** (dodges
+Apple's 15–30% cut — that saved margin *is* the lower price), billing happens
+on the web account. The `AiUsage` meter (6.0) makes the free/paid line a
+config value, not a code change, so we can tune generosity by watching real
+usage. Suggested launch tiers:
+- **Free:** full CRM + static shares + document storage + a monthly taste of
+  each AI feature (5 imports, 1 itinerary draft, 10 assistant msgs).
+- **Pro (~$12–15/mo):** unlimited AI, live client itineraries, forward-to-
+  inbox import, proactive expiry reminders, commission dashboard, exports.
+
+### 6.4 Build order for §6 (after the §4.2 core-CRM five)
+
+1. AI service layer + `AiUsage` meter (6.0) — the reusable spine.
+2. **AI Smart Import** (6.1 #1) — the paid-tier anchor.
+3. **Travel Document Vault** (6.1 #4) — cheapest premium-feeling win, reuses
+   cron + push.
+4. **Live Client Itinerary** (6.1 #3) — the growth-loop upgrade.
+5. **AI Itinerary Draft** (6.1 #2) then **Trip Assistant** (6.1 #5).
+
+Every AI item needs Vercel AI Gateway wiring and (for external flight/mail
+services) new vendor accounts — **flag for sign-off before adding packages
+or vendors**, per the standing rule.
