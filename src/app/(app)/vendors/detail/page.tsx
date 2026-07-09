@@ -13,7 +13,7 @@ import { DetailMissingId } from '@/components/travelmanager/DetailMissingId';
 function VendorDetailFromQuery() {
   const id = useSearchParams().get('id');
   if (!id) return <DetailMissingId listHref="/vendors" label="vendors" />;
-  return <VendorDetailContent id={id} />;
+  return <VendorDetailContent key={id} id={id} />;
 }
 
 export default function VendorDetailQueryPage() {

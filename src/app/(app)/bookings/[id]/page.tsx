@@ -9,5 +9,9 @@ import BookingDetailContent from '../detail-content';
 
 export default function BookingDetailPage() {
   const params = useParams();
-  return <BookingDetailContent id={params.id as string} />;
+  const id = params.id as string;
+  // key={id} forces a full remount when the id changes in place (native
+  // query-param route, duplicate-trip redirect) — the content components
+  // hold per-entity state that must not leak across ids.
+  return <BookingDetailContent key={id} id={id} />;
 }

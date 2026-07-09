@@ -821,19 +821,21 @@ export default function TripDetailContent({ id }: { id: string }) {
                       <Copy />
                       Duplicate trip
                     </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuLabel className="text-xs font-medium uppercase tracking-wider text-slate-400">
-                      Export
-                    </DropdownMenuLabel>
-                    {/* Opening an /api URL in a new tab is a NAVIGATION, not a fetch —
-                        native-fetch's Bearer rewrite never touches it. Inside
-                        the Capacitor shell it resolves to capacitor://localhost
-                        /api/... (nothing there), and pointing it at the web
-                        origin would 401 (no session cookie in the shell). Hide
-                        on native until these exports go through apiFetch +
-                        native file sharing. */}
+                    {/* The whole Export section is web-only for now:
+                        - window.open of an /api URL is a NAVIGATION, not a
+                          fetch — native-fetch's Bearer rewrite never touches
+                          it. In the Capacitor shell it resolves to
+                          capacitor://localhost/api/... (nothing there), and
+                          the web origin would 401 (no session cookie).
+                        - window.print() is a silent no-op inside WKWebView.
+                        Bring these back on native via apiFetch + native file
+                        sharing / a print plugin. */}
                     {!isNativePlatform() && (
                       <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuLabel className="text-xs font-medium uppercase tracking-wider text-slate-400">
+                          Export
+                        </DropdownMenuLabel>
                         <DropdownMenuItem onClick={() => window.open(`/api/trips/${id}/ical`, '_blank')} /* native-ok: gated by !isNativePlatform() above */>
                           <Download />
                           Add to calendar (.ics)
@@ -842,12 +844,12 @@ export default function TripDetailContent({ id }: { id: string }) {
                           <FileDown />
                           PDF report
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => window.print()}>
+                          <Printer />
+                          Print
+                        </DropdownMenuItem>
                       </>
                     )}
-                    <DropdownMenuItem onClick={() => window.print()}>
-                      <Printer />
-                      Print
-                    </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>
                       <Trash2 />

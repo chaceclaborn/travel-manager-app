@@ -573,6 +573,9 @@ export async function getPublicTripByToken(token: string) {
           seat: true,
         },
       },
+      // email is deliberately included: SharedTripView renders a
+      // "contact your agent" mailto button with it. If that ever becomes
+      // opt-in per share, drop it here too (2026-07-09 audit trade-off).
       user: { select: { name: true, email: true } },
     },
   });

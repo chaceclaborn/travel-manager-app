@@ -13,7 +13,7 @@ import { DetailMissingId } from '@/components/travelmanager/DetailMissingId';
 function TripDetailFromQuery() {
   const id = useSearchParams().get('id');
   if (!id) return <DetailMissingId listHref="/trips" label="trips" />;
-  return <TripDetailContent id={id} />;
+  return <TripDetailContent key={id} id={id} />;
 }
 
 export default function TripDetailQueryPage() {

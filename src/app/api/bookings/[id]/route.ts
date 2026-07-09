@@ -92,6 +92,12 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       }
     }
 
+    // Trip reassignment must go through PATCH -> linkBookingToTrip, which
+    // verifies the caller owns the TARGET trip. Passing tripId straight into
+    // updateBooking would let a user attach their booking to someone else's
+    // trip (tenant-isolation hole found in the 2026-07-09 audit).
+    delete sanitized.tripId;
+
     const booking = await updateBooking(id, sanitized as Parameters<typeof updateBooking>[1], user.id);
     return NextResponse.json(booking);
   } catch (error) {

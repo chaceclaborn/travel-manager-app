@@ -2,12 +2,25 @@
 name: Travel Manager Roadmap
 description: Master roadmap for the travel-manager-app — project context, shipped work, backlog, decisions, and constraints
 type: project
-last_updated: 2026-04-06
+last_updated: 2026-07-09
 ---
 
 # Travel Manager — Master Roadmap
 
 This file is the canonical "brain" for the travel-manager-app. It is maintained for both the human (Chace) and the `tm-master` sub-agent. When asked "what should I build next," "how should I design X," or "what did we decide about Y," start here.
+
+> **2026-07-09 status update:** much of this file predates the App Store
+> push and is stale in places. Current truth: **v1.0 build 4 is in Apple
+> review** (native detail-nav fix + full APNs push shipped end-to-end;
+> `.claude/skills/ship-testflight/SKILL.md` is the release runbook). The
+> current forward plan — audit findings, 1.0.1 punch list, next five
+> features, growth/monetization — lives in **`IMPROVEMENT_PLAN.md`** and
+> supersedes Sections 3/5 below where they conflict. Two new standing
+> design rules: (1) nothing shipped in the iOS bundle may link to a dynamic
+> `[param]` route — use `detailHref()`; enforced by
+> `src/lib/mobile-export/static-routes.test.ts` and
+> `scripts/verify-mobile-bundle.mjs`; (2) `CapacitorHttp.enabled = true`
+> is load-bearing for all native data loading — never disable it.
 
 ---
 
