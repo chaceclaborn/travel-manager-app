@@ -103,10 +103,22 @@ export function useAuth() {
   }
 
   async function signOut() {
-    if (!supabase?.auth) return;
     await clearStoredToken();
-    await supabase.auth.signOut();
-    window.location.href = '/tour';
+    // scope: 'local' clears the session without the network round-trip that
+    // the default global sign-out makes. In the Capacitor shell that call can
+    // hang or throw and block the redirect below, so the button "does
+    // nothing"; the stored Bearer token is already cleared and the server
+    // token expires on its own. try/catch guarantees we still navigate away.
+    try {
+      await supabase?.auth?.signOut({ scope: 'local' });
+    } catch {
+      /* best-effort — still redirect to the sign-in screen */
+    }
+    // Native uses a trailing slash: the iOS static export (trailingSlash:true)
+    // stores this route as /tour/index.html, and a bare `/tour` hard
+    // navigation doesn't resolve to a file in the webview. Web has a server
+    // that serves /tour directly, so leave it unchanged there.
+    window.location.href = isNativePlatform() ? '/tour/' : '/tour';
   }
 
   return { user, loading, signInWithGoogle, signInWithApple, signInWithEmail, signOut };

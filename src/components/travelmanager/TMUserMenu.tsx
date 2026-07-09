@@ -53,7 +53,7 @@ export function TMUserMenu({ user, onSignOut }: TMUserMenuProps) {
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className="rounded-full focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-slate-900"
+          className="flex min-h-11 min-w-11 items-center justify-center rounded-full focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-slate-900"
           aria-label="User menu"
         >
           {avatarUrl && !imageError ? (
