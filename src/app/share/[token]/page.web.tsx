@@ -1,7 +1,54 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getPublicTripByToken } from '@/lib/travelmanager/trips';
-import SharedTripView from '@/components/travelmanager/SharedTripView';
+import SharedTripView, { type SharedWeatherDay } from '@/components/travelmanager/SharedTripView';
+
+/**
+ * Server-side weather fetch for the public share page (the authed
+ * /api/weather proxy can't be used here). Open-Meteo is keyless; results are
+ * cached for an hour via Next's fetch cache. Returns only forecast days that
+ * fall inside the trip's date range (max 8 shown), or null when the trip is
+ * outside the ~16-day forecast horizon or anything fails — weather is a
+ * nice-to-have and must never break the page.
+ */
+async function getTripWeather(
+  lat: number,
+  lng: number,
+  startDate: Date | null,
+  endDate: Date | null
+): Promise<SharedWeatherDay[] | null> {
+  if (!startDate) return null;
+  try {
+    const url = new URL('https://api.open-meteo.com/v1/forecast');
+    url.searchParams.set('latitude', String(lat));
+    url.searchParams.set('longitude', String(lng));
+    url.searchParams.set('daily', 'weather_code,temperature_2m_max,temperature_2m_min');
+    url.searchParams.set('temperature_unit', 'fahrenheit');
+    url.searchParams.set('timezone', 'auto');
+    url.searchParams.set('forecast_days', '16');
+
+    const res = await fetch(url, { next: { revalidate: 3600 }, signal: AbortSignal.timeout(4000) });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const dates: string[] = data?.daily?.time ?? [];
+    const codes: number[] = data?.daily?.weather_code ?? [];
+    const maxs: number[] = data?.daily?.temperature_2m_max ?? [];
+    const mins: number[] = data?.daily?.temperature_2m_min ?? [];
+
+    const startKey = new Date(startDate).toISOString().slice(0, 10);
+    const endKey = (endDate ? new Date(endDate) : new Date(startDate)).toISOString().slice(0, 10);
+
+    const days: SharedWeatherDay[] = [];
+    for (let i = 0; i < dates.length && days.length < 8; i++) {
+      if (dates[i] < startKey || dates[i] > endKey) continue;
+      if (typeof maxs[i] !== 'number' || typeof mins[i] !== 'number') continue;
+      days.push({ date: dates[i], weatherCode: codes[i] ?? 3, tempMax: maxs[i], tempMin: mins[i] });
+    }
+    return days.length > 0 ? days : null;
+  } catch {
+    return null;
+  }
+}
 
 // Always fetch fresh — share state can be toggled by the agent at any time
 // and we want the "unshared" message to appear immediately.
@@ -26,17 +73,25 @@ export async function generateMetadata(
     const trip = await getPublicTripByToken(token);
     if (!trip) return fallback;
 
-    const description = trip.destination
-      ? `View this trip to ${trip.destination}`
-      : 'View this shared trip itinerary';
+    // "Aug 4 – Aug 12, 2026 · Paris, France · itinerary by Jane Smith"
+    const parts: string[] = [];
+    if (trip.startDate) {
+      const fmt = (d: Date) =>
+        new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+      parts.push(trip.endDate ? `${fmt(trip.startDate)} – ${fmt(trip.endDate)}` : fmt(trip.startDate));
+    }
+    if (trip.destination) parts.push(trip.destination);
+    parts.push(trip.user?.name ? `Itinerary by ${trip.user.name}` : 'Your travel itinerary');
+    const description = parts.join(' · ');
 
     return {
       title: `${trip.title} — shared trip`,
       description,
       openGraph: {
         title: trip.title,
-        description: trip.destination || 'Shared trip',
+        description,
         type: 'website',
+        siteName: 'Travel Manager',
       },
       // Share links shouldn't be indexed by search engines
       robots: { index: false, follow: false },
@@ -110,5 +165,10 @@ export default async function SharedTripPage(
     return <UnsharedTripMessage />;
   }
 
-  return <SharedTripView trip={trip} />;
+  const weather =
+    trip.latitude != null && trip.longitude != null
+      ? await getTripWeather(trip.latitude, trip.longitude, trip.startDate, trip.endDate)
+      : null;
+
+  return <SharedTripView trip={trip} weather={weather} />;
 }
