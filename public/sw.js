@@ -11,7 +11,7 @@
 //     offline so the UI can show its own error state, not a cached stale
 //     response that could mislead the user.
 
-const CACHE = 'travel-manager-v1';
+const CACHE = 'travel-manager-v2'; // v2: new app icon
 const OFFLINE_URL = '/offline.html';
 const PRECACHE = ['/offline.html', '/manifest.json', '/icons/icon-192.png'];
 
