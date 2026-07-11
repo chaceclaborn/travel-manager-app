@@ -1,6 +1,7 @@
 'use client';
 
 import { Suspense, useState, useEffect } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -16,7 +17,6 @@ import {
   UserCheck,
   Download,
   Trash2,
-  Plane,
   AlertCircle,
   Mail,
   Loader2,
@@ -224,9 +224,15 @@ function TourPageContent() {
             aria-hidden="true"
             className="pointer-events-none absolute left-1/2 top-4 size-72 -translate-x-1/2 rounded-full bg-amber-400/15 blur-3xl"
           />
-          <div className="relative mx-auto mb-6 flex size-16 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 shadow-glow">
-            <Plane className="size-8 text-white" />
-          </div>
+          <Image
+            src="/icons/icon-192.png"
+            alt=""
+            width={96}
+            height={96}
+            priority
+            className="relative mx-auto mb-6 size-24 drop-shadow-[0_8px_24px_rgba(245,158,11,0.35)]"
+            aria-hidden="true"
+          />
           <h1 className="relative text-4xl font-bold tracking-tight sm:text-5xl">
             <span className="text-gradient-brand">Travel Manager</span>
           </h1>

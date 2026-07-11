@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import type { TripStatus, BookingType } from '@/lib/generated/prisma';
 
 // Narrow, public-safe subset of the trip returned by getPublicTripByToken.
@@ -268,7 +269,10 @@ export default function SharedTripView({ trip }: SharedTripViewProps) {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm font-semibold text-stone-900">{agentName}</p>
-              <p className="text-xs text-stone-500">Shared via Travel Manager</p>
+              <p className="flex items-center gap-1.5 text-xs text-stone-500">
+                <Image src="/icons/icon-192.png" alt="" width={16} height={16} className="size-4" aria-hidden="true" />
+                Shared via Travel Manager
+              </p>
             </div>
             {agentEmail && (
               <a

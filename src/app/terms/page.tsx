@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import Link from 'next/link';
 import {
   Sparkles,
@@ -137,7 +138,9 @@ export default function TermsOfServicePage() {
           href="/"
           className="mb-8 inline-flex items-center gap-2 text-sm text-slate-600 transition-colors hover:text-amber-600"
         >
-          <span aria-hidden="true">&larr;</span> Travel Manager
+          <span aria-hidden="true">&larr;</span>
+          <Image src="/icons/icon-192.png" alt="" width={20} height={20} className="size-5" aria-hidden="true" />
+          Travel Manager
         </Link>
 
         <header className="mb-8">

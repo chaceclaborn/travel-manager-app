@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, MapPin, Search, MessageSquarePlus } from 'lucide-react';
+import Image from 'next/image';
+import { Menu, X, Search, MessageSquarePlus } from 'lucide-react';
 import { TMSidebar } from '@/components/travelmanager/TMSidebar';
 import { TMToastProvider } from '@/components/travelmanager/TMToast';
 import { TMCommandPalette } from '@/components/travelmanager/TMCommandPalette';
@@ -274,9 +275,7 @@ export default function TravelManagerLayout({
           <aside className="hidden md:flex w-64 flex-col fixed inset-y-0 left-0 bg-gradient-to-b from-slate-900 to-slate-950 border-r border-white/[0.06] z-40 safe-area-top safe-area-bottom safe-area-left" role="navigation" aria-label="Main navigation">
             <div className="flex items-center justify-between px-5 py-5 border-b border-white/10">
               <div className="flex items-center gap-2.5">
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 shadow-glow">
-                  <MapPin className="size-4 text-white" aria-hidden="true" />
-                </span>
+                <Image src="/icons/icon-192.png" alt="" width={32} height={32} className="size-8 shrink-0" aria-hidden="true" />
                 <div>
                   <h1 className="text-base font-bold text-white leading-tight">Travel Manager</h1>
                   <p className="text-[11px] text-slate-400">Trip Planning Dashboard</p>
@@ -309,9 +308,7 @@ export default function TravelManagerLayout({
             <div className="flex items-center justify-between px-4 h-16">
               <div>
                 <h1 className="text-lg font-bold text-white flex items-center gap-2">
-                  <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-amber-400 to-amber-600 shadow-glow">
-                    <MapPin className="size-3.5 text-white" aria-hidden="true" />
-                  </span>
+                  <Image src="/icons/icon-192.png" alt="" width={24} height={24} className="size-6 shrink-0" aria-hidden="true" />
                   Travel Manager
                 </h1>
                 {pageTitle && (
@@ -368,9 +365,7 @@ export default function TravelManagerLayout({
                 >
                   <div className="flex items-center justify-between px-5 py-5 border-b border-white/10">
                     <div className="flex items-center gap-2.5">
-                      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 shadow-glow">
-                        <MapPin className="size-4 text-white" aria-hidden="true" />
-                      </span>
+                      <Image src="/icons/icon-192.png" alt="" width={32} height={32} className="size-8 shrink-0" aria-hidden="true" />
                       <div>
                         <h1 className="text-base font-bold text-white leading-tight">Travel Manager</h1>
                         <p className="text-[11px] text-slate-400">Trip Planning Dashboard</p>
