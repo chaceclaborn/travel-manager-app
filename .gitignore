@@ -17,4 +17,7 @@ src/lib/generated/
 
 # Security audit reports — local-only, may reference file:line vuln details
 /security-audits
+
+# App Store screenshot captures — uploaded via fastlane deliver, not source
+/app-store-screenshots
 .vercel
