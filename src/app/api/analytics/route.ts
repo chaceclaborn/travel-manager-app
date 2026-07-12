@@ -44,6 +44,7 @@ export async function GET(request: NextRequest) {
       spendingGrouped,
       trips,
       totalExpenses,
+      commissionBookings,
     ] = await Promise.all([
       prisma.expense.groupBy({
         by: ['category'],
@@ -63,6 +64,21 @@ export async function GET(request: NextRequest) {
       prisma.expense.aggregate({
         where: expenseWhere,
         _sum: { amount: true },
+      }),
+      // Commission rollup. startDateTime is a text column, so the period
+      // filter happens in JS below (per-user booking counts are small).
+      prisma.booking.findMany({
+        where: {
+          userId: user.id,
+          status: 'ACTIVE',
+          commissionAmount: { not: null },
+        },
+        select: {
+          commissionAmount: true,
+          commissionPaid: true,
+          startDateTime: true,
+          createdAt: true,
+        },
       }),
     ]);
 
@@ -114,6 +130,29 @@ export async function GET(request: NextRequest) {
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([quarter, days]) => ({ quarter, days }));
 
+    // Commissions: bucket by travel month (startDateTime, falling back to
+    // createdAt when the booking has no date), split paid vs pending.
+    const commissionMonthMap = new Map<string, { paid: number; pending: number }>();
+    let commissionTotal = 0;
+    let commissionPending = 0;
+    for (const b of commissionBookings) {
+      const amount = b.commissionAmount ?? 0;
+      if (amount <= 0) continue;
+      const parsed = b.startDateTime ? new Date(b.startDateTime) : b.createdAt;
+      const date = isNaN(parsed.getTime()) ? b.createdAt : parsed;
+      if (sinceDate && date < sinceDate) continue;
+      commissionTotal += amount;
+      if (!b.commissionPaid) commissionPending += amount;
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      const bucket = commissionMonthMap.get(key) ?? { paid: 0, pending: 0 };
+      if (b.commissionPaid) bucket.paid += amount;
+      else bucket.pending += amount;
+      commissionMonthMap.set(key, bucket);
+    }
+    const commissionsByMonth = Array.from(commissionMonthMap.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([month, sums]) => ({ month, ...sums }));
+
     // Summary stats
     const totalSpent = totalExpenses._sum.amount || 0;
     const totalTrips = trips.length;
@@ -131,6 +170,9 @@ export async function GET(request: NextRequest) {
       totalTrips,
       averageTripCost,
       mostVisited,
+      commissionsByMonth,
+      commissionTotal,
+      commissionPending,
     });
   } catch (error) {
     console.error('Error fetching analytics:', error instanceof Error ? error.message : error);

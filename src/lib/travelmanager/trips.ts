@@ -294,15 +294,26 @@ export async function deleteItineraryItem(id: string, userId: string) {
 }
 
 export async function getDashboardStats(userId: string) {
-  const [totalTrips, upcomingTrips, totalVendors, totalClients, totalMeetings] = await Promise.all([
+  const [totalTrips, upcomingTrips, totalVendors, totalClients, totalMeetings, pendingCommissions] = await Promise.all([
     prisma.trip.count({ where: { userId } }),
     prisma.trip.count({ where: { userId, startDate: { gte: new Date() }, status: { in: ['PLANNED', 'IN_PROGRESS'] } } }),
     prisma.vendor.count({ where: { userId } }),
     prisma.client.count({ where: { userId } }),
     prisma.meeting.count({ where: { userId } }),
+    prisma.booking.aggregate({
+      where: { userId, status: 'ACTIVE', commissionPaid: false, commissionAmount: { not: null } },
+      _sum: { commissionAmount: true },
+    }),
   ]);
 
-  return { totalTrips, upcomingTrips, totalVendors, totalClients, totalMeetings };
+  return {
+    totalTrips,
+    upcomingTrips,
+    totalVendors,
+    totalClients,
+    totalMeetings,
+    pendingCommissions: pendingCommissions._sum.commissionAmount ?? 0,
+  };
 }
 
 export async function getUpcomingTrips(userId: string, limit = 5) {

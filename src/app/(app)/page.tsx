@@ -24,6 +24,7 @@ interface DashboardData {
     totalVendors: number;
     totalClients: number;
     totalMeetings: number;
+    pendingCommissions: number;
   };
   upcoming: TripWithRelations[];
   recent: TripWithRelations[];
@@ -245,7 +246,7 @@ export default function TravelManagerDashboard() {
     );
   }
 
-  const stats = data?.stats ?? { totalTrips: 0, upcomingTrips: 0, totalVendors: 0, totalClients: 0, totalMeetings: 0 };
+  const stats = data?.stats ?? { totalTrips: 0, upcomingTrips: 0, totalVendors: 0, totalClients: 0, totalMeetings: 0, pendingCommissions: 0 };
   const upcoming = data?.upcoming ?? [];
   const recent = data?.recent ?? [];
 
@@ -326,6 +327,17 @@ export default function TravelManagerDashboard() {
         {daysUntilNext !== null && (
           <motion.div variants={statsItem}>
             <TMStatsCard title="Days to Next Trip" value={daysUntilNext} icon={Plane} color="red" href={upcoming[0] ? detailHref('trips', upcoming[0].id) : '/trips'} />
+          </motion.div>
+        )}
+        {stats.pendingCommissions > 0 && (
+          <motion.div variants={statsItem}>
+            <TMStatsCard
+              title="Pending Commissions"
+              value={`$${Math.round(stats.pendingCommissions).toLocaleString('en-US')}`}
+              icon={DollarSign}
+              color="amber"
+              href="/analytics"
+            />
           </motion.div>
         )}
       </motion.div>

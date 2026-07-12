@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Settings, ShieldCheck } from 'lucide-react';
 import { useNavPreferences } from '@/lib/travelmanager/useNavPreferences';
+import { chordLabel, useKeybinds } from '@/lib/travelmanager/keybinds';
 
 function NavItem({
   href,
@@ -79,10 +80,15 @@ function NavItem({
 export function TMSidebar({ isAdmin }: { isAdmin?: boolean }) {
   const pathname = usePathname();
   const { visibleItems } = useNavPreferences();
+  const { binds } = useKeybinds();
+
+  // Shortcut chips reflect the user's custom keybinds (Settings → Shortcuts).
+  const shortcutFor = (navKey: string, fallback: string) =>
+    binds[`go-${navKey}`] ? chordLabel(binds[`go-${navKey}`]) : fallback;
 
   const bottomNavItems = [
-    { href: '/settings', label: 'Settings', icon: Settings, shortcut: 'G S', track: 'nav:settings' },
-    ...(isAdmin ? [{ href: '/admin', label: 'Admin', icon: ShieldCheck, shortcut: 'G X', track: 'nav:admin' }] : []),
+    { href: '/settings', label: 'Settings', icon: Settings, shortcut: shortcutFor('settings', 'G S'), track: 'nav:settings' },
+    ...(isAdmin ? [{ href: '/admin', label: 'Admin', icon: ShieldCheck, shortcut: shortcutFor('admin', 'G X'), track: 'nav:admin' }] : []),
   ];
 
   return (
@@ -94,7 +100,7 @@ export function TMSidebar({ isAdmin }: { isAdmin?: boolean }) {
 
       {/* Main nav items */}
       <div className="flex flex-col gap-0.5">
-        {visibleItems.map(({ href, label, icon, shortcut, track }) => {
+        {visibleItems.map(({ key, href, label, icon, shortcut, track }) => {
           const isActive =
             href === '/'
               ? pathname === '/'
@@ -106,7 +112,7 @@ export function TMSidebar({ isAdmin }: { isAdmin?: boolean }) {
               href={href}
               label={label}
               icon={icon}
-              shortcut={shortcut}
+              shortcut={shortcutFor(key, shortcut)}
               isActive={isActive}
               track={track}
             />

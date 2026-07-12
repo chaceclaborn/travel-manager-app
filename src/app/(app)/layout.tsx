@@ -17,6 +17,7 @@ import { PushRegister } from '@/components/travelmanager/PushRegister';
 import { NotificationOptInCard } from '@/components/travelmanager/NotificationOptInCard';
 import { OfflineIndicator } from '@/components/travelmanager/OfflineIndicator';
 import { useAuth } from '@/lib/travelmanager/useAuth';
+import { KEYBIND_DEFS, useKeybinds } from '@/lib/travelmanager/keybinds';
 import { installNativeApiFetchPatch } from '@/lib/travelmanager/native-fetch';
 
 // Install the native-only global fetch interceptor at MODULE-EVALUATION scope
@@ -37,6 +38,7 @@ export default function TravelManagerLayout({
   const [searchOpen, setSearchOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [modKey, setModKey] = useState('⌘');
+  const { binds: keybinds } = useKeybinds();
   const [isAdmin, setIsAdmin] = useState(false);
   const [isAdminChecked, setIsAdminChecked] = useState(false);
   const pathname = usePathname();
@@ -115,32 +117,26 @@ export default function TravelManagerLayout({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === keybinds.search) {
         e.preventDefault();
         setSearchOpen((prev) => !prev);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [keybinds.search]);
 
   useEffect(() => {
     let firstKey: 'g' | null = null;
     let firstKeyTimer: ReturnType<typeof setTimeout> | null = null;
 
-    const shortcuts: Record<string, string> = {
-      'g+d': '/',
-      'g+t': '/trips',
-      'g+b': '/bookings',
-      'g+e': '/meetings',
-      'g+v': '/vendors',
-      'g+c': '/clients',
-      'g+f': '/friends',
-      'g+a': '/analytics',
-      'g+m': '/map',
-      'g+s': '/settings',
-      'g+x': '/admin',
-    };
+    // Chord map built from the user's (customizable) keybinds.
+    const shortcuts: Record<string, string> = {};
+    for (const def of KEYBIND_DEFS) {
+      if (def.kind === 'chord' && def.href) {
+        shortcuts[`g+${keybinds[def.action]}`] = def.href;
+      }
+    }
 
     function handler(e: KeyboardEvent) {
       // Skip if user is typing in an input
@@ -171,7 +167,7 @@ export default function TravelManagerLayout({
       window.removeEventListener('keydown', handler);
       if (firstKeyTimer) clearTimeout(firstKeyTimer);
     };
-  }, [router]);
+  }, [router, keybinds]);
 
   // Public pages (tour, privacy, terms, support) are outside this route group,
   // so this check is a fallback only
@@ -291,7 +287,7 @@ export default function TravelManagerLayout({
               >
                 <Search className="size-4" />
                 <span>Search</span>
-                <kbd className="ml-auto font-mono text-[10px] tracking-wide border border-white/10 bg-white/5 px-1.5 py-0.5 rounded-md">{modKey}+K</kbd>
+                <kbd className="ml-auto font-mono text-[10px] tracking-wide border border-white/10 bg-white/5 px-1.5 py-0.5 rounded-md">{modKey}+{keybinds.search.toUpperCase()}</kbd>
               </button>
               <button
                 onClick={() => setFeedbackOpen(true)}

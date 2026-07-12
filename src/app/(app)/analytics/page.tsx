@@ -37,6 +37,9 @@ const PERIODS = [
 /* ───────────────────────── Types ───────────────────────── */
 
 interface AnalyticsData {
+  commissionsByMonth: { month: string; paid: number; pending: number }[];
+  commissionTotal: number;
+  commissionPending: number;
   spendingByCategory: { category: string; total: number }[];
   tripsByMonth: { month: string; count: number }[];
   topDestinations: { destination: string; count: number }[];
@@ -670,6 +673,88 @@ export default function AnalyticsPage() {
           ) : (
             <div className="flex h-[280px] items-center justify-center text-sm text-slate-400">
               No travel day data yet
+            </div>
+          )}
+        </ChartCard>
+
+        {/* ── Commissions by Month - Stacked Bar ── */}
+        <ChartCard title="Commissions" index={4}>
+          {data.commissionsByMonth.length > 0 ? (
+            <>
+              <div className="mb-4 flex gap-6">
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Earned</p>
+                  <p className="text-xl font-bold text-slate-900">{formatCurrency(data.commissionTotal)}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Pending payout</p>
+                  <p className="text-xl font-bold text-amber-600">{formatCurrency(data.commissionPending)}</p>
+                </div>
+              </div>
+              <div role="img" aria-label="Commissions per month stacked bar chart" className="[&_svg]:focus:outline-none [&_.recharts-wrapper_svg]:outline-none">
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={data.commissionsByMonth} barCategoryGap="20%">
+                  <defs>
+                    <linearGradient id="commissionPaidGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#34d399" />
+                      <stop offset="100%" stopColor="#10b981" />
+                    </linearGradient>
+                    <linearGradient id="commissionPendingGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#fbbf24" />
+                      <stop offset="100%" stopColor="#f59e0b" />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                  <XAxis
+                    dataKey="month"
+                    tick={{ fontSize: 11, fill: '#94a3b8' }}
+                    axisLine={{ stroke: '#e2e8f0' }}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 11, fill: '#94a3b8' }}
+                    axisLine={false}
+                    tickLine={false}
+                    tickFormatter={(v: number) => formatCurrency(v)}
+                  />
+                  <RechartsTooltip
+                    content={
+                      <CustomTooltip
+                        formatter={(value, name) =>
+                          `${formatCurrency(value)} ${name === 'paid' ? 'paid' : 'pending'}`
+                        }
+                      />
+                    }
+                    cursor={{ fill: 'rgba(16, 185, 129, 0.06)' }}
+                  />
+                  <Legend
+                    content={<CustomLegend labelFormatter={(v) => (v === 'paid' ? 'Paid' : 'Pending')} />}
+                  />
+                  <Bar
+                    dataKey="paid"
+                    stackId="commission"
+                    fill="url(#commissionPaidGradient)"
+                    animationBegin={200}
+                    animationDuration={800}
+                    animationEasing="ease-out"
+                  />
+                  <Bar
+                    dataKey="pending"
+                    stackId="commission"
+                    fill="url(#commissionPendingGradient)"
+                    radius={[6, 6, 0, 0]}
+                    animationBegin={200}
+                    animationDuration={800}
+                    animationEasing="ease-out"
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+              </div>
+            </>
+          ) : (
+            <div className="flex h-[280px] flex-col items-center justify-center gap-1 text-center text-sm text-slate-400">
+              <p>No commission data yet</p>
+              <p className="text-xs">Add a commission amount to a booking to start tracking payouts.</p>
             </div>
           )}
         </ChartCard>

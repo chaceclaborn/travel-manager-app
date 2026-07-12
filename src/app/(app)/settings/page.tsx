@@ -21,6 +21,7 @@ import { TMBreadcrumb } from '@/components/travelmanager/TMBreadcrumb';
 import { useTMToast } from '@/components/travelmanager/TMToast';
 import { CurrencyConverter } from '@/components/travelmanager/CurrencyConverter';
 import { NotificationsSettingCard } from '@/components/travelmanager/NotificationsSettingCard';
+import { KeyboardShortcutsCard } from '@/components/travelmanager/KeyboardShortcutsCard';
 import { ANALYTICS_OPTOUT_KEY } from '@/components/travelmanager/ClickTracker';
 import { useAuth } from '@/lib/travelmanager/useAuth';
 
@@ -589,6 +590,9 @@ export default function SettingsPage() {
           <p className="mt-3 text-xs text-slate-300">Loading your preferences…</p>
         )}
       </motion.div>
+
+      {/* Keyboard Shortcuts */}
+      <KeyboardShortcutsCard />
 
       {/* Notifications */}
       <NotificationsSettingCard />
