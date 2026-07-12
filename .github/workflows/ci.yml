@@ -21,8 +21,45 @@ jobs:
           cache: 'yarn'
       - run: yarn install --frozen-lockfile
       - run: node scripts/check-migration-consistency.mjs
+      - run: node scripts/check-migration-safety.mjs
       - run: yarn prisma generate
       - run: yarn tsc --noEmit
       - run: yarn lint
       - run: yarn test
       - run: yarn audit:static
+
+  # Prove the schema + migration chain applies cleanly to an empty database,
+  # and that every manual migration is idempotent (they re-run on EVERY Vercel
+  # build against the already-migrated prod DB, so a second application must
+  # be a no-op, not an error).
+  migrations:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: travelmanager
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/travelmanager
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'yarn'
+      - run: yarn install --frozen-lockfile
+      - run: yarn prisma generate
+      - name: Apply schema to scratch database
+        run: yarn prisma db push --skip-generate
+      - name: Apply manual migrations (first pass)
+        run: node scripts/apply-manual-migrations.mjs
+      - name: Re-apply manual migrations (idempotency pass)
+        run: node scripts/apply-manual-migrations.mjs

@@ -61,6 +61,7 @@
  */
 
 import { isNativePlatform, getStoredToken } from '@/lib/mobile-auth';
+import { App } from '@capacitor/app';
 // STATIC import (not dynamic): when CapacitorHttp is enabled it patches fetch to
 // go through the native layer, and a dynamic import('@capacitor/core') would then
 // try to load its webpack chunk via that native fetch — which cannot read
@@ -82,6 +83,22 @@ const API_ORIGIN = 'https://www.travels-manager.com';
  * any recipient.
  */
 export const WEB_ORIGIN = API_ORIGIN;
+
+// "1.0.1 (5) ios" — fetched once from the native App plugin, then cached.
+// Null until resolved (or forever on the web, where the header is not sent).
+let appVersionHeader: string | null = null;
+let appVersionFetched = false;
+async function getAppVersionHeader(): Promise<string | null> {
+  if (appVersionFetched) return appVersionHeader;
+  appVersionFetched = true;
+  try {
+    const info = await App.getInfo();
+    appVersionHeader = `${info.version} (${info.build}) ios`;
+  } catch {
+    appVersionHeader = null;
+  }
+  return appVersionHeader;
+}
 
 // Minimal local shapes for the @capacitor/core HTTP plugin. We avoid importing
 // the real types statically so this module type-checks and tree-shakes cleanly
@@ -307,6 +324,11 @@ export function installNativeApiFetchPatch(): void {
       const token = await getStoredToken();
       if (token) headers.set('Authorization', `Bearer ${token}`);
     }
+
+    // Identify this binary to the API. Lets the server log/act on old-client
+    // traffic (version-skew detection) — see /api/app-config.
+    const appVersion = await getAppVersionHeader();
+    if (appVersion) headers.set('X-App-Version', appVersion);
 
     const signal = init?.signal ?? req?.signal ?? undefined;
 

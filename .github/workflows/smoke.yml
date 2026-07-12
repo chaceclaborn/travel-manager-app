@@ -1,0 +1,33 @@
+name: Production smoke
+
+# Weekly synthetic check of the live site (plus manual trigger). Backstop for
+# external monitoring — GitHub cron timing is best-effort, so this is a net,
+# not the primary alarm. Doubles as a Supabase keep-warm ping.
+on:
+  schedule:
+    - cron: '0 13 * * 1,4' # Mon + Thu 13:00 UTC
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'yarn'
+      - run: yarn install --frozen-lockfile
+      - run: yarn playwright install --with-deps chromium webkit
+      - name: Run Playwright against production
+        run: yarn playwright test
+        env:
+          BASE_URL: https://www.travels-manager.com
+          E2E_EMAIL: ${{ secrets.E2E_EMAIL }}
+          E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: smoke-report
+          path: playwright-report/
+          retention-days: 14

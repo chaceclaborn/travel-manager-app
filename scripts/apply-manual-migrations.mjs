@@ -37,7 +37,12 @@ dotenv.config({ path: resolve(__dirname, '..', '.env') });
 
 const isProdDeploy = process.env.VERCEL_ENV === 'production';
 
-if (!process.env.DB_PASSWORD) {
+// A full DATABASE_URL (CI scratch Postgres, `yarn local` Docker DB) takes
+// precedence over the hardcoded Supabase pooler — but never on a production
+// deploy, where migrations must go through the pooler with DB_PASSWORD.
+const localUrl = !isProdDeploy ? process.env.DATABASE_URL : undefined;
+
+if (!process.env.DB_PASSWORD && !localUrl) {
   if (isProdDeploy) {
     // Fail-closed: a production build with no DB credentials must not proceed,
     // or it could ship code that needs an un-applied migration.
@@ -65,17 +70,25 @@ if (files.length === 0) {
   process.exit(0);
 }
 
-const client = new pg.Client({
-  host: 'aws-1-us-east-2.pooler.supabase.com',
-  port: 5432,
-  database: 'postgres',
-  user: 'postgres.bsnzgcmizbonttgnxvqi',
-  password: process.env.DB_PASSWORD,
-  ssl: { rejectUnauthorized: false },
-  // Fail fast rather than hanging a build if the DB is unreachable.
-  connectionTimeoutMillis: 15000,
-  statement_timeout: 30000,
-});
+const client = new pg.Client(
+  localUrl
+    ? {
+        connectionString: localUrl,
+        connectionTimeoutMillis: 15000,
+        statement_timeout: 30000,
+      }
+    : {
+        host: 'aws-1-us-east-2.pooler.supabase.com',
+        port: 5432,
+        database: 'postgres',
+        user: 'postgres.bsnzgcmizbonttgnxvqi',
+        password: process.env.DB_PASSWORD,
+        ssl: { rejectUnauthorized: false },
+        // Fail fast rather than hanging a build if the DB is unreachable.
+        connectionTimeoutMillis: 15000,
+        statement_timeout: 30000,
+      }
+);
 
 try {
   await client.connect();

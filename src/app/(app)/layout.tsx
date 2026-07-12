@@ -18,6 +18,7 @@ import { NotificationOptInCard } from '@/components/travelmanager/NotificationOp
 import { OfflineIndicator } from '@/components/travelmanager/OfflineIndicator';
 import { useAuth } from '@/lib/travelmanager/useAuth';
 import { KEYBIND_DEFS, useKeybinds } from '@/lib/travelmanager/keybinds';
+import { AppUpdateGate } from '@/components/travelmanager/AppUpdateGate';
 import { installNativeApiFetchPatch } from '@/lib/travelmanager/native-fetch';
 
 // Install the native-only global fetch interceptor at MODULE-EVALUATION scope
@@ -263,6 +264,7 @@ export default function TravelManagerLayout({
             useTMToast() to surface foreground pushes as in-app toasts. The
             opt-in card primes the user before the OS permission dialog. */}
         <PushRegister />
+        <AppUpdateGate />
         <NotificationOptInCard />
         <OfflineIndicator />
 

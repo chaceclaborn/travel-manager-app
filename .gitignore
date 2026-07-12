@@ -20,4 +20,8 @@ src/lib/generated/
 
 # App Store screenshot captures — uploaded via fastlane deliver, not source
 /app-store-screenshots
+
+# Playwright artifacts
+/playwright-report
+/test-results
 .vercel
