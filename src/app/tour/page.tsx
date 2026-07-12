@@ -118,6 +118,7 @@ function EmailSignIn() {
   const [open, setOpen] = useState(false);
   // In the native shell OAuth is hidden, so email is the only sign-in path —
   // reveal the form by default there.
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time post-hydration platform detection, not a render cascade
   useEffect(() => { if (isNativePlatform()) setOpen(true); }, []);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -189,6 +190,7 @@ function TourPageContent() {
   // those buttons and use email/password (which works natively). Detected after
   // mount so the first render still matches the prerendered (web) HTML.
   const [native, setNative] = useState(false);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time post-hydration platform detection, not a render cascade
   useEffect(() => { setNative(isNativePlatform()); }, []);
   const searchParams = useSearchParams();
   const errorCode = searchParams.get('error');
