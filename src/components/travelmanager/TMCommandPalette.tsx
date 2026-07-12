@@ -14,6 +14,12 @@ import {
   Plane,
   CalendarDays,
   Loader2,
+  Plus,
+  LayoutDashboard,
+  BarChart3,
+  Map,
+  Settings,
+  Zap,
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 
@@ -49,6 +55,42 @@ interface TMCommandPaletteProps {
 
 const RECENT_KEY = 'tm-recent-searches';
 const MAX_RECENT = 5;
+
+// Quick actions: creation shortcuts + page jumps, filtered by label/keyword
+// substring match. All hrefs must be static routes (iOS bundle has no [id]
+// routes — the route-firewall tests enforce this for entity results, and
+// commands must follow the same rule).
+interface Command {
+  id: string;
+  label: string;
+  keywords: string;
+  href: string;
+  icon: typeof MapPin;
+  create?: boolean;
+}
+
+const COMMANDS: Command[] = [
+  { id: 'new-trip', label: 'New Trip', keywords: 'create add trip', href: '/trips/new', icon: Plus, create: true },
+  { id: 'new-client', label: 'New Client', keywords: 'create add client', href: '/clients/new', icon: Plus, create: true },
+  { id: 'new-vendor', label: 'New Vendor', keywords: 'create add vendor supplier', href: '/vendors/new', icon: Plus, create: true },
+  { id: 'go-dashboard', label: 'Go to Dashboard', keywords: 'home overview', href: '/', icon: LayoutDashboard },
+  { id: 'go-trips', label: 'Go to Trips', keywords: 'trips travel', href: '/trips', icon: MapPin },
+  { id: 'go-clients', label: 'Go to Clients', keywords: 'clients people', href: '/clients', icon: Users },
+  { id: 'go-vendors', label: 'Go to Vendors', keywords: 'vendors suppliers', href: '/vendors', icon: Building2 },
+  { id: 'go-bookings', label: 'Go to Bookings', keywords: 'bookings flights hotels reservations new booking', href: '/bookings', icon: Plane },
+  { id: 'go-meetings', label: 'Go to Meetings', keywords: 'meetings calendar appointments new meeting', href: '/meetings', icon: CalendarDays },
+  { id: 'go-analytics', label: 'Go to Analytics', keywords: 'analytics stats charts reports', href: '/analytics', icon: BarChart3 },
+  { id: 'go-map', label: 'Go to Map', keywords: 'map travel world', href: '/map', icon: Map },
+  { id: 'go-settings', label: 'Go to Settings', keywords: 'settings preferences account', href: '/settings', icon: Settings },
+];
+
+function matchCommands(query: string): Command[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
+  return COMMANDS.filter(
+    (c) => c.label.toLowerCase().includes(q) || c.keywords.includes(q)
+  ).slice(0, 5);
+}
 
 function getRecentSearches(): string[] {
   if (typeof window === 'undefined') return [];
@@ -169,6 +211,15 @@ export function TMCommandPalette({ open, onClose }: TMCommandPaletteProps) {
     [results]
   );
 
+  // Commands match synchronously (no debounce): with an empty query show the
+  // create shortcuts; once typing, substring-match the full command list.
+  // Keyboard navigation spans commands first, then entity results.
+  const visibleCommands = useMemo(
+    () => (query.trim().length < 2 ? COMMANDS.filter((c) => c.create) : matchCommands(query)),
+    [query]
+  );
+  const totalNavItems = visibleCommands.length + flatItems.length;
+
   // Reset state when opening — adjusted during render (React's "adjusting
   // state when props change" pattern) so no effect-triggered re-render.
   const [prevOpen, setPrevOpen] = useState(open);
@@ -195,6 +246,7 @@ export function TMCommandPalette({ open, onClose }: TMCommandPaletteProps) {
   const [prevQuery, setPrevQuery] = useState(query);
   if (query !== prevQuery) {
     setPrevQuery(query);
+    setActiveIndex(0);
     if (query.trim().length < 2) {
       setResults(null);
       setLoading(false);
@@ -251,24 +303,34 @@ export function TMCommandPalette({ open, onClose }: TMCommandPaletteProps) {
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (flatItems.length === 0) return;
+      if (totalNavItems === 0) return;
       if (e.key === 'ArrowDown') {
         e.preventDefault();
-        setActiveIndex((i) => (i + 1) % flatItems.length);
+        setActiveIndex((i) => (i + 1) % totalNavItems);
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
-        setActiveIndex((i) => (i - 1 + flatItems.length) % flatItems.length);
-      } else if (e.key === 'Enter' && flatItems[activeIndex]) {
-        e.preventDefault();
-        navigateTo(flatItems[activeIndex].href);
+        setActiveIndex((i) => (i - 1 + totalNavItems) % totalNavItems);
+      } else if (e.key === 'Enter') {
+        const target =
+          activeIndex < visibleCommands.length
+            ? visibleCommands[activeIndex]
+            : flatItems[activeIndex - visibleCommands.length];
+        if (target) {
+          e.preventDefault();
+          navigateTo(target.href);
+        }
       }
     },
-    [flatItems, activeIndex, navigateTo]
+    [totalNavItems, visibleCommands, flatItems, activeIndex, navigateTo]
   );
 
   const showRecent = query.length < 2 && recentSearches.length > 0;
   const showEmptyState =
-    !loading && query.trim().length >= 2 && results !== null && !hasAnyResults(results);
+    !loading &&
+    query.trim().length >= 2 &&
+    results !== null &&
+    !hasAnyResults(results) &&
+    visibleCommands.length === 0;
 
   // Pre-compute which items begin a new section, so render stays pure
   // (no `let` reassignment during the .map() callback).
@@ -321,6 +383,36 @@ export function TMCommandPalette({ open, onClose }: TMCommandPaletteProps) {
             </div>
           )}
 
+          {visibleCommands.length > 0 && (
+            <div>
+              <div className="flex items-center gap-2 px-3 py-2 text-xs font-semibold uppercase text-slate-400">
+                <Zap className="size-3.5" />
+                {query.trim().length < 2 ? 'Quick Actions' : 'Commands'}
+              </div>
+              {visibleCommands.map((cmd, index) => {
+                const CmdIcon = cmd.icon;
+                return (
+                  <Link
+                    key={cmd.id}
+                    href={cmd.href}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      navigateTo(cmd.href);
+                    }}
+                    className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
+                      index === activeIndex
+                        ? 'bg-amber-50 text-amber-900'
+                        : 'text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    <CmdIcon className="size-4 shrink-0 text-slate-400" />
+                    <span className="flex-1 truncate font-medium">{cmd.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+
           {showRecent && (
             <div>
               <div className="flex items-center gap-2 px-3 py-2 text-xs font-medium uppercase text-slate-400">
@@ -359,7 +451,7 @@ export function TMCommandPalette({ open, onClose }: TMCommandPaletteProps) {
                     navigateTo(item.href);
                   }}
                   className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
-                    index === activeIndex
+                    index + visibleCommands.length === activeIndex
                       ? 'bg-amber-50 text-amber-900'
                       : 'text-slate-700 hover:bg-slate-100'
                   }`}
