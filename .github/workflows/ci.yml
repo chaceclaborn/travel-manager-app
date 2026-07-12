@@ -58,7 +58,7 @@ jobs:
       - run: yarn install --frozen-lockfile
       - run: yarn prisma generate
       - name: Apply schema to scratch database
-        run: yarn prisma db push --skip-generate
+        run: yarn prisma db push
       - name: Apply manual migrations (first pass)
         run: node scripts/apply-manual-migrations.mjs
       - name: Re-apply manual migrations (idempotency pass)
