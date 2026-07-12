@@ -50,7 +50,7 @@ export function FriendCard({ friend, onSaved, onDeleted }: FriendCardProps) {
       const res = await fetch(`/api/friends/${friend.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: form.name.trim(), email: form.email.trim() || undefined, phone: form.phone.trim() || undefined }),
+        body: JSON.stringify({ name: form.name.trim(), email: form.email.trim() || null, phone: form.phone.trim() || null }),
       });
       if (!res.ok) throw new Error();
       showToast('Friend updated');

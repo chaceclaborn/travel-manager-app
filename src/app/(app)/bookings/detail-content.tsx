@@ -108,13 +108,13 @@ export default function BookingDetailContent({ id }: { id: string }) {
         body: JSON.stringify({
           type: form.type,
           provider: form.provider.trim(),
-          confirmationNum: form.confirmationNum.trim() || undefined,
-          startDateTime: form.startDateTime || undefined,
-          endDateTime: form.endDateTime || undefined,
-          location: form.location.trim() || undefined,
-          endLocation: form.endLocation.trim() || undefined,
-          seat: form.seat.trim() || undefined,
-          notes: form.notes.trim() || undefined,
+          confirmationNum: form.confirmationNum.trim() || null,
+          startDateTime: form.startDateTime || null,
+          endDateTime: form.endDateTime || null,
+          location: form.location.trim() || null,
+          endLocation: form.endLocation.trim() || null,
+          seat: form.seat.trim() || null,
+          notes: form.notes.trim() || null,
         }),
       });
       if (!res.ok) throw new Error();

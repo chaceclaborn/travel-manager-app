@@ -108,12 +108,12 @@ export function TripCard({ trip, onSaved, onDeleted }: TripCardProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: form.title.trim(),
-          destination: form.destination.trim() || undefined,
-          startDate: form.startDate || undefined,
-          endDate: form.endDate || undefined,
+          destination: form.destination.trim() || null,
+          startDate: form.startDate || null,
+          endDate: form.endDate || null,
           status: form.status,
           tripType: form.tripType,
-          budget: form.budget ? parseFloat(form.budget) : undefined,
+          budget: form.budget ? parseFloat(form.budget) : null,
         }),
       });
       if (!res.ok) throw new Error();

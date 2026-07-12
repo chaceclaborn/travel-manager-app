@@ -51,6 +51,14 @@ describe('sanitizeString', () => {
 });
 
 describe('sanitizeObject', () => {
+  // Data-loss guard: edit forms send null for cleared fields so PUT can
+  // blank a value. sanitizeObject must pass null through (only absent /
+  // undefined-valued fields are skipped) or cleared fields silently revert.
+  it('passes null through for whitelisted fields (clear-on-update contract)', () => {
+    const result = sanitizeObject({ notes: null, seat: null }, ['notes', 'seat']);
+    expect(result).toEqual({ notes: null, seat: null });
+  });
+
   it('only keeps whitelisted fields', () => {
     const result = sanitizeObject({ name: 'Alice', secret: 'bad' }, ['name']);
     expect(result).toEqual({ name: 'Alice' });

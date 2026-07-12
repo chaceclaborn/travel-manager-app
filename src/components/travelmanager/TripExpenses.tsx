@@ -186,7 +186,7 @@ export function TripExpenses({ tripId, tripStartDate, tripEndDate }: TripExpense
       amount,
       category: formCategory,
       date: formDate,
-      description: formDescription || undefined,
+      description: formDescription || null,
     };
 
     try {

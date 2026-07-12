@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { PhotoGallery } from '@/components/travelmanager/PhotoGallery';
+import { TMDeleteDialog } from '@/components/travelmanager/TMDeleteDialog';
 import { removePhotosForParent } from '@/lib/photos/store';
 import { haversineDistance, KM_TO_MILES } from '@/lib/distance';
 
@@ -129,6 +130,7 @@ export function TripStops({
   const [adding, setAdding] = useState(false);
   const [modePickerFor, setModePickerFor] = useState<string | null>(null);
   const [photosOpenFor, setPhotosOpenFor] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<TripStopData | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
@@ -772,7 +774,7 @@ export function TripStops({
                     </button>
                     <button
                       type="button"
-                      onClick={() => removeStop(stop.id)}
+                      onClick={() => setDeleteTarget(stop)}
                       aria-label={`Remove ${stop.name}`}
                       className="flex size-6 shrink-0 items-center justify-center rounded-md text-slate-300 transition-colors hover:bg-red-50 hover:text-red-500 active:bg-red-50 active:text-red-500"
                     >
@@ -856,6 +858,21 @@ export function TripStops({
           )}
         </ul>
       )}
+
+      <TMDeleteDialog
+        open={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={() => {
+          if (deleteTarget) removeStop(deleteTarget.id);
+          setDeleteTarget(null);
+        }}
+        title="Remove this stop?"
+        description={
+          deleteTarget
+            ? `"${deleteTarget.name}" will be removed from the route, along with any photos you attached to it.`
+            : ''
+        }
+      />
     </div>
   );
 }

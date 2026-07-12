@@ -75,7 +75,7 @@ export function VendorCard({ vendor, onSaved, onDeleted }: VendorCardProps) {
       const res = await fetch(`/api/vendors/${vendor.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: form.name.trim(), contactName: form.contactName.trim() || undefined, category: form.category, email: form.email.trim() || undefined, phone: form.phone.trim() || undefined, city: form.city.trim() || undefined, state: form.state.trim() || undefined }),
+        body: JSON.stringify({ name: form.name.trim(), contactName: form.contactName.trim() || null, category: form.category, email: form.email.trim() || null, phone: form.phone.trim() || null, city: form.city.trim() || null, state: form.state.trim() || null }),
       });
       if (!res.ok) throw new Error();
       showToast('Vendor updated');

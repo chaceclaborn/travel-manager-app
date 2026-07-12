@@ -55,7 +55,7 @@ export function ClientCard({ client, onSaved, onDeleted }: ClientCardProps) {
       const res = await fetch(`/api/clients/${client.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: form.name.trim(), company: form.company.trim() || undefined, email: form.email.trim() || undefined, phone: form.phone.trim() || undefined }),
+        body: JSON.stringify({ name: form.name.trim(), company: form.company.trim() || null, email: form.email.trim() || null, phone: form.phone.trim() || null }),
       });
       if (!res.ok) throw new Error();
       showToast('Client updated');

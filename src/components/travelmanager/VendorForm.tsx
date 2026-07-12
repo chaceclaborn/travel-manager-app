@@ -69,15 +69,15 @@ export function VendorForm({ initialData, onSubmit, isLoading }: VendorFormProps
     setErrors({});
     onSubmit({
       name: name.trim(),
-      contactName: contactName.trim() || undefined,
+      contactName: contactName.trim() || null,
       category,
-      email: email.trim() || undefined,
-      phone: phone.trim() || undefined,
-      address: address.trim() || undefined,
-      city: city.trim() || undefined,
-      state: state.trim() || undefined,
-      website: website.trim() || undefined,
-      notes: notes.trim() || undefined,
+      email: email.trim() || null,
+      phone: phone.trim() || null,
+      address: address.trim() || null,
+      city: city.trim() || null,
+      state: state.trim() || null,
+      website: website.trim() || null,
+      notes: notes.trim() || null,
     });
   };
 
