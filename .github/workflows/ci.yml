@@ -49,6 +49,9 @@ jobs:
           --health-retries 10
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/travelmanager
+      # prisma.config.ts reads DIRECT_URL (falls back to a placeholder that
+      # only works for generate) — point it at the scratch DB for db push.
+      DIRECT_URL: postgresql://postgres:postgres@localhost:5432/travelmanager
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

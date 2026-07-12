@@ -11,17 +11,39 @@ jobs:
     if: github.event.deployment_status.state == 'success'
     runs-on: ubuntu-latest
     steps:
+      # Deployment-specific *.vercel.app URLs sit behind Vercel deployment
+      # protection (every request 200s with an SSO wall). Production is
+      # reachable on the public domain; previews need the bypass secret —
+      # skip them gracefully until it's configured.
+      - name: Resolve target URL
+        id: target
+        env:
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: |
+          if [ "${{ github.event.deployment.environment }}" = "Production" ]; then
+            echo "url=https://www.travels-manager.com" >> "$GITHUB_OUTPUT"
+          elif [ -n "$VERCEL_AUTOMATION_BYPASS_SECRET" ]; then
+            echo "url=${{ github.event.deployment_status.environment_url }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "Preview deployment and no VERCEL_AUTOMATION_BYPASS_SECRET — skipping."
+            echo "url=" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/checkout@v4
+        if: steps.target.outputs.url != ''
       - uses: actions/setup-node@v4
+        if: steps.target.outputs.url != ''
         with:
           node-version: '22'
           cache: 'yarn'
       - run: yarn install --frozen-lockfile
+        if: steps.target.outputs.url != ''
       - run: yarn playwright install --with-deps chromium webkit
+        if: steps.target.outputs.url != ''
       - name: Run Playwright against the deployment
+        if: steps.target.outputs.url != ''
         run: yarn playwright test
         env:
-          BASE_URL: ${{ github.event.deployment_status.environment_url }}
+          BASE_URL: ${{ steps.target.outputs.url }}
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
           E2E_EMAIL: ${{ secrets.E2E_EMAIL }}
           E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
