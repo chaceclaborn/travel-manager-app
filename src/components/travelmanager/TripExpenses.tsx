@@ -117,17 +117,22 @@ export function TripExpenses({ tripId, tripStartDate, tripEndDate }: TripExpense
   });
   const [formDescription, setFormDescription] = useState('');
 
-  const fetchExpenses = useCallback(async () => {
+  const fetchExpenses = useCallback(async (signal?: AbortSignal) => {
+    // Reset loading when tripId changes — the parent's key={id} remount masks
+    // this today, but the component shouldn't rely on it (stale-response guard
+    // via AbortController for the same reason).
+    setLoading(true);
     try {
-      const res = await fetch(`/api/trips/${tripId}/expenses`);
+      const res = await fetch(`/api/trips/${tripId}/expenses`, { signal });
       if (!res.ok) throw new Error();
       const data = await res.json();
       setExpenses(Array.isArray(data) ? data : []);
       setLoadError(false);
-    } catch {
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'AbortError') return;
       setLoadError(true);
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
   }, [tripId]);
 
@@ -142,8 +147,10 @@ export function TripExpenses({ tripId, tripStartDate, tripEndDate }: TripExpense
   }, [tripId]);
 
   useEffect(() => {
-    fetchExpenses();
+    const controller = new AbortController();
+    fetchExpenses(controller.signal);
     fetchTrip();
+    return () => controller.abort();
   }, [fetchExpenses, fetchTrip]);
 
   useEffect(() => {

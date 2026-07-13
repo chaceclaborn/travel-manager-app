@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useTMToast } from '@/components/travelmanager/TMToast';
 import { TMDeleteDialog } from '@/components/travelmanager/TMDeleteDialog';
 import { DatePicker } from '@/components/travelmanager/DatePicker';
-import { formatDate, formatDateTime } from '@/lib/date-utils';
+import { formatDate, formatDateTime, toDateTimeInputValue } from '@/lib/date-utils';
 import { type BookingType, typeConfig, typeLabels, emptyBookingForm, getBookingFormHelpers } from '@/lib/travelmanager/booking-config';
 
 interface Booking {
@@ -241,22 +241,29 @@ export function TripBookings({ tripId, tripStartDate, tripEndDate }: TripBooking
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const fetchBookings = useCallback(async () => {
+  const fetchBookings = useCallback(async (signal?: AbortSignal) => {
+    // Reset loading when tripId changes — the parent's key={id} remount masks
+    // this today, but the component shouldn't rely on it (stale-response guard
+    // via AbortController for the same reason).
+    setLoading(true);
     try {
-      const res = await fetch(`/api/trips/${tripId}/bookings`);
+      const res = await fetch(`/api/trips/${tripId}/bookings`, { signal });
       if (!res.ok) throw new Error();
       const data = await res.json();
       setBookings(Array.isArray(data) ? data : []);
       setLoadError(false);
-    } catch {
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'AbortError') return;
       setLoadError(true);
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
   }, [tripId]);
 
   useEffect(() => {
-    fetchBookings();
+    const controller = new AbortController();
+    fetchBookings(controller.signal);
+    return () => controller.abort();
   }, [fetchBookings]);
 
   const startEdit = (booking: Booking) => {
@@ -265,8 +272,8 @@ export function TripBookings({ tripId, tripStartDate, tripEndDate }: TripBooking
       type: booking.type,
       provider: booking.provider,
       confirmationNum: booking.confirmationNum || '',
-      startDateTime: booking.startDateTime || '',
-      endDateTime: booking.endDateTime || '',
+      startDateTime: toDateTimeInputValue(booking.startDateTime),
+      endDateTime: toDateTimeInputValue(booking.endDateTime),
       location: booking.location || '',
       endLocation: booking.endLocation || '',
       seat: booking.seat || '',

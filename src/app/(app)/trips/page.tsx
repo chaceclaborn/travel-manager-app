@@ -128,6 +128,18 @@ function TripsPageContent() {
     const param = searchParams.get('type')?.toUpperCase();
     return param && TYPE_FILTERS.some((f) => f.value === param) ? param : 'ALL';
   });
+  // Re-sync filters when the URL changes while mounted (e.g. the dashboard's
+  // "Upcoming" card navigating to /trips?status=UPCOMING from /trips) — the
+  // initializers above only run on mount. Render-time adjustment, per
+  // React's "adjusting state when props change" pattern.
+  const [prevParams, setPrevParams] = useState(searchParams.toString());
+  if (searchParams.toString() !== prevParams) {
+    setPrevParams(searchParams.toString());
+    const status = searchParams.get('status')?.toUpperCase();
+    setStatusFilter(status && STATUS_FILTERS.some((f) => f.value === status) ? status : 'ALL');
+    const type = searchParams.get('type')?.toUpperCase();
+    setTypeFilter(type && TYPE_FILTERS.some((f) => f.value === type) ? type : 'ALL');
+  }
   const [sortBy, setSortBy] = useState('date-nearest');
   const abortRef = useRef<AbortController | null>(null);
   const { showToast } = useTMToast();

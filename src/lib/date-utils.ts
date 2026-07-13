@@ -33,6 +33,23 @@ function toUTCDate(date: Date | string): Date {
   return new Date(year, month - 1, day);
 }
 
+/**
+ * Normalize a stored datetime string to the shape date/time form inputs
+ * accept ("YYYY-MM-DD" or "YYYY-MM-DDTHH:mm"). Values typed in our forms are
+ * already this shape and pass through untouched; full ISO strings (e.g. from
+ * email import: "2026-07-20T08:30:00.000Z") would render <input type=time>
+ * BLANK, so they're parsed and re-emitted as local wall-clock. Unparseable
+ * input returns '' (an empty input beats a silently wrong one).
+ */
+export function toDateTimeInputValue(raw: string | null | undefined): string {
+  if (!raw) return '';
+  if (/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?$/.test(raw)) return raw;
+  const d = new Date(raw);
+  if (isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 /** Format a date as "Mar 15, 2024". Accepts Date objects or ISO strings. Returns null for falsy input. */
 export function formatDate(date: Date | string | null | undefined): string | null {
   if (!date) return null;

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { toLocalDateString, parseLocalDate, formatDateDisplay, formatDate, formatDateLong, formatDateShort } from '@/lib/date-utils';
+import { toLocalDateString, parseLocalDate, formatDateDisplay, formatDate, formatDateLong, formatDateShort, toDateTimeInputValue } from '@/lib/date-utils';
 
 describe('toLocalDateString', () => {
   it('formats a standard date as YYYY-MM-DD', () => {
@@ -140,5 +140,31 @@ describe('formatDateShort', () => {
 
   it('returns null for null input', () => {
     expect(formatDateShort(null)).toBeNull();
+  });
+});
+
+describe('toDateTimeInputValue', () => {
+  it('passes through form-shaped values untouched', () => {
+    expect(toDateTimeInputValue('2026-07-20T08:30')).toBe('2026-07-20T08:30');
+    expect(toDateTimeInputValue('2026-07-20')).toBe('2026-07-20');
+  });
+
+  it('returns empty string for falsy or unparseable input', () => {
+    expect(toDateTimeInputValue(null)).toBe('');
+    expect(toDateTimeInputValue(undefined)).toBe('');
+    expect(toDateTimeInputValue('')).toBe('');
+    expect(toDateTimeInputValue('not a date')).toBe('');
+  });
+
+  it('normalizes full ISO strings to input shape (local wall-clock)', () => {
+    const result = toDateTimeInputValue('2026-07-20T08:30:00.000Z');
+    // Exact hour depends on the runner's timezone — assert the SHAPE and
+    // that it round-trips through Date to the same instant.
+    expect(result).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/);
+    expect(new Date(result).getTime()).toBe(new Date('2026-07-20T08:30:00.000Z').getTime());
+  });
+
+  it('normalizes seconds-precision local strings', () => {
+    expect(toDateTimeInputValue('2026-07-20T08:30:00')).toBe('2026-07-20T08:30');
   });
 });

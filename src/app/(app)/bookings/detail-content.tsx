@@ -13,7 +13,7 @@ import { TMBreadcrumb } from '@/components/travelmanager/TMBreadcrumb';
 import { useTMToast } from '@/components/travelmanager/TMToast';
 import { useDeleteEntity } from '@/lib/travelmanager/useDeleteEntity';
 import { DatePicker } from '@/components/travelmanager/DatePicker';
-import { formatDate, formatDateTime } from '@/lib/date-utils';
+import { formatDate, formatDateTime, toDateTimeInputValue } from '@/lib/date-utils';
 import { type BookingType, typeConfig, typeLabels, getBookingFormHelpers } from '@/lib/travelmanager/booking-config';
 
 interface BookingData {
@@ -76,8 +76,8 @@ export default function BookingDetailContent({ id }: { id: string }) {
         type: data.type,
         provider: data.provider,
         confirmationNum: data.confirmationNum || '',
-        startDateTime: data.startDateTime || '',
-        endDateTime: data.endDateTime || '',
+        startDateTime: toDateTimeInputValue(data.startDateTime),
+        endDateTime: toDateTimeInputValue(data.endDateTime),
         location: data.location || '',
         endLocation: data.endLocation || '',
         seat: data.seat || '',

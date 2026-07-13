@@ -1,7 +1,7 @@
 'use client';
 import { detailHref } from '@/lib/travelmanager/detail-routes';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
@@ -84,7 +84,7 @@ import { TripJournal } from '@/components/travelmanager/TripJournal';
 import { TripPhotos } from '@/components/travelmanager/TripPhotos';
 import { useTMToast } from '@/components/travelmanager/TMToast';
 import { useDeleteEntity } from '@/lib/travelmanager/useDeleteEntity';
-import { formatDateLong as formatDate } from '@/lib/date-utils';
+import { formatDateLong as formatDate, toDateTimeInputValue } from '@/lib/date-utils';
 import { nativeShare } from '@/lib/native/share';
 import { isNativePlatform } from '@/lib/mobile-auth';
 import { WEB_ORIGIN } from '@/lib/travelmanager/native-fetch';
@@ -178,6 +178,8 @@ export default function TripDetailContent({ id }: { id: string }) {
 
   const [trip, setTrip] = useState<TripDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [duplicating, setDuplicating] = useState(false);
@@ -216,19 +218,39 @@ export default function TripDetailContent({ id }: { id: string }) {
   const [shareOpen, setShareOpen] = useState(false);
   const [shareLoading, setShareLoading] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
+  // Track the reset timer so an unmount (or a second copy) doesn't leak it /
+  // fire setState on an unmounted component.
+  const shareCopiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const flashShareCopied = useCallback(() => {
+    setShareCopied(true);
+    if (shareCopiedTimer.current) clearTimeout(shareCopiedTimer.current);
+    shareCopiedTimer.current = setTimeout(() => setShareCopied(false), 2000);
+  }, []);
+  useEffect(() => () => {
+    if (shareCopiedTimer.current) clearTimeout(shareCopiedTimer.current);
+  }, []);
 
   const fetchTrip = useCallback(async () => {
+    setLoading(true);
+    setNotFound(false);
+    setLoadError(false);
     try {
       const res = await fetch(`/api/trips/${id}`);
+      // A missing trip and a failed request are different situations: 404 is
+      // final ("deleted / never existed"), anything else deserves a Retry.
+      if (res.status === 404) {
+        setNotFound(true);
+        return;
+      }
       if (!res.ok) throw new Error();
       const data = await res.json();
       setTrip(data);
     } catch {
-      showToast('Failed to load trip', 'error');
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
-  }, [id, showToast]);
+  }, [id]);
 
   const fetchItinerary = useCallback(async () => {
     try {
@@ -515,8 +537,7 @@ export default function TripDetailContent({ id }: { id: string }) {
     if (!shareUrl) return;
     try {
       await navigator.clipboard.writeText(shareUrl);
-      setShareCopied(true);
-      setTimeout(() => setShareCopied(false), 2000);
+      flashShareCopied();
     } catch {
       showToast('Failed to copy link', 'error');
     }
@@ -534,8 +555,7 @@ export default function TripDetailContent({ id }: { id: string }) {
       dialogTitle: 'Share trip',
     });
     if (result === 'clipboard') {
-      setShareCopied(true);
-      setTimeout(() => setShareCopied(false), 2000);
+      flashShareCopied();
     } else if (result === 'failed') {
       showToast('Failed to share link', 'error');
     }
@@ -619,13 +639,34 @@ export default function TripDetailContent({ id }: { id: string }) {
     );
   }
 
-  if (!trip) {
+  if (notFound) {
     return (
       <div className="py-12 text-center text-slate-500">
-        Trip not found.{' '}
+        Trip not found. It may have been deleted.{' '}
         <Link href="/trips" className="text-amber-500 hover:underline">
           Back to Trips
         </Link>
+      </div>
+    );
+  }
+
+  if (loadError || !trip) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <div className="mb-6 flex size-20 items-center justify-center rounded-full bg-red-50">
+          <AlertCircle className="size-10 text-red-400" />
+        </div>
+        <p className="text-lg font-medium text-slate-700">Couldn&apos;t load this trip</p>
+        <p className="mt-1 text-sm text-slate-500">
+          Check your connection and try again.
+        </p>
+        <button
+          onClick={fetchTrip}
+          className="mt-6 inline-flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-amber-600"
+        >
+          <RefreshCw className="size-4" />
+          Retry
+        </button>
       </div>
     );
   }
@@ -1227,11 +1268,10 @@ export default function TripDetailContent({ id }: { id: string }) {
                       type="datetime-local"
                       disabled={shareLoading}
                       defaultValue={
-                        trip.shareExpiresAt
-                          ? new Date(trip.shareExpiresAt)
-                              .toISOString()
-                              .slice(0, 16)
-                          : ''
+                        // datetime-local inputs are LOCAL wall-clock; rendering
+                        // the UTC ISO here shifted the shown time by the UTC
+                        // offset (and re-saving shifted the stored instant).
+                        toDateTimeInputValue(trip.shareExpiresAt)
                       }
                       onBlur={(e) => {
                         const value = e.currentTarget.value;

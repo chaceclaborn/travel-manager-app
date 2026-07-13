@@ -23,7 +23,7 @@ import { TMEmptyState } from '@/components/travelmanager/TMEmptyState';
 import { useTMToast } from '@/components/travelmanager/TMToast';
 import { TMDeleteDialog } from '@/components/travelmanager/TMDeleteDialog';
 import { DatePicker } from '@/components/travelmanager/DatePicker';
-import { formatDate, formatDateTime } from '@/lib/date-utils';
+import { formatDate, formatDateTime, toDateTimeInputValue } from '@/lib/date-utils';
 import { type BookingType, BOOKING_TYPES, typeConfig, typeLabels, emptyBookingForm, getBookingFormHelpers } from '@/lib/travelmanager/booking-config';
 import type { BookingStatus } from '@/lib/travelmanager/types';
 
@@ -197,8 +197,8 @@ function BookingCard({
     type: booking.type,
     provider: booking.provider,
     confirmationNum: booking.confirmationNum || '',
-    startDateTime: booking.startDateTime || '',
-    endDateTime: booking.endDateTime || '',
+    startDateTime: toDateTimeInputValue(booking.startDateTime),
+    endDateTime: toDateTimeInputValue(booking.endDateTime),
     timezone: booking.timezone || '',
     location: booking.location || '',
     endLocation: booking.endLocation || '',
@@ -220,8 +220,8 @@ function BookingCard({
       type: booking.type,
       provider: booking.provider,
       confirmationNum: booking.confirmationNum || '',
-      startDateTime: booking.startDateTime || '',
-      endDateTime: booking.endDateTime || '',
+      startDateTime: toDateTimeInputValue(booking.startDateTime),
+      endDateTime: toDateTimeInputValue(booking.endDateTime),
       timezone: booking.timezone || '',
       location: booking.location || '',
       endLocation: booking.endLocation || '',

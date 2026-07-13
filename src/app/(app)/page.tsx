@@ -194,20 +194,28 @@ export default function TravelManagerDashboard() {
     return () => abortRef.current?.abort();
   }, [fetchDashboard]);
 
+  // Same abort discipline as fetchDashboard — without it, navigating away
+  // mid-request fires setState on an unmounted page.
+  const meetingsAbortRef = useRef<AbortController | null>(null);
   const fetchMeetings = useCallback(async () => {
+    if (meetingsAbortRef.current) meetingsAbortRef.current.abort();
+    const controller = new AbortController();
+    meetingsAbortRef.current = controller;
     try {
-      const res = await fetch('/api/meetings');
+      const res = await fetch('/api/meetings', { signal: controller.signal });
       if (!res.ok) throw new Error(`Server error (${res.status})`);
       const d = await res.json();
       setMeetings(Array.isArray(d) ? d : []);
       setMeetingsError(false);
-    } catch {
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'AbortError') return;
       setMeetingsError(true);
     }
   }, []);
 
   useEffect(() => {
     fetchMeetings();
+    return () => meetingsAbortRef.current?.abort();
   }, [fetchMeetings]);
 
 

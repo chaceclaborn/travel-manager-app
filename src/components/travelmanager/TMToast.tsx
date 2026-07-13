@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useCallback, useRef } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, XCircle, Info, X } from 'lucide-react';
 
@@ -70,22 +70,39 @@ export function TMToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const counterRef = useRef(0);
 
+  // Auto-dismiss timers by toast id — cleared on manual dismiss and on
+  // provider unmount so nothing fires setState after teardown.
+  const timersRef = useRef(new Map<number, ReturnType<typeof setTimeout>>());
+
   const showToast = useCallback((message: string, type: ToastType = 'success') => {
     const id = ++counterRef.current;
     setToasts((prev) => [...prev, { id, message, type }]);
 
-    const duration = toastDurations[type];
-    setTimeout(() => {
+    const timer = setTimeout(() => {
+      timersRef.current.delete(id);
       setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, duration);
+    }, toastDurations[type]);
+    timersRef.current.set(id, timer);
   }, []);
 
   const removeToast = useCallback((id: number) => {
+    const timer = timersRef.current.get(id);
+    if (timer) clearTimeout(timer);
+    timersRef.current.delete(id);
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
+  useEffect(() => {
+    const timers = timersRef.current;
+    return () => timers.forEach((t) => clearTimeout(t));
+  }, []);
+
+  // Stable context value — an inline object would re-render every consumer
+  // of useTMToast() on each provider render.
+  const contextValue = useMemo(() => ({ showToast }), [showToast]);
+
   return (
-    <ToastContext.Provider value={{ showToast }}>
+    <ToastContext.Provider value={contextValue}>
       {children}
       <div className="fixed bottom-6 left-4 right-4 sm:left-auto sm:right-6 z-[200] flex flex-col-reverse gap-3 pointer-events-none">
         <AnimatePresence mode="popLayout">
