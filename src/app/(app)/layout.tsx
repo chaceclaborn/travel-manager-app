@@ -4,12 +4,11 @@ import { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
-import { Menu, X, Search, MessageSquarePlus } from 'lucide-react';
+import { Menu, X, Search, MessageSquarePlus, ChevronRight, Bell } from 'lucide-react';
 import { TMSidebar } from '@/components/travelmanager/TMSidebar';
 import { TMToastProvider } from '@/components/travelmanager/TMToast';
 import { TMCommandPalette } from '@/components/travelmanager/TMCommandPalette';
 import { TMUserMenu } from '@/components/travelmanager/TMUserMenu';
-import { CookieBanner } from '@/components/travelmanager/CookieBanner';
 import { FeedbackModal } from '@/components/travelmanager/FeedbackWidget';
 import { ClickTracker } from '@/components/travelmanager/ClickTracker';
 import { ServiceWorkerRegister } from '@/components/travelmanager/ServiceWorkerRegister';
@@ -57,6 +56,7 @@ export default function TravelManagerLayout({
     : pathname.includes('/analytics') ? 'Analytics'
     : pathname.includes('/map') ? 'Map'
     : pathname.includes('/settings') ? 'Settings'
+    : pathname.includes('/friends') ? 'Friends'
     : pathname.includes('/admin') ? 'Admin'
     : '';
 
@@ -271,15 +271,14 @@ export default function TravelManagerLayout({
         <div className="flex min-h-screen max-w-[100vw] overflow-x-hidden">
           {/* Desktop Sidebar */}
           <aside className="hidden md:flex w-64 flex-col fixed inset-y-0 left-0 bg-gradient-to-b from-slate-900 to-slate-950 border-r border-white/[0.06] z-40 safe-area-top safe-area-bottom safe-area-left" role="navigation" aria-label="Main navigation">
-            <div className="flex items-center justify-between px-5 py-5 border-b border-white/10">
-              <div className="flex items-center gap-2.5">
-                <Image src="/icons/icon-192.png" alt="" width={32} height={32} className="size-8 shrink-0" aria-hidden="true" />
-                <div>
-                  <h1 className="text-base font-bold text-white leading-tight">Travel Manager</h1>
-                  <p className="text-[11px] text-slate-400">Trip Planning Dashboard</p>
-                </div>
+            <div className="flex items-center gap-[11px] px-[18px] py-[18px] border-b border-white/[0.08]">
+              <div className="flex size-[42px] shrink-0 items-center justify-center rounded-[13px] bg-white p-1 shadow-[0_4px_14px_-4px_rgba(0,0,0,0.5)]">
+                <Image src="/icons/icon-192.png" alt="" width={42} height={42} className="size-full object-contain" aria-hidden="true" />
               </div>
-              <TMUserMenu user={user} onSignOut={signOut} />
+              <div>
+                <h1 className="text-[15px] font-bold leading-[1.15] tracking-[-0.01em] text-white">Travel Manager</h1>
+                <p className="text-[11px] text-slate-500">Trip Planning Dashboard</p>
+              </div>
             </div>
             <TMSidebar isAdmin={isAdminChecked && isAdmin} />
             <div className="mt-auto px-4 py-4 border-t border-white/10 space-y-1">
@@ -306,7 +305,7 @@ export default function TravelManagerLayout({
             <div className="flex items-center justify-between px-4 h-16">
               <div>
                 <h1 className="text-lg font-bold text-white flex items-center gap-2">
-                  <Image src="/icons/icon-192.png" alt="" width={24} height={24} className="size-6 shrink-0" aria-hidden="true" />
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-[10px] bg-white p-[3px] shadow-[0_2px_8px_-2px_rgba(0,0,0,0.4)]"><Image src="/icons/icon-192.png" alt="" width={32} height={32} className="size-full object-contain" aria-hidden="true" /></span>
                   Travel Manager
                 </h1>
                 {pageTitle && (
@@ -363,7 +362,7 @@ export default function TravelManagerLayout({
                 >
                   <div className="flex items-center justify-between px-5 py-5 border-b border-white/10">
                     <div className="flex items-center gap-2.5">
-                      <Image src="/icons/icon-192.png" alt="" width={32} height={32} className="size-8 shrink-0" aria-hidden="true" />
+                      <span className="flex size-[42px] shrink-0 items-center justify-center rounded-[13px] bg-white p-1 shadow-[0_4px_14px_-4px_rgba(0,0,0,0.5)]"><Image src="/icons/icon-192.png" alt="" width={42} height={42} className="size-full object-contain" aria-hidden="true" /></span>
                       <div>
                         <h1 className="text-base font-bold text-white leading-tight">Travel Manager</h1>
                         <p className="text-[11px] text-slate-400">Trip Planning Dashboard</p>
@@ -396,6 +395,39 @@ export default function TravelManagerLayout({
 
           {/* Main Content */}
           <main id="main-content" className="flex-1 min-w-0 md:ml-64 mt-[calc(4rem+var(--safe-area-top))] md:mt-0 overflow-x-hidden safe-area-bottom">
+            {/* Desktop sticky top bar (md+). A sticky child of <main>, not a new
+                fixed element, so the mobile offset math is unchanged. */}
+            <div className="hidden md:flex sticky top-0 z-30 items-center justify-between gap-4 glass-topbar border-b border-[rgba(226,232,240,0.7)] px-8 py-3.5 safe-area-top">
+              <div className="flex items-center gap-2.5">
+                <span className="text-[13px] text-slate-400">Workspace</span>
+                {pageTitle && (
+                  <>
+                    <ChevronRight className="size-3.5 text-slate-300" aria-hidden="true" />
+                    <span className="text-[15px] font-semibold text-slate-800">{pageTitle}</span>
+                  </>
+                )}
+              </div>
+              <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setSearchOpen(true)}
+                  aria-label="Search"
+                  className="flex h-[38px] min-w-[200px] items-center gap-2 rounded-[10px] border border-slate-200 bg-white px-3 text-left shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:border-amber-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/40"
+                >
+                  <Search className="size-[15px] text-slate-400" aria-hidden="true" />
+                  <span className="flex-1 text-[13px] text-slate-400">Search anything…</span>
+                  <kbd className="rounded-[5px] border border-slate-200 px-1.5 py-0.5 font-mono text-[10px] text-slate-400">{modKey}+{keybinds.search.toUpperCase()}</kbd>
+                </button>
+                <button
+                  type="button"
+                  aria-label="Notifications"
+                  className="relative flex size-[38px] items-center justify-center rounded-[10px] border border-slate-200 bg-white text-slate-500 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:border-slate-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/40"
+                >
+                  <Bell className="size-[17px]" aria-hidden="true" />
+                </button>
+                <TMUserMenu user={user} onSignOut={signOut} />
+              </div>
+            </div>
             <div className="p-4 md:p-8 max-w-full">{children}</div>
           </main>
         </div>
@@ -404,7 +436,6 @@ export default function TravelManagerLayout({
       <TMCommandPalette open={searchOpen} onClose={() => setSearchOpen(false)} />
       <ClickTracker />
       <FeedbackModal open={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
-      <CookieBanner />
       <ServiceWorkerRegister />
     </>
   );

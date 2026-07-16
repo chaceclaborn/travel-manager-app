@@ -23,7 +23,6 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { CookieBanner } from '@/components/travelmanager/CookieBanner';
 import { useAuth } from '@/lib/travelmanager/useAuth';
 import { isNativePlatform } from '@/lib/mobile-auth';
 
@@ -198,7 +197,6 @@ function TourPageContent() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-amber-50/60 via-white to-slate-50">
-      <CookieBanner />
       <motion.div
         variants={container}
         initial="hidden"

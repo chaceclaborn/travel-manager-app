@@ -33,7 +33,7 @@ const config: CapacitorConfig = {
     SplashScreen: {
       launchShowDuration: 2000,
       launchAutoHide: true,
-      backgroundColor: '#0f172a', // slate-900 matches the app shell
+      backgroundColor: '#0b1a2e', // matches the branded splash artwork edge color
       showSpinner: false,
     },
     PushNotifications: {
