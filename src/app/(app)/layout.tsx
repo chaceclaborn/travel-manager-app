@@ -268,7 +268,7 @@ export default function TravelManagerLayout({
         <NotificationOptInCard />
         <OfflineIndicator />
 
-        <div className="flex min-h-screen max-w-[100vw] overflow-x-hidden">
+        <div className="flex min-h-screen max-w-[100vw] overflow-x-clip">
           {/* Desktop Sidebar */}
           <aside className="hidden md:flex w-64 flex-col fixed inset-y-0 left-0 bg-gradient-to-b from-slate-900 to-slate-950 border-r border-white/[0.06] z-40 safe-area-top safe-area-bottom safe-area-left" role="navigation" aria-label="Main navigation">
             <div className="flex items-center gap-[11px] px-[18px] py-[18px] border-b border-white/[0.08]">
@@ -394,7 +394,7 @@ export default function TravelManagerLayout({
           </AnimatePresence>
 
           {/* Main Content */}
-          <main id="main-content" className="flex-1 min-w-0 md:ml-64 mt-[calc(4rem+var(--safe-area-top))] md:mt-0 overflow-x-hidden safe-area-bottom">
+          <main id="main-content" className="flex-1 min-w-0 md:ml-64 mt-[calc(4rem+var(--safe-area-top))] md:mt-0 overflow-x-clip safe-area-bottom">
             {/* Desktop sticky top bar (md+). A sticky child of <main>, not a new
                 fixed element, so the mobile offset math is unchanged. */}
             <div className="hidden md:flex sticky top-0 z-30 items-center justify-between gap-4 glass-topbar border-b border-[rgba(226,232,240,0.7)] px-8 py-3.5 safe-area-top">

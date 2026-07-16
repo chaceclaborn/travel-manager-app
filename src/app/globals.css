@@ -132,7 +132,11 @@
   }
   html {
     scroll-behavior: smooth;
-    overflow-x: hidden;
+    /* `clip` (not `hidden`) prevents horizontal overflow WITHOUT establishing a
+       scroll container — `overflow-x: hidden` on any ancestor silently breaks
+       `position: sticky` descendants (e.g. the (app) desktop top bar). clip is
+       supported on all modern browsers incl. iOS 16+ (the App-Store target). */
+    overflow-x: clip;
     /* The app ships a light-only palette (no .dark token block). `only light`
        opts out of Chrome's Auto Dark Mode force-darkening, which otherwise
        inverts public pages — the (app) shell's !important overrides only
@@ -143,7 +147,8 @@
     @apply text-foreground antialiased;
     background: var(--background);
     min-height: 100vh;
-    overflow-x: hidden;
+    /* clip, not hidden — see the html rule above (keeps sticky working). */
+    overflow-x: clip;
   }
 }
 
