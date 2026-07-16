@@ -98,8 +98,8 @@ function NavToggle({
       }`}
     >
       <span
-        className={`inline-block size-4 transform rounded-full bg-white shadow transition-transform ${
-          checked ? 'translate-x-6' : 'translate-x-1'
+        className={`inline-block size-5 transform rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.25)] transition-transform ${
+          checked ? 'translate-x-[22px]' : 'translate-x-0.5'
         }`}
       />
     </button>
@@ -351,7 +351,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="max-w-3xl mx-auto space-y-6">
+    <motion.div variants={container} initial="hidden" animate="show" className="max-w-[720px] mx-auto space-y-[18px]">
       <TMBreadcrumb
         items={[
           { label: 'Travel Manager', href: '/' },
@@ -360,30 +360,30 @@ export default function SettingsPage() {
       />
 
       <motion.div variants={item}>
-        <h1 className="text-2xl font-bold text-slate-800">Settings</h1>
+        <h1 className="text-[26px] font-bold tracking-[-0.02em] text-slate-900">Settings</h1>
         <p className="text-sm text-slate-500 mt-1">Manage your account, data, and preferences</p>
       </motion.div>
 
       {/* Account Info */}
-      <motion.div variants={item} className="rounded-xl bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-800 mb-4">Account Information</h2>
+      <motion.div variants={item} className="rounded-2xl border border-[#eef2f6] bg-white p-[22px] shadow-card">
+        <h2 className="text-base font-semibold text-slate-900 mb-4">Account Information</h2>
         <div className="flex items-center gap-4">
           {avatarUrl && !avatarError ? (
             <Image
               src={avatarUrl}
               alt={fullName}
-              width={64}
-              height={64}
+              width={60}
+              height={60}
               className="rounded-full"
               onError={() => setAvatarError(true)}
             />
           ) : (
-            <div className="size-16 rounded-full bg-amber-500 flex items-center justify-center text-lg font-bold text-white shrink-0">
+            <div className="size-[60px] rounded-full bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-xl font-bold text-white shrink-0 shadow-[0_6px_16px_-4px_rgba(245,158,11,0.5)]">
               {initials}
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <p className="text-base font-medium text-slate-800 truncate">{fullName}</p>
+            <p className="text-base font-semibold text-slate-800 truncate">{fullName}</p>
             <p className="text-sm text-slate-500 truncate">{email}</p>
             {userInfo?.createdAt && (
               <p className="text-xs text-slate-400 mt-1">
@@ -398,10 +398,10 @@ export default function SettingsPage() {
       </motion.div>
 
       {/* Username */}
-      <motion.div variants={item} className="rounded-xl bg-white p-6 shadow-sm">
+      <motion.div variants={item} className="rounded-2xl border border-[#eef2f6] bg-white p-[22px] shadow-card">
         <div className="flex items-center gap-2 mb-4">
-          <AtSign className="size-5 text-amber-600" />
-          <h2 className="text-lg font-semibold text-slate-800">Username</h2>
+          <AtSign className="size-[18px] text-amber-600" />
+          <h2 className="text-base font-semibold text-slate-900">Username</h2>
         </div>
         <p className="text-xs text-slate-500 mb-3">
           Your unique @handle lets friends find and add you.
@@ -412,7 +412,7 @@ export default function SettingsPage() {
             </>
           )}
         </p>
-        <div className="flex items-start gap-2">
+        <div className="flex items-center gap-2.5">
           <div className="relative flex-1">
             <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
               @
@@ -421,7 +421,7 @@ export default function SettingsPage() {
               value={usernameDraft}
               onChange={(e) => setUsernameDraft(e.target.value)}
               placeholder="username"
-              className="pl-7"
+              className="pl-7 h-[42px] rounded-[11px]"
               autoComplete="off"
               autoCapitalize="none"
               spellCheck={false}
@@ -431,7 +431,7 @@ export default function SettingsPage() {
           <Button
             onClick={handleSaveUsername}
             disabled={savingUsername || usernameCheck.status !== 'available'}
-            className="bg-amber-500 hover:bg-amber-600"
+            className="h-[42px] rounded-[11px] px-5 bg-gradient-to-br from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 shadow-[0_4px_14px_-4px_rgba(245,158,11,0.55)] motion-safe:hover:-translate-y-px transition-transform"
           >
             {savingUsername ? <Loader2 className="size-4 animate-spin" /> : 'Save'}
           </Button>
@@ -467,8 +467,8 @@ export default function SettingsPage() {
             }`}
           >
             <span
-              className={`inline-block size-4 transform rounded-full bg-white shadow transition-transform ${
-                (userInfo?.isPublic ?? true) ? 'translate-x-6' : 'translate-x-1'
+              className={`inline-block size-5 transform rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.25)] transition-transform ${
+                (userInfo?.isPublic ?? true) ? 'translate-x-[22px]' : 'translate-x-0.5'
               }`}
             />
           </button>
@@ -476,10 +476,10 @@ export default function SettingsPage() {
       </motion.div>
 
       {/* Home Location */}
-      <motion.div variants={item} className="rounded-xl bg-white p-6 shadow-sm">
+      <motion.div variants={item} className="rounded-2xl border border-[#eef2f6] bg-white p-[22px] shadow-card">
         <div className="flex items-center gap-2 mb-4">
-          <MapPin className="size-5 text-amber-600" />
-          <h2 className="text-lg font-semibold text-slate-800">Home Location</h2>
+          <MapPin className="size-[18px] text-amber-600" />
+          <h2 className="text-base font-semibold text-slate-900">Home Location</h2>
         </div>
         <p className="text-xs text-slate-500 mb-3">
           Set your home city to calculate round-trip distances on the map.
@@ -492,7 +492,7 @@ export default function SettingsPage() {
                 onChange={(e) => handleHomeInputChange(e.target.value)}
                 onFocus={() => { if (homeResults.length > 0) setHomeSearchOpen(true); }}
                 placeholder="Search for your home city..."
-                className="pr-8"
+                className="pr-8 h-[42px] rounded-[11px]"
                 autoComplete="off"
                 aria-label="Search home city"
               />
@@ -538,18 +538,18 @@ export default function SettingsPage() {
           )}
         </div>
         {userInfo?.homeCity && (
-          <p className="text-xs text-green-600 mt-2">
+          <p className="text-xs text-emerald-600 mt-2">
             Home set to: {userInfo.homeCity}
           </p>
         )}
       </motion.div>
 
       {/* Sidebar Customization */}
-      <motion.div variants={item} className="rounded-xl bg-white p-6 shadow-sm">
+      <motion.div variants={item} className="rounded-2xl border border-[#eef2f6] bg-white p-[22px] shadow-card">
         <div className="flex items-center justify-between gap-2 mb-1">
           <div className="flex items-center gap-2">
-            <PanelLeft className="size-5 text-amber-600" />
-            <h2 className="text-lg font-semibold text-slate-800">Sidebar</h2>
+            <PanelLeft className="size-[18px] text-amber-600" />
+            <h2 className="text-base font-semibold text-slate-900">Sidebar</h2>
           </div>
           {hiddenCount > 0 && (
             <button
@@ -570,7 +570,7 @@ export default function SettingsPage() {
             const visible = !isHidden(key);
             return (
               <div key={key} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
-                <div className={`flex size-9 shrink-0 items-center justify-center rounded-lg transition-colors ${visible ? 'bg-amber-50 text-amber-600' : 'bg-slate-100 text-slate-400'}`}>
+                <div className={`flex size-9 shrink-0 items-center justify-center rounded-[10px] transition-colors ${visible ? 'bg-amber-50 text-amber-600' : 'bg-slate-100 text-slate-400'}`}>
                   <Icon className="size-[18px]" />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -600,8 +600,8 @@ export default function SettingsPage() {
       {/* Tools */}
       <motion.div variants={item}>
         <div className="mb-3 flex items-center gap-2 px-1">
-          <Wrench className="size-5 text-amber-600" />
-          <h2 className="text-lg font-semibold text-slate-800">Tools</h2>
+          <Wrench className="size-[18px] text-amber-600" />
+          <h2 className="text-base font-semibold text-slate-900">Tools</h2>
         </div>
         <p className="mb-3 px-1 text-xs text-slate-500">
           Handy utilities for trip planning.
@@ -610,12 +610,12 @@ export default function SettingsPage() {
       </motion.div>
 
       {/* Privacy */}
-      <motion.div variants={item} className="rounded-xl bg-white p-6 shadow-sm">
+      <motion.div variants={item} className="rounded-2xl border border-[#eef2f6] bg-white p-[22px] shadow-card">
         <div className="flex items-center gap-2 mb-4">
-          <BarChart3 className="size-5 text-amber-600" />
-          <h2 className="text-lg font-semibold text-slate-800">Privacy</h2>
+          <BarChart3 className="size-[18px] text-amber-600" />
+          <h2 className="text-base font-semibold text-slate-900">Privacy</h2>
         </div>
-        <div className="flex items-center justify-between gap-4 rounded-lg border border-slate-100 p-4">
+        <div className="flex items-start justify-between gap-4 rounded-xl border border-slate-100 p-4">
           <div>
             <p className="text-sm font-medium text-slate-800">Usage analytics</p>
             <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
@@ -643,8 +643,8 @@ export default function SettingsPage() {
             }`}
           >
             <span
-              className={`inline-block size-4 transform rounded-full bg-white shadow transition-transform ${
-                analyticsOptOut ? 'translate-x-1' : 'translate-x-6'
+              className={`inline-block size-5 transform rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.25)] transition-transform ${
+                analyticsOptOut ? 'translate-x-0.5' : 'translate-x-[22px]'
               }`}
             />
           </button>
@@ -652,10 +652,10 @@ export default function SettingsPage() {
       </motion.div>
 
       {/* Security */}
-      <motion.div variants={item} className="rounded-xl bg-white p-6 shadow-sm">
+      <motion.div variants={item} className="rounded-2xl border border-[#eef2f6] bg-white p-[22px] shadow-card">
         <div className="flex items-center gap-2 mb-4">
-          <Shield className="size-5 text-amber-600" />
-          <h2 className="text-lg font-semibold text-slate-800">Security</h2>
+          <Shield className="size-[18px] text-amber-600" />
+          <h2 className="text-base font-semibold text-slate-900">Security</h2>
         </div>
         <h3 className="text-sm font-medium text-slate-700 mb-3">Recent Sign-ins</h3>
         {loadingSessions ? (
@@ -669,9 +669,9 @@ export default function SettingsPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-100">
-                  <th className="text-left py-2 pr-4 font-medium text-slate-500">Date</th>
-                  <th className="text-left py-2 pr-4 font-medium text-slate-500">Browser</th>
-                  <th className="text-left py-2 pr-4 font-medium text-slate-500">IP Address</th>
+                  <th className="text-left py-2 pr-4 text-[11px] font-semibold uppercase tracking-[0.05em] text-slate-400">Date</th>
+                  <th className="text-left py-2 pr-4 text-[11px] font-semibold uppercase tracking-[0.05em] text-slate-400">Browser</th>
+                  <th className="text-left py-2 pr-4 text-[11px] font-semibold uppercase tracking-[0.05em] text-slate-400">IP Address</th>
                 </tr>
               </thead>
               <tbody>
@@ -706,10 +706,10 @@ export default function SettingsPage() {
       </motion.div>
 
       {/* Data Management */}
-      <motion.div variants={item} className="rounded-xl bg-white p-6 shadow-sm">
+      <motion.div variants={item} className="rounded-2xl border border-[#eef2f6] bg-white p-[22px] shadow-card">
         <div className="flex items-center gap-2 mb-4">
-          <Download className="size-5 text-amber-600" />
-          <h2 className="text-lg font-semibold text-slate-800">Data Management</h2>
+          <Download className="size-[18px] text-amber-600" />
+          <h2 className="text-base font-semibold text-slate-900">Data Management</h2>
         </div>
 
         <div className="space-y-5">
@@ -766,15 +766,15 @@ export default function SettingsPage() {
       </motion.div>
 
       {/* About & Legal */}
-      <motion.div variants={item} className="rounded-xl bg-white p-6 shadow-sm">
+      <motion.div variants={item} className="rounded-2xl border border-[#eef2f6] bg-white p-[22px] shadow-card">
         <div className="flex items-center gap-2 mb-4">
-          <Shield className="size-5 text-amber-600" />
-          <h2 className="text-lg font-semibold text-slate-800">About &amp; Legal</h2>
+          <Shield className="size-[18px] text-amber-600" />
+          <h2 className="text-base font-semibold text-slate-900">About &amp; Legal</h2>
         </div>
         <p className="text-xs text-slate-500 mb-4">
           Review how Travel Manager handles your data and the terms of using the app.
         </p>
-        <div className="flex flex-col divide-y divide-slate-100 border border-slate-100 rounded-lg overflow-hidden">
+        <div className="flex flex-col divide-y divide-slate-100 border border-slate-100 rounded-xl overflow-hidden">
           <a
             href="/privacy"
             className="flex items-center justify-between px-4 py-3 text-sm text-slate-700 active:bg-slate-50 hover:bg-slate-50 transition-colors"
@@ -809,12 +809,12 @@ export default function SettingsPage() {
       </motion.div>
 
       {/* Danger Zone */}
-      <motion.div variants={item} className="rounded-xl bg-white p-6 shadow-sm border-2 border-red-200">
+      <motion.div variants={item} className="rounded-2xl bg-white p-[22px] shadow-card border border-red-200">
         <div className="flex items-center gap-2 mb-4">
-          <Trash2 className="size-5 text-red-500" />
-          <h2 className="text-lg font-semibold text-red-600">Danger Zone</h2>
+          <Trash2 className="size-[18px] text-red-600" />
+          <h2 className="text-base font-semibold text-red-600">Danger Zone</h2>
         </div>
-        <p className="text-sm text-slate-600 mb-4">
+        <p className="text-sm text-slate-500 mb-4">
           Permanently delete your account and all associated data. This action cannot be undone.
         </p>
         <Button

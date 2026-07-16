@@ -217,7 +217,7 @@ function MeetingCard({
       layout
       exit={{ opacity: 0, scale: 0.95 }}
       whileTap={{ scale: 0.98 }}
-      className={`relative rounded-lg border bg-white p-4 shadow-sm transition-all duration-200 ${editing ? 'border-amber-300 ring-1 ring-amber-200' : selected ? 'border-amber-400 ring-2 ring-amber-300' : 'border-slate-100 hover:-translate-y-0.5 hover:shadow-md'}`}
+      className={`relative rounded-[15px] border bg-white p-4 shadow-card transition-all duration-200 ${editing ? 'border-amber-300 ring-1 ring-amber-200' : selected ? 'border-amber-400 ring-2 ring-amber-300' : 'border-[#eef2f6] hover:-translate-y-[3px] motion-reduce:hover:translate-y-0 hover:shadow-card-hover'}`}
     >
       {selectMode && !editing && (
         <button
@@ -240,11 +240,11 @@ function MeetingCard({
           </div>
         ) : (
           <div className="flex items-center gap-2.5 min-w-0 flex-1">
-            <span className="flex items-center justify-center rounded-xl bg-indigo-50 p-2.5 ring-2 ring-indigo-100">
-              <Users className="size-4 text-indigo-500" />
+            <span className="flex items-center justify-center shrink-0 size-[38px] rounded-[11px] bg-indigo-50">
+              <Users className="size-[18px] text-indigo-600" />
             </span>
             <div className="min-w-0">
-              <p className="font-semibold text-slate-800 truncate">{meeting.title}</p>
+              <p className="text-sm font-semibold leading-[1.3] text-slate-800 truncate">{meeting.title}</p>
             </div>
           </div>
         )}
@@ -414,7 +414,7 @@ function MeetingCard({
             {meeting.trip && (
               <Link
                 href={detailHref('trips', meeting.trip.id)}
-                className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100"
+                className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-[3px] text-[11px] font-semibold text-amber-700 transition-colors hover:bg-amber-100"
               >
                 <MapPin className="size-3" />
                 {meeting.trip.title}
@@ -423,21 +423,21 @@ function MeetingCard({
             {meeting.client && (
               <Link
                 href={detailHref('clients', meeting.client.id)}
-                className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-100"
+                className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-[3px] text-[11px] font-semibold text-blue-700 transition-colors hover:bg-blue-100"
               >
                 <Building2 className="size-3" />
                 {meeting.client.name}
               </Link>
             )}
             {!meeting.trip && !meeting.client && (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-500">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-[3px] text-[11px] font-semibold text-slate-500">
                 Standalone
               </span>
             )}
           </div>
 
-          <div className="space-y-1.5 text-sm">
-            <div className="flex items-center gap-2 text-slate-600">
+          <div className="space-y-1.5 text-[13px]">
+            <div className="flex items-center gap-2 text-slate-500">
               <Clock className="size-3.5 shrink-0 text-indigo-400" />
               <span>
                 {formatDateTime(meeting.startDateTime)}
@@ -448,7 +448,7 @@ function MeetingCard({
               </span>
             </div>
             {meeting.location && (
-              <div className="flex items-center gap-2 text-slate-600">
+              <div className="flex items-center gap-2 text-slate-500">
                 <MapPin className="size-3.5 shrink-0 text-indigo-400" />
                 <span className="truncate">{meeting.location}</span>
               </div>
@@ -673,7 +673,7 @@ export default function MeetingsPage() {
       <div className="space-y-6" role="status" aria-label="Loading meetings">
         {/* Title row: heading + action buttons */}
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h1 className="text-2xl font-bold text-slate-800">Meetings</h1>
+          <h1 className="text-[26px] font-bold tracking-[-0.02em] text-slate-900">Meetings</h1>
           <div className="flex flex-wrap items-center gap-2">
             <div className="h-8 w-24 rounded-md bg-slate-200/60 animate-pulse" />
             <div className="h-9 w-36 rounded-md bg-slate-200/70 animate-pulse" />
@@ -689,7 +689,7 @@ export default function MeetingsPage() {
         {/* Meeting cards */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="rounded-lg border border-slate-100 bg-white p-4 shadow-sm">
+            <div key={i} className="rounded-[15px] border border-[#eef2f6] bg-white p-4 shadow-card">
               <div className="mb-3 flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <div className="size-9 shrink-0 rounded-xl bg-slate-200/70 animate-pulse" />
@@ -757,7 +757,7 @@ export default function MeetingsPage() {
           )}
           <Button
             onClick={() => setShowForm(true)}
-            className="bg-amber-500 hover:bg-amber-600 text-white"
+            className="h-10 rounded-[11px] bg-gradient-to-br from-amber-500 to-amber-600 text-white shadow-[0_4px_14px_-4px_rgba(245,158,11,0.55)] transition-transform hover:from-amber-600 hover:to-amber-700 motion-safe:hover:-translate-y-px"
           >
             <Plus className="mr-2 size-4" />
             New Meeting

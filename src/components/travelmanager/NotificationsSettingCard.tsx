@@ -43,12 +43,12 @@ export function NotificationsSettingCard() {
   }
 
   return (
-    <motion.div variants={item} className="rounded-xl bg-white p-6 shadow-sm">
+    <motion.div variants={item} className="rounded-2xl border border-[#eef2f6] bg-white p-[22px] shadow-card">
       <div className="flex items-center gap-2 mb-4">
-        <Bell className="size-5 text-amber-600" />
-        <h2 className="text-lg font-semibold text-slate-800">Notifications</h2>
+        <Bell className="size-[18px] text-amber-600" />
+        <h2 className="text-base font-semibold text-slate-900">Notifications</h2>
       </div>
-      <div className="flex items-start justify-between gap-4 rounded-lg border border-slate-100 p-4">
+      <div className="flex items-start justify-between gap-4 rounded-xl border border-slate-100 p-4">
         <div className="min-w-0">
           <p className="text-sm font-medium text-slate-800">Trip &amp; meeting reminders</p>
           <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
@@ -74,8 +74,8 @@ export function NotificationsSettingCard() {
           }`}
         >
           <span
-            className={`inline-block size-4 transform rounded-full bg-white shadow transition-transform ${
-              enabled ? 'translate-x-6' : 'translate-x-1'
+            className={`inline-block size-5 transform rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.25)] transition-transform ${
+              enabled ? 'translate-x-[22px]' : 'translate-x-0.5'
             }`}
           />
         </button>

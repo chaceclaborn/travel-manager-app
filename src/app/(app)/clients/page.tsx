@@ -163,7 +163,7 @@ export default function ClientsPage() {
       <div className="space-y-6" role="status" aria-label="Loading clients">
         {/* Header row */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-2xl font-bold text-slate-800">Clients</h1>
+          <h1 className="text-[26px] font-bold tracking-[-0.02em] text-slate-900">Clients</h1>
           <div className="h-9 w-32 rounded-md bg-slate-200/80 animate-pulse" />
         </div>
 
@@ -247,7 +247,7 @@ export default function ClientsPage() {
               {selectMode ? 'Cancel' : 'Select'}
             </Button>
           )}
-          <Button asChild className="bg-amber-500 hover:bg-amber-600 text-white">
+          <Button asChild className="h-10 rounded-[11px] bg-gradient-to-br from-amber-500 to-amber-600 px-[18px] text-white shadow-[0_4px_14px_-4px_rgba(245,158,11,0.55)] transition-transform motion-safe:hover:-translate-y-px hover:from-amber-600 hover:to-amber-700">
             <Link href="/clients/new">
               <Plus className="mr-2 size-4" />
               New Client

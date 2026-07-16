@@ -70,9 +70,9 @@ export function CurrencyConverter() {
   };
 
   return (
-    <div className="rounded-xl bg-white p-6 shadow-sm">
+    <div className="rounded-2xl border border-[#eef2f6] bg-white p-[22px] shadow-card">
       <div className="mb-4">
-        <h2 className="text-lg font-semibold text-slate-800">Currency Converter</h2>
+        <h2 className="text-base font-semibold text-slate-900">Currency Converter</h2>
         <p className="mt-0.5 text-xs text-slate-500">
           Quick conversion for international trip planning. Rates via ECB (Frankfurter).
         </p>

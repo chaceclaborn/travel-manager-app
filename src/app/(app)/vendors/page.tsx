@@ -172,7 +172,7 @@ export default function VendorsPage() {
       <div className="space-y-6" role="status" aria-label="Loading vendors">
         {/* Header row */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-2xl font-bold text-slate-800">Vendors</h1>
+          <h1 className="text-[26px] font-bold tracking-[-0.02em] text-slate-900">Vendors</h1>
           <div className="h-9 w-32 rounded-md bg-slate-200/80 animate-pulse" />
         </div>
 
@@ -246,12 +246,20 @@ export default function VendorsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold text-slate-800">Vendors</h1>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-[26px] font-bold tracking-[-0.02em] text-slate-900">Vendors</h1>
+          {!isLoading && vendors.length > 0 && (
+            <p className="mt-1.5 text-sm text-slate-500">
+              Showing {filtered.length} of {vendors.length} vendors
+            </p>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           {vendors.length > 0 && (
             <Button
               variant="outline"
+              className="rounded-[11px]"
               onClick={() => {
                 setSelectMode((m) => !m);
                 setSelectedIds(new Set());
@@ -260,7 +268,7 @@ export default function VendorsPage() {
               {selectMode ? 'Cancel' : 'Select'}
             </Button>
           )}
-          <Button asChild className="bg-amber-500 hover:bg-amber-600 text-white">
+          <Button asChild className="bg-gradient-to-br from-amber-500 to-amber-600 text-white rounded-[11px] shadow-[0_4px_14px_-4px_rgba(245,158,11,0.55)] hover:from-amber-600 hover:to-amber-700 motion-safe:hover:-translate-y-px transition-transform">
             <Link href="/vendors/new">
               <Plus className="mr-2 size-4" />
               New Vendor
@@ -277,7 +285,7 @@ export default function VendorsPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             aria-label="Search vendors"
-            className="pl-9"
+            className="pl-9 h-10 rounded-[11px] focus-visible:!border-amber-400 focus-visible:ring-amber-500/15"
           />
         </div>
         <Select value={categoryFilter} onValueChange={setCategoryFilter}>
@@ -304,11 +312,6 @@ export default function VendorsPage() {
         </Select>
       </div>
 
-      {!isLoading && vendors.length > 0 && (
-        <p className="text-sm text-slate-500">
-          Showing {filtered.length} of {vendors.length} vendors
-        </p>
-      )}
 
       {filtered.length === 0 ? (
         <TMEmptyState
@@ -342,7 +345,7 @@ export default function VendorsPage() {
                 }}
               >
                 <div
-                  className={`relative rounded-xl transition-all ${
+                  className={`relative rounded-[15px] transition-all ${
                     selectMode && isSelected ? 'ring-2 ring-amber-500 ring-offset-2' : ''
                   }`}
                   onClick={(e) => {

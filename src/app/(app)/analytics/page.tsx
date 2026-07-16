@@ -167,7 +167,7 @@ function LoadingSkeleton() {
         {[1, 2, 3, 4].map((i) => (
           <div
             key={i}
-            className="rounded-xl bg-white border border-slate-100 p-5 space-y-3"
+            className="rounded-2xl bg-white border border-[#eef2f6] p-5 space-y-3"
           >
             <div className="flex items-center gap-2.5">
               <Skeleton className="size-9 !rounded-lg" />
@@ -178,11 +178,11 @@ function LoadingSkeleton() {
         ))}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-[18px] lg:grid-cols-2">
         {[1, 2, 3, 4].map((i) => (
           <div
             key={i}
-            className="rounded-xl bg-white border border-slate-100 p-5 space-y-4"
+            className="rounded-2xl bg-white border border-[#eef2f6] p-5 space-y-4"
           >
             <Skeleton className="h-4 w-36" />
             <Skeleton className="h-[260px] w-full !rounded-lg" />
@@ -209,9 +209,9 @@ function ChartCard({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, delay: 0.1 + index * 0.08, ease: [0.25, 0.46, 0.45, 0.94] }}
-      className="rounded-xl bg-white border border-slate-100 p-5 shadow-sm hover:shadow-md transition-shadow duration-300"
+      className="rounded-2xl bg-white border border-[#eef2f6] p-[22px] shadow-card hover:shadow-card-hover transition-shadow duration-300"
     >
-      <h2 className="text-sm font-semibold text-slate-700 mb-4">{title}</h2>
+      <h2 className="text-sm font-semibold text-slate-700 mb-5">{title}</h2>
       {children}
     </motion.div>
   );
@@ -330,7 +330,7 @@ export default function AnalyticsPage() {
       label: 'Most Visited',
       value: data.mostVisited || 'N/A',
       icon: MapPin,
-      gradient: 'from-purple-400 to-purple-500',
+      gradient: 'from-purple-400 to-purple-600',
       bgLight: 'bg-purple-50',
     },
   ];
@@ -343,7 +343,7 @@ export default function AnalyticsPage() {
           initial={{ opacity: 0, x: -10 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.35 }}
-          className="text-2xl font-bold text-slate-800"
+          className="text-[26px] font-bold tracking-[-0.02em] text-slate-900"
         >
           Analytics
         </motion.h1>
@@ -361,7 +361,7 @@ export default function AnalyticsPage() {
               onClick={() => setPeriod(p.value)}
               aria-label={`Show ${p.label} period`}
               aria-pressed={period === p.value}
-              className={`relative z-10 inline-flex items-center justify-center rounded-full px-4 py-2.5 min-h-11 sm:py-1.5 sm:min-h-0 text-sm font-medium transition-colors duration-200 ${
+              className={`relative z-10 inline-flex items-center justify-center rounded-full px-4 py-2.5 min-h-11 sm:py-1.5 sm:min-h-0 text-sm font-semibold transition-colors duration-200 ${
                 period === p.value
                   ? 'text-white'
                   : 'text-slate-500 hover:text-slate-700'
@@ -370,7 +370,7 @@ export default function AnalyticsPage() {
               {period === p.value && (
                 <motion.div
                   layoutId="period-pill"
-                  className="absolute inset-0 rounded-full bg-amber-500 shadow-sm"
+                  className="absolute inset-0 rounded-full bg-amber-500 shadow-[0_2px_8px_-2px_rgba(245,158,11,0.5)]"
                   transition={{ type: 'spring', bounce: 0.15, duration: 0.5 }}
                 />
               )}
@@ -395,16 +395,16 @@ export default function AnalyticsPage() {
               visible: { opacity: 1, y: 0, scale: 1 },
             }}
             transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
-            whileHover={{ y: -3, boxShadow: '0 8px 25px -5px rgba(0,0,0,0.08)' }}
-            className="rounded-xl bg-white border border-slate-100 p-5 shadow-sm cursor-default transition-colors duration-200"
+            whileHover={{ y: -3, boxShadow: '0 8px 24px -6px rgba(15,23,42,0.13)' }}
+            className="rounded-2xl bg-white border border-[#eef2f6] p-5 shadow-card cursor-default transition-colors duration-200"
           >
             <div className="flex items-center gap-3">
-              <div className={`flex items-center justify-center size-9 rounded-lg bg-gradient-to-br ${card.gradient} shadow-sm`}>
+              <div className={`flex items-center justify-center size-[38px] rounded-[10px] bg-gradient-to-br ${card.gradient} shadow-sm`}>
                 <card.icon className="size-4 text-white" strokeWidth={2.5} />
               </div>
               <span className="text-sm text-slate-500 font-medium">{card.label}</span>
             </div>
-            <p className="mt-3 text-2xl font-bold text-slate-800 truncate tracking-tight">
+            <p className="mt-3.5 text-[26px] font-bold text-slate-900 truncate tracking-[-0.02em]">
               {card.value}
             </p>
           </motion.div>
@@ -412,7 +412,7 @@ export default function AnalyticsPage() {
       </motion.div>
 
       {/* Charts Grid */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-[18px] lg:grid-cols-2">
         {/* ── Spending by Category - Donut ── */}
         <ChartCard title="Spending by Category" index={0}>
           {data.spendingByCategory.length > 0 ? (

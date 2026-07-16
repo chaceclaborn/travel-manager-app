@@ -27,20 +27,20 @@ function NavItem({
       href={href}
       aria-current={isActive ? 'page' : undefined}
       data-track={track}
-      className="group relative flex items-center rounded-md outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50"
+      className="group relative flex items-center rounded-[10px] outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50"
     >
       {/* Active left accent bar */}
       {isActive && (
         <motion.div
           layoutId="sidebar-active-accent"
-          className="absolute left-0 top-1 bottom-1 w-[3px] rounded-full bg-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.65)]"
+          className="absolute -left-3 top-2 bottom-2 w-[3px] rounded-r-[3px] bg-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.65)]"
           transition={{ type: 'spring', stiffness: 350, damping: 30 }}
         />
       )}
 
       {/* Hover background — slides in from left */}
       <motion.div
-        className="absolute inset-0 rounded-md"
+        className="absolute inset-0 rounded-[10px]"
         initial={false}
         whileHover={{ opacity: 1, scaleX: 1 }}
         style={{
@@ -54,7 +54,7 @@ function NavItem({
 
       <div
         className={`relative flex w-full items-center gap-3 px-3 py-2.5 min-h-11 sm:py-2 sm:min-h-0 text-[13px] transition-colors duration-200 ${
-          isActive ? 'font-semibold text-amber-400' : 'font-medium text-slate-400 group-hover:text-slate-200'
+          isActive ? 'font-semibold text-amber-400' : 'font-medium text-slate-300 group-hover:text-white'
         }`}
       >
         <Icon
@@ -94,7 +94,7 @@ export function TMSidebar({ isAdmin }: { isAdmin?: boolean }) {
   return (
     <nav className="flex flex-1 flex-col px-3 py-3">
       {/* Section label */}
-      <span className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-widest text-slate-600">
+      <span className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-600">
         Navigation
       </span>
 
@@ -124,7 +124,7 @@ export function TMSidebar({ isAdmin }: { isAdmin?: boolean }) {
       <div className="mx-3 my-3 border-t border-white/[0.06]" />
 
       {/* Bottom section label */}
-      <span className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-widest text-slate-600">
+      <span className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-600">
         System
       </span>
 

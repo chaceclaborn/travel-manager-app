@@ -48,11 +48,11 @@ function formatBudget(budget: number): string {
 }
 
 const statusBorderColors: Record<string, string> = {
-  DRAFT: 'border-l-slate-300',
-  PLANNED: 'border-l-blue-400',
-  IN_PROGRESS: 'border-l-amber-400',
-  COMPLETED: 'border-l-emerald-400',
-  CANCELLED: 'border-l-red-400',
+  DRAFT: 'border-l-slate-400',
+  PLANNED: 'border-l-blue-500',
+  IN_PROGRESS: 'border-l-amber-500',
+  COMPLETED: 'border-l-emerald-500',
+  CANCELLED: 'border-l-red-500',
 };
 
 function extractDate(d: string | null | undefined): string {
@@ -81,7 +81,7 @@ export function TripCard({ trip, onSaved, onDeleted }: TripCardProps) {
   const vendorCount = trip._count?.vendors ?? trip.vendors?.length ?? 0;
   const clientCount = trip._count?.clients ?? trip.clients?.length ?? 0;
   const friendCount = trip._count?.friends ?? trip.friends?.length ?? 0;
-  const borderColor = statusBorderColors[trip.status] ?? 'border-l-slate-300';
+  const borderColor = statusBorderColors[trip.status] ?? 'border-l-slate-400';
 
   const startEdit = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -138,7 +138,7 @@ export function TripCard({ trip, onSaved, onDeleted }: TripCardProps) {
   if (editing) {
     return (
       <>
-        <div className={`overflow-hidden rounded-xl border border-amber-300 ring-1 ring-amber-200 border-l-[3px] ${borderColor} bg-white p-5`}>
+        <div className={`overflow-hidden rounded-[15px] border border-amber-300 ring-1 ring-amber-200 border-l-[3px] ${borderColor} bg-white p-[18px]`}>
           <form onSubmit={handleSave} className="space-y-3">
             <div className="flex items-center justify-between">
               <p className="text-sm font-medium text-slate-700">Edit Trip</p>
@@ -193,9 +193,9 @@ export function TripCard({ trip, onSaved, onDeleted }: TripCardProps) {
           whileHover={reducedMotion ? undefined : { y: -3, transition: { duration: 0.2, ease: 'easeOut' } }}
           whileTap={reducedMotion ? undefined : { scale: 0.98, transition: { duration: 0.1 } }}
         >
-          <div className={`relative cursor-pointer overflow-hidden rounded-xl border border-slate-100 border-l-[3px] ${borderColor} bg-white p-5 shadow-sm transition-all duration-200 group-hover:shadow-lg group-hover:border-slate-200 group-focus-visible:ring-2 group-focus-visible:ring-amber-500 group-focus-visible:ring-offset-2`}>
+          <div className={`relative cursor-pointer overflow-hidden rounded-[15px] border border-[#eef2f6] border-l-[3px] ${borderColor} bg-white p-[18px] shadow-card transition-all duration-200 group-hover:shadow-[0_12px_28px_-8px_rgba(15,23,42,0.16)] group-hover:border-slate-200 group-focus-visible:ring-2 group-focus-visible:ring-amber-500 group-focus-visible:ring-offset-2`}>
             <div className="flex items-start justify-between gap-3">
-              <h3 className="font-semibold text-slate-800 leading-snug line-clamp-2 min-w-0 flex-1">{trip.title}</h3>
+              <h3 className="text-[15px] font-semibold text-slate-800 leading-[1.3] line-clamp-2 min-w-0 flex-1">{trip.title}</h3>
               <div className="flex items-center gap-1 shrink-0">
                 <button
                   type="button"
@@ -220,38 +220,38 @@ export function TripCard({ trip, onSaved, onDeleted }: TripCardProps) {
             </div>
 
             {trip.destination && (
-              <div className="mt-2.5 flex items-center gap-1.5 text-sm text-slate-500 min-w-0">
+              <div className="mt-2.5 flex items-center gap-1.5 text-[13px] text-slate-500 min-w-0">
                 <MapPin className="size-3.5 shrink-0 text-slate-400" />
                 <span className="truncate">{trip.destination}</span>
               </div>
             )}
 
             {trip.startDate && trip.endDate ? (
-              <div className="mt-1.5 flex items-center gap-1.5 text-sm text-slate-500">
+              <div className="mt-1.5 flex items-center gap-1.5 text-[13px] text-slate-500">
                 <Calendar className="size-3.5 shrink-0 text-slate-400" />
                 <span>{formatDateDisplay(trip.startDate)} &ndash; {formatDate(trip.endDate)}</span>
                 {days && (
-                  <span className="ml-1 inline-flex items-center rounded-md bg-slate-50 px-1.5 py-0.5 text-xs font-medium text-slate-500 ring-1 ring-inset ring-slate-200">{days}d</span>
+                  <span className="ml-1 inline-flex items-center rounded-[6px] bg-slate-100 px-[7px] py-0.5 text-[11px] font-semibold text-slate-500">{days}d</span>
                 )}
               </div>
             ) : (
-              <div className="mt-1.5 flex items-center gap-1.5 text-sm text-slate-400 italic">
+              <div className="mt-1.5 flex items-center gap-1.5 text-[13px] text-slate-400 italic">
                 <Calendar className="size-3.5 shrink-0" /><span>Dates not set</span>
               </div>
             )}
 
             {(vendorCount > 0 || clientCount > 0 || friendCount > 0 || trip.tripType === 'WORK') && (
               <div className="mt-3 flex items-center gap-1.5 flex-wrap">
-                {trip.tripType === 'WORK' && <Badge variant="secondary" className="text-[11px] gap-1 bg-sky-50 text-sky-700 ring-1 ring-inset ring-sky-200 border-0 px-2 py-0.5"><Briefcase className="size-3" />Work</Badge>}
+                {trip.tripType === 'WORK' && <Badge variant="secondary" className="text-[11px] gap-1 bg-sky-50 text-sky-700 ring-1 ring-inset ring-sky-100 border-0 px-2 py-0.5"><Briefcase className="size-3" />Work</Badge>}
                 {friendCount > 0 && <Badge variant="secondary" className="text-[11px] gap-1 bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200 border-0 px-2 py-0.5"><HeartHandshake className="size-3" />{friendCount} {friendCount === 1 ? 'friend' : 'friends'}</Badge>}
-                {vendorCount > 0 && <Badge variant="secondary" className="text-[11px] gap-1 bg-slate-50 text-slate-600 ring-1 ring-inset ring-slate-200 border-0 px-2 py-0.5"><Building2 className="size-3" />{vendorCount} {vendorCount === 1 ? 'vendor' : 'vendors'}</Badge>}
-                {clientCount > 0 && <Badge variant="secondary" className="text-[11px] gap-1 bg-slate-50 text-slate-600 ring-1 ring-inset ring-slate-200 border-0 px-2 py-0.5"><Users className="size-3" />{clientCount} {clientCount === 1 ? 'client' : 'clients'}</Badge>}
+                {vendorCount > 0 && <Badge variant="secondary" className="text-[11px] gap-1 bg-slate-50 text-slate-500 ring-1 ring-inset ring-[#eef2f6] border-0 px-2 py-0.5"><Building2 className="size-3" />{vendorCount} {vendorCount === 1 ? 'vendor' : 'vendors'}</Badge>}
+                {clientCount > 0 && <Badge variant="secondary" className="text-[11px] gap-1 bg-slate-50 text-slate-500 ring-1 ring-inset ring-[#eef2f6] border-0 px-2 py-0.5"><Users className="size-3" />{clientCount} {clientCount === 1 ? 'client' : 'clients'}</Badge>}
               </div>
             )}
 
-            <div className="mt-3.5 flex items-center justify-between border-t border-slate-50 pt-3">
+            <div className="mt-3.5 flex items-center justify-between border-t border-slate-100 pt-[13px]">
               {trip.budget != null ? (
-                <span className="flex items-center gap-1 text-sm font-semibold text-slate-700"><DollarSign className="size-3.5 text-emerald-500" />{formatBudget(trip.budget)}</span>
+                <span className="flex items-center gap-1.5 text-sm font-semibold text-slate-700"><DollarSign className="size-3.5 text-emerald-500" />{formatBudget(trip.budget)}</span>
               ) : (
                 <span className="text-xs text-slate-400">No budget set</span>
               )}

@@ -99,6 +99,17 @@
   border: 1px solid rgba(255, 255, 255, 0.55);
 }
 
+/* Sticky desktop top bar surface. Separate from `glass` because the top bar
+   wants only a bottom hairline (applied on the element via border-b), a higher
+   canvas-tinted alpha, and a stronger blur/saturate. The explicit
+   -webkit-backdrop-filter is required for iOS Safari / WKWebView (App-Store
+   target), which Tailwind's arbitrary backdrop-* utilities don't guarantee. */
+@utility glass-topbar {
+  background: rgba(248, 250, 252, 0.72);
+  backdrop-filter: blur(14px) saturate(1.6);
+  -webkit-backdrop-filter: blur(14px) saturate(1.6);
+}
+
 /* Brand gradient text — use sparingly (hero headings, brand marks). */
 @utility text-gradient-brand {
   background-image: linear-gradient(115deg, #f59e0b 20%, #fbbf24 50%, #d97706 80%);

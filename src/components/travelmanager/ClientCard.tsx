@@ -25,6 +25,30 @@ interface ClientCardProps {
   onDeleted?: () => void;
 }
 
+// Six-gradient palette (amber/blue/green/violet/pink/sky) cycled deterministically
+// by client id so each client keeps a stable avatar color across sorts/re-fetches.
+const AVATAR_GRADIENTS = [
+  'linear-gradient(135deg,#f59e0b,#fbbf24)',
+  'linear-gradient(135deg,#3b82f6,#60a5fa)',
+  'linear-gradient(135deg,#059669,#34d399)',
+  'linear-gradient(135deg,#8b5cf6,#c084fc)',
+  'linear-gradient(135deg,#ec4899,#f472b6)',
+  'linear-gradient(135deg,#0ea5e9,#38bdf8)',
+];
+
+function clientInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+}
+
+function gradientIndex(id: string): number {
+  let sum = 0;
+  for (let i = 0; i < id.length; i++) sum = (sum + id.charCodeAt(i)) % AVATAR_GRADIENTS.length;
+  return sum;
+}
+
 export function ClientCard({ client, onSaved, onDeleted }: ClientCardProps) {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -39,6 +63,9 @@ export function ClientCard({ client, onSaved, onDeleted }: ClientCardProps) {
   });
   const { showToast } = useTMToast();
   const reducedMotion = useReducedMotion();
+
+  const initials = clientInitials(client.name);
+  const avatarBg = AVATAR_GRADIENTS[gradientIndex(client.id)];
 
   const startEdit = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -101,12 +128,15 @@ export function ClientCard({ client, onSaved, onDeleted }: ClientCardProps) {
 
   return (
     <>
-      <motion.div whileHover={reducedMotion ? undefined : { y: -2 }} whileTap={reducedMotion ? undefined : { scale: 0.98 }} transition={{ duration: 0.2 }}>
-        <Card className="bg-white p-5 border border-slate-100 hover:shadow-md hover:border-slate-200 transition-all rounded-xl group">
-          <div className="flex items-start justify-between">
-            <Link href={detailHref('clients', client.id)} className="min-w-0 flex-1">
-              <h3 className="font-semibold text-lg text-slate-800 hover:text-amber-600 transition-colors" title={client.name}>{client.name}</h3>
-              {client.company && <p className="text-sm text-slate-500 mt-0.5">{client.company}</p>}
+      <motion.div whileHover={reducedMotion ? undefined : { y: -3 }} whileTap={reducedMotion ? undefined : { scale: 0.98 }} transition={{ duration: 0.2 }}>
+        <Card className="bg-white p-[18px] border border-[#eef2f6] shadow-card hover:shadow-card-hover transition-all rounded-[15px] group">
+          <div className="flex items-center justify-between gap-3">
+            <Link href={detailHref('clients', client.id)} className="flex min-w-0 flex-1 items-center gap-3">
+              <div aria-hidden="true" className="flex size-[46px] shrink-0 items-center justify-center rounded-full text-[15px] font-bold text-white" style={{ background: avatarBg }}>{initials}</div>
+              <div className="min-w-0">
+                <h3 className="font-semibold text-[15px] text-slate-800 truncate hover:text-amber-600 transition-colors" title={client.name}>{client.name}</h3>
+                {client.company && <p className="text-[13px] text-slate-400 mt-0.5 truncate">{client.company}</p>}
+              </div>
             </Link>
             <div className="flex items-center gap-1 shrink-0">
               <button onClick={startEdit} className="rounded-md p-2.5 sm:p-2 min-w-11 min-h-11 sm:min-w-0 sm:min-h-0 inline-flex items-center justify-center text-slate-400 transition-all duration-200 hover:bg-amber-50 hover:text-amber-500 focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:outline-none" title="Edit" aria-label="Edit client"><Pencil className="size-4" /></button>
@@ -115,21 +145,21 @@ export function ClientCard({ client, onSaved, onDeleted }: ClientCardProps) {
           </div>
 
           <Link href={detailHref('clients', client.id)}>
-            <div className="mt-3 space-y-1.5">
+            <div className="mt-3.5 space-y-1.5">
               {client.email && (
-                <div className="flex items-center gap-2 text-sm text-slate-600">
+                <div className="flex items-center gap-2 text-[13px] text-slate-500">
                   <Mail className="size-3.5 text-slate-400" />
                   <span className="truncate">{client.email}</span>
                 </div>
               )}
               {client.phone && (
-                <div className="flex items-center gap-2 text-sm text-slate-600">
+                <div className="flex items-center gap-2 text-[13px] text-slate-500">
                   <Phone className="size-3.5 text-slate-400" />
                   <span>{client.phone}</span>
                 </div>
               )}
             </div>
-            <p className="mt-3 text-xs text-slate-400">{client.trips.length} {client.trips.length === 1 ? 'trip' : 'trips'}</p>
+            <p className="mt-3.5 text-xs text-slate-400">{client.trips.length} {client.trips.length === 1 ? 'trip' : 'trips'}</p>
           </Link>
         </Card>
       </motion.div>

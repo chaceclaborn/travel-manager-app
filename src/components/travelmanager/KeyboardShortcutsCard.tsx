@@ -54,12 +54,12 @@ export function KeyboardShortcutsCard() {
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-xl bg-white p-6 shadow-sm"
+      className="rounded-2xl border border-[#eef2f6] bg-white p-[22px] shadow-card"
     >
       <div className="flex items-center justify-between gap-2 mb-1">
         <div className="flex items-center gap-2">
           <Keyboard className="size-5 text-amber-600" />
-          <h2 className="text-lg font-semibold text-slate-800">Keyboard Shortcuts</h2>
+          <h2 className="text-base font-semibold text-slate-900">Keyboard Shortcuts</h2>
         </div>
         {isCustomized && (
           <button

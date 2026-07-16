@@ -229,11 +229,17 @@ export function TMCalendarPreview({ trips, meetings = [] }: TMCalendarPreviewPro
   const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month;
 
   return (
-    <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-slate-100 w-full">
+    <div className="rounded-[18px] bg-white p-[22px] shadow-card border border-[#eef2f6] w-full">
       {/* Header */}
-      <div className="flex items-center justify-between mb-5">
+      <div className="flex items-center justify-between mb-[18px] flex-wrap gap-y-2">
         <div className="flex items-center gap-3">
-          <h2 className="text-lg font-semibold text-slate-800 tracking-tight">Calendar</h2>
+          <h2 className="text-[17px] font-semibold text-slate-900 tracking-[-0.01em]">Calendar</h2>
+          <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-500 bg-slate-100 px-[9px] py-[3px] rounded-full">
+            <span className="size-[7px] rounded-full bg-blue-500" />
+            Trips
+            <span className="size-[7px] rounded-full bg-indigo-600 ml-1.5" />
+            Meetings
+          </span>
           {!isCurrentMonth && (
             <button
               onClick={goToToday}
@@ -246,7 +252,8 @@ export function TMCalendarPreview({ trips, meetings = [] }: TMCalendarPreviewPro
         <div className="flex items-center gap-1">
           <button
             onClick={prevMonth}
-            className="p-1.5 rounded-lg hover:bg-slate-100 active:bg-slate-200 transition-colors text-slate-400 hover:text-slate-600"
+            className="size-[30px] flex items-center justify-center rounded-[9px] hover:bg-slate-100 active:bg-slate-200 transition-colors text-slate-400 hover:text-slate-600"
+            aria-label="Previous month"
           >
             <ChevronLeft className="size-4" />
           </button>
@@ -260,7 +267,7 @@ export function TMCalendarPreview({ trips, meetings = [] }: TMCalendarPreviewPro
                 animate="center"
                 exit="exit"
                 transition={{ duration: 0.2, ease: 'easeInOut' }}
-                className="inline-block text-sm font-semibold text-slate-800"
+                className="inline-block text-sm font-semibold text-slate-900"
               >
                 {monthLabel}{' '}
                 <span className="font-normal text-slate-400">{yearLabel}</span>
@@ -269,7 +276,8 @@ export function TMCalendarPreview({ trips, meetings = [] }: TMCalendarPreviewPro
           </div>
           <button
             onClick={nextMonth}
-            className="p-1.5 rounded-lg hover:bg-slate-100 active:bg-slate-200 transition-colors text-slate-400 hover:text-slate-600"
+            className="size-[30px] flex items-center justify-center rounded-[9px] hover:bg-slate-100 active:bg-slate-200 transition-colors text-slate-400 hover:text-slate-600"
+            aria-label="Next month"
           >
             <ChevronRight className="size-4" />
           </button>
@@ -279,7 +287,7 @@ export function TMCalendarPreview({ trips, meetings = [] }: TMCalendarPreviewPro
       {/* Day labels */}
       <div className="grid grid-cols-7 mb-1">
         {DAY_LABELS.map((d) => (
-          <div key={d} className="text-center text-[11px] font-semibold text-slate-400 uppercase tracking-wider pb-2">
+          <div key={d} className="text-center text-[10px] font-semibold text-slate-400 uppercase tracking-[0.08em] pb-2">
             {d}
           </div>
         ))}
@@ -298,7 +306,7 @@ export function TMCalendarPreview({ trips, meetings = [] }: TMCalendarPreviewPro
         >
           {weeks.flat().map((day, i) => {
             if (!day) {
-              return <div key={`empty-${i}`} className="min-h-[4.5rem] bg-white/60" />;
+              return <div key={`empty-${i}`} className="min-h-[80px] bg-white/60" />;
             }
 
             const dayNum = day.getDate();
@@ -317,7 +325,7 @@ export function TMCalendarPreview({ trips, meetings = [] }: TMCalendarPreviewPro
             return (
               <div
                 key={dayNum}
-                className={`min-h-[4.5rem] flex flex-col text-xs relative transition-all duration-150 group bg-white ${
+                className={`min-h-[80px] flex flex-col text-xs relative transition-all duration-150 group bg-white ${
                   isToday
                     ? 'ring-2 ring-amber-400/70 ring-inset bg-gradient-to-b from-amber-50/80 to-amber-50/30 z-10'
                     : isPopoverOpen
@@ -332,9 +340,9 @@ export function TMCalendarPreview({ trips, meetings = [] }: TMCalendarPreviewPro
                 <div className="flex items-center justify-between px-1.5 pt-1.5">
                   <div className="flex items-center gap-1">
                     {isToday ? (
-                      <span className="relative flex items-center justify-center size-6 -ml-0.5">
+                      <span className="relative flex items-center justify-center size-[22px] -ml-0.5">
                         <span className="absolute inset-0 rounded-full bg-amber-500 animate-pulse opacity-20" />
-                        <span className="relative size-5 flex items-center justify-center rounded-full bg-amber-500 text-white text-[11px] font-bold leading-none">
+                        <span className="relative size-[22px] flex items-center justify-center rounded-full bg-amber-500 text-white text-[11px] font-bold leading-none">
                           {dayNum}
                         </span>
                       </span>
@@ -347,10 +355,10 @@ export function TMCalendarPreview({ trips, meetings = [] }: TMCalendarPreviewPro
                   <div className="flex items-center gap-1">
                     {hasMeetings && (
                       <span
-                        className="inline-flex items-center gap-0.5 text-[9px] font-semibold text-indigo-600"
+                        className="inline-flex items-center gap-0.5 text-[9px] font-bold text-indigo-600"
                         title={dayMeetings.map((m) => m.title).join(', ')}
                       >
-                        <span className="size-1.5 rounded-full bg-indigo-500" />
+                        <span className="size-1.5 rounded-full bg-indigo-600" />
                         {dayMeetings.length > 1 ? dayMeetings.length : ''}
                       </span>
                     )}
@@ -383,8 +391,8 @@ export function TMCalendarPreview({ trips, meetings = [] }: TMCalendarPreviewPro
                       >
                         {(info.isStart || info.isSingle) && (
                           <span className={`flex items-center gap-1 px-1 min-w-0 ${text}`}>
-                            <span className={`shrink-0 size-1.5 rounded-full ${dot}`} />
-                            <span className="truncate text-[10px] font-medium leading-none">{info.trip.title}</span>
+                            <span className={`shrink-0 size-[5px] rounded-full ${dot}`} />
+                            <span className="truncate text-[10px] font-semibold leading-none">{info.trip.title}</span>
                           </span>
                         )}
                       </Link>

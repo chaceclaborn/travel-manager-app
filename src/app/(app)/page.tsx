@@ -63,7 +63,7 @@ const statsItem = {
 
 const sectionCardHover = {
   y: -3,
-  boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 4px 10px -5px rgba(0, 0, 0, 0.04)',
+  boxShadow: '0 8px 24px -6px rgba(15,23,42,0.13)',
   transition: { duration: 0.2, ease: 'easeOut' as const },
 };
 
@@ -79,7 +79,7 @@ function SkeletonPulse({ className }: { className?: string }) {
 
 function DashboardSkeleton() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-[26px]">
       {/* Header skeleton */}
       <div>
         <SkeletonPulse className="h-8 w-56 rounded-lg" />
@@ -87,13 +87,13 @@ function DashboardSkeleton() {
       </div>
 
       {/* Stats cards skeleton — mirrors TMStatsCard layout */}
-      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         {Array.from({ length: 6 }).map((_, i) => (
           <div
             key={i}
-            className="flex items-center gap-4 rounded-xl bg-white p-6 shadow-sm"
+            className="flex items-center gap-4 rounded-[16px] bg-white p-5 shadow-card border border-[#eef2f6]"
           >
-            <SkeletonPulse className="size-12 !rounded-full flex-shrink-0" />
+            <SkeletonPulse className="size-[46px] !rounded-[13px] flex-shrink-0" />
             <div className="flex-1 space-y-2">
               <SkeletonPulse className="h-7 w-10" />
               <SkeletonPulse className="h-3.5 w-16" />
@@ -103,7 +103,7 @@ function DashboardSkeleton() {
       </div>
 
       {/* Calendar skeleton — mirrors calendar grid shape */}
-      <div className="rounded-xl bg-white p-6 shadow-sm">
+      <div className="rounded-[18px] bg-white p-[22px] shadow-card border border-[#eef2f6]">
         <div className="flex items-center justify-between mb-4">
           <SkeletonPulse className="h-5 w-20" />
           <div className="flex items-center gap-2">
@@ -123,9 +123,9 @@ function DashboardSkeleton() {
       </div>
 
       {/* Two-column section skeleton */}
-      <div className="grid lg:grid-cols-2 gap-6">
+      <div className="grid lg:grid-cols-2 gap-[18px]">
         {Array.from({ length: 2 }).map((_, i) => (
-          <div key={i} className="rounded-xl bg-white p-6 shadow-sm">
+          <div key={i} className="rounded-[18px] bg-white p-[22px] shadow-card border border-[#eef2f6]">
             <div className="flex items-center justify-between mb-4">
               <SkeletonPulse className="h-5 w-28" />
               <SkeletonPulse className="h-4 w-16" />
@@ -273,21 +273,21 @@ export default function TravelManagerDashboard() {
   }, []);
 
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="space-y-8 overflow-x-hidden">
+    <motion.div variants={container} initial="hidden" animate="show" className="space-y-[26px] overflow-x-hidden">
       {/* Welcome Header */}
       <motion.div variants={item}>
         <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-bold text-slate-800">{greeting}</h1>
-          <Sparkles className="size-5 text-amber-400" />
+          <h1 className="text-[26px] font-bold tracking-[-0.02em] leading-tight text-slate-900">{greeting}</h1>
+          <Sparkles className="size-[22px] text-amber-500 fill-amber-500" />
         </div>
-        <p className="text-sm text-slate-500 mt-1">{dateStr}</p>
+        <p className="text-sm text-slate-500 mt-1.5">{dateStr}</p>
       </motion.div>
 
       {/* Onboarding: starter templates — only shown when user has zero trips */}
       {data?.stats.totalTrips === 0 && (
         <motion.section
           variants={item}
-          className="rounded-xl border border-amber-200 bg-gradient-to-br from-amber-50 via-white to-indigo-50 p-6"
+          className="rounded-[16px] border border-amber-200 bg-gradient-to-br from-amber-50 via-white to-indigo-50 p-6"
         >
           <div className="mb-4">
             <h2 className="text-lg font-semibold text-slate-800">Get started with a template</h2>
@@ -315,7 +315,7 @@ export default function TravelManagerDashboard() {
         variants={statsContainer}
         initial="hidden"
         animate="show"
-        className="grid grid-cols-2 lg:grid-cols-6 gap-4"
+        className="grid grid-cols-2 lg:grid-cols-3 gap-4"
       >
         <motion.div variants={statsItem}>
           <TMStatsCard title="Total Trips" value={stats.totalTrips} icon={MapPin} color="blue" href="/trips" />
@@ -334,7 +334,7 @@ export default function TravelManagerDashboard() {
         </motion.div>
         {daysUntilNext !== null && (
           <motion.div variants={statsItem}>
-            <TMStatsCard title="Days to Next Trip" value={daysUntilNext} icon={Plane} color="red" href={upcoming[0] ? detailHref('trips', upcoming[0].id) : '/trips'} />
+            <TMStatsCard title="Days to Next Trip" value={daysUntilNext} icon={Plane} color="rose" href={upcoming[0] ? detailHref('trips', upcoming[0].id) : '/trips'} />
           </motion.div>
         )}
         {stats.pendingCommissions > 0 && (
@@ -383,33 +383,33 @@ export default function TravelManagerDashboard() {
 
       {/* Quick Actions */}
       <motion.div variants={item}>
-        <h2 className="text-lg font-semibold text-slate-800 mb-3">Quick Actions</h2>
+        <h2 className="text-[17px] font-semibold tracking-[-0.01em] text-slate-900 mb-3">Quick Actions</h2>
         <div className="flex flex-wrap gap-3">
-          <Button asChild className="bg-amber-500 hover:bg-amber-600 text-white">
+          <Button asChild className="bg-gradient-to-br from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-[11px] shadow-[0_4px_14px_-4px_rgba(245,158,11,0.55)]">
             <Link href="/trips/new">
               <Plus className="size-4 mr-2" />
               New Trip
             </Link>
           </Button>
-          <Button asChild variant="outline">
+          <Button asChild variant="outline" className="rounded-[11px] text-slate-700">
             <Link href="/vendors/new">
               <Plus className="size-4 mr-2" />
               New Vendor
             </Link>
           </Button>
-          <Button asChild variant="outline">
+          <Button asChild variant="outline" className="rounded-[11px] text-slate-700">
             <Link href="/clients/new">
               <Plus className="size-4 mr-2" />
               New Client
             </Link>
           </Button>
-          <Button asChild variant="outline">
+          <Button asChild variant="outline" className="rounded-[11px] text-slate-700">
             <Link href="/meetings">
               <Plus className="size-4 mr-2" />
               New Meeting
             </Link>
           </Button>
-          <Button asChild variant="outline">
+          <Button asChild variant="outline" className="rounded-[11px] text-slate-700">
             <Link href="/bookings">
               <Plus className="size-4 mr-2" />
               New Booking
@@ -419,17 +419,17 @@ export default function TravelManagerDashboard() {
       </motion.div>
 
       {/* Two-column layout for upcoming + recent */}
-      <div className="grid lg:grid-cols-2 gap-6">
+      <div className="grid lg:grid-cols-2 gap-[18px]">
         {/* Upcoming Trips */}
         <motion.div
           variants={item}
           whileHover={sectionCardHover}
-          className="rounded-xl bg-white p-6 shadow-sm transition-shadow"
+          className="rounded-[18px] bg-white p-[22px] shadow-card border border-[#eef2f6] transition-shadow"
         >
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <div className="size-1.5 rounded-full bg-amber-400" />
-              <h2 className="text-lg font-semibold text-slate-800">Upcoming Trips</h2>
+              <div className="size-[7px] rounded-full bg-amber-500" />
+              <h2 className="text-base font-semibold tracking-[-0.01em] text-slate-900">Upcoming Trips</h2>
             </div>
             <Button asChild variant="ghost" size="sm" className="text-amber-600 hover:text-amber-700">
               <Link href="/trips">
@@ -451,13 +451,13 @@ export default function TravelManagerDashboard() {
                 <Link
                   key={trip.id}
                   href={detailHref('trips', trip.id)}
-                  className="flex items-center justify-between p-3 rounded-lg hover:bg-slate-50 transition-colors group"
+                  className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 transition-colors group"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-slate-800 truncate group-hover:text-amber-600 transition-colors">
+                    <p className="text-sm font-semibold text-slate-800 truncate group-hover:text-amber-600 transition-colors">
                       {trip.destination || trip.title}
                     </p>
-                    <p className="text-xs text-slate-500 mt-0.5">
+                    <p className="text-xs text-slate-400 mt-0.5">
                       {trip.startDate && trip.endDate
                         ? `${formatDate(trip.startDate as unknown as string)} -- ${formatDate(trip.endDate as unknown as string)}`
                         : 'Dates not set'}
@@ -488,12 +488,12 @@ export default function TravelManagerDashboard() {
         <motion.div
           variants={item}
           whileHover={sectionCardHover}
-          className="rounded-xl bg-white p-6 shadow-sm transition-shadow"
+          className="rounded-[18px] bg-white p-[22px] shadow-card border border-[#eef2f6] transition-shadow"
         >
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <div className="size-1.5 rounded-full bg-slate-400" />
-              <h2 className="text-lg font-semibold text-slate-800">Recent Activity</h2>
+              <div className="size-[7px] rounded-full bg-slate-400" />
+              <h2 className="text-base font-semibold tracking-[-0.01em] text-slate-900">Recent Activity</h2>
             </div>
             <Clock className="size-4 text-slate-400" />
           </div>
@@ -509,13 +509,13 @@ export default function TravelManagerDashboard() {
                 <Link
                   key={trip.id}
                   href={detailHref('trips', trip.id)}
-                  className="flex items-center justify-between p-3 rounded-lg hover:bg-slate-50 transition-colors group"
+                  className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 transition-colors group"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-slate-800 truncate group-hover:text-amber-600 transition-colors">
+                    <p className="text-sm font-semibold text-slate-800 truncate group-hover:text-amber-600 transition-colors">
                       {trip.title}
                     </p>
-                    <p className="text-xs text-slate-500 mt-0.5">
+                    <p className="text-xs text-slate-400 mt-0.5">
                       {trip.destination ? `${trip.destination} \u00B7 ` : ''}Updated {formatDate(trip.updatedAt as unknown as string)}
                     </p>
                   </div>

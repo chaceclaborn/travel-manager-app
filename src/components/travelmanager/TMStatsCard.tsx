@@ -16,10 +16,11 @@ interface TMStatsCardProps {
 const colorMap: Record<string, { bg: string; text: string; border: string }> = {
   blue: { bg: 'bg-gradient-to-br from-blue-50 to-blue-100/80 ring-1 ring-inset ring-blue-500/10', text: 'text-blue-600', border: 'bg-gradient-to-r from-blue-500 to-blue-400' },
   amber: { bg: 'bg-gradient-to-br from-amber-50 to-amber-100/80 ring-1 ring-inset ring-amber-500/10', text: 'text-amber-600', border: 'bg-gradient-to-r from-amber-500 to-amber-400' },
-  purple: { bg: 'bg-gradient-to-br from-purple-50 to-purple-100/80 ring-1 ring-inset ring-purple-500/10', text: 'text-purple-600', border: 'bg-gradient-to-r from-purple-500 to-purple-400' },
-  green: { bg: 'bg-gradient-to-br from-green-50 to-green-100/80 ring-1 ring-inset ring-green-500/10', text: 'text-green-600', border: 'bg-gradient-to-r from-green-500 to-green-400' },
+  purple: { bg: 'bg-gradient-to-br from-purple-50 to-purple-100/80 ring-1 ring-inset ring-purple-500/10', text: 'text-purple-600', border: 'bg-gradient-to-r from-purple-600 to-purple-400' },
+  green: { bg: 'bg-gradient-to-br from-emerald-50 to-emerald-100/80 ring-1 ring-inset ring-emerald-500/10', text: 'text-emerald-600', border: 'bg-gradient-to-r from-emerald-600 to-emerald-400' },
   red: { bg: 'bg-gradient-to-br from-red-50 to-red-100/80 ring-1 ring-inset ring-red-500/10', text: 'text-red-600', border: 'bg-gradient-to-r from-red-500 to-red-400' },
-  indigo: { bg: 'bg-gradient-to-br from-indigo-50 to-indigo-100/80 ring-1 ring-inset ring-indigo-500/10', text: 'text-indigo-600', border: 'bg-gradient-to-r from-indigo-500 to-indigo-400' },
+  rose: { bg: 'bg-gradient-to-br from-rose-50 to-rose-100/80 ring-1 ring-inset ring-rose-500/10', text: 'text-rose-600', border: 'bg-gradient-to-r from-rose-600 to-rose-400' },
+  indigo: { bg: 'bg-gradient-to-br from-indigo-50 to-indigo-100/80 ring-1 ring-inset ring-indigo-500/10', text: 'text-indigo-600', border: 'bg-gradient-to-r from-indigo-600 to-indigo-400' },
   slate: { bg: 'bg-gradient-to-br from-slate-50 to-slate-100/80 ring-1 ring-inset ring-slate-500/10', text: 'text-slate-600', border: 'bg-gradient-to-r from-slate-500 to-slate-400' },
 };
 
@@ -72,26 +73,26 @@ export function TMStatsCard({ title, value, icon: Icon, color, href }: TMStatsCa
       transition={{ duration: 0.3, ease: 'easeOut' }}
       whileHover={{
         y: -3,
-        boxShadow: '0 8px 24px -4px rgba(0,0,0,0.08), 0 4px 8px -4px rgba(0,0,0,0.04)',
+        boxShadow: '0 8px 24px -6px rgba(15,23,42,0.13)',
       }}
-      className={`relative overflow-hidden rounded-xl bg-white p-6 shadow-card ring-1 ring-slate-900/[0.04] transition-colors${
+      className={`relative overflow-hidden rounded-[16px] bg-white p-5 shadow-card border border-[#eef2f6] transition-colors${
         href ? ' cursor-pointer hover:bg-slate-50/40' : ''
       }`}
     >
       {/* Bottom border accent */}
-      <div className={`absolute inset-x-0 bottom-0 h-[3px] ${colors.border} rounded-b-xl`} />
+      <div className={`absolute inset-x-0 bottom-0 h-[3px] ${colors.border} rounded-b-[16px]`} />
 
       <div className="flex items-center gap-4">
         <div
-          className={`flex size-11 shrink-0 items-center justify-center rounded-lg ${colors.bg}`}
+          className={`flex size-[46px] shrink-0 items-center justify-center rounded-[13px] ${colors.bg}`}
         >
-          <Icon className={`size-5 ${colors.text}`} />
+          <Icon className={`size-[21px] ${colors.text}`} />
         </div>
         <div className="min-w-0">
-          <p className="text-3xl font-bold tracking-tight tabular-nums text-slate-900">
+          <p className="text-[28px] font-bold tracking-[-0.02em] tabular-nums text-slate-900">
             {displayValue}
           </p>
-          <p className="mt-0.5 text-xs font-medium tracking-wide text-slate-400 uppercase">
+          <p className="mt-0.5 text-[11px] font-semibold tracking-[0.06em] text-slate-400 uppercase">
             {title}
           </p>
         </div>

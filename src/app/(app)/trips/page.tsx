@@ -58,7 +58,7 @@ const STATUS_FILTERS = [
 function SkeletonCard({ index }: { index: number }) {
   return (
     <div
-      className="relative h-[210px] animate-pulse overflow-hidden rounded-xl border border-slate-100 border-l-[3px] border-l-slate-200 bg-white p-5 shadow-sm"
+      className="relative h-[210px] animate-pulse overflow-hidden rounded-[15px] border border-[#eef2f6] border-l-[3px] border-l-slate-200 bg-white p-[18px] shadow-card"
       style={{ animationDelay: `${index * 100}ms` }}
     >
       {/* Title + badge */}
@@ -299,14 +299,14 @@ function TripsPageContent() {
       {/* Page header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Trips</h1>
+          <h1 className="text-[26px] font-bold tracking-[-0.02em] text-slate-900">Trips</h1>
           {!loading && trips.length > 0 && (
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1.5 text-sm text-slate-500">
               {filtered.length === trips.length ? (
                 <>{trips.length} {trips.length === 1 ? 'trip' : 'trips'}</>
               ) : (
                 <>
-                  <span className="font-medium text-slate-700">{filtered.length}</span> of {trips.length} {trips.length === 1 ? 'trip' : 'trips'}
+                  <span className="font-semibold text-slate-700">{filtered.length}</span> of {trips.length} {trips.length === 1 ? 'trip' : 'trips'}
                 </>
               )}
             </p>
@@ -316,6 +316,7 @@ function TripsPageContent() {
           {trips.length > 0 && (
             <Button
               variant="outline"
+              className="h-10 rounded-[11px] text-[13px] font-semibold border-slate-200 hover:border-slate-300"
               onClick={() => {
                 setSelectMode((m) => !m);
                 setSelectedIds(new Set());
@@ -324,7 +325,7 @@ function TripsPageContent() {
               {selectMode ? 'Cancel' : 'Select'}
             </Button>
           )}
-          <Button asChild className="bg-amber-500 hover:bg-amber-600 shadow-sm">
+          <Button asChild className="h-10 rounded-[11px] px-[18px] text-[13px] font-semibold text-white bg-gradient-to-br from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 shadow-[0_4px_14px_-4px_rgba(245,158,11,0.55)] motion-safe:hover:-translate-y-px transition-transform">
             <Link href="/trips/new">
               <Plus className="mr-1.5 size-4" />
               New Trip
@@ -335,15 +336,15 @@ function TripsPageContent() {
 
       {/* Search and filters */}
       <div className="space-y-3">
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400 pointer-events-none" />
+        <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap">
+          <div className="relative flex-1 min-w-[220px]">
+            <Search className="absolute left-[13px] top-1/2 size-4 -translate-y-1/2 text-slate-400 pointer-events-none" />
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by trip name or destination..."
               aria-label="Search trips"
-              className="pl-9 pr-9 h-10 bg-white border-slate-200 shadow-sm placeholder:text-slate-400 focus-visible:ring-amber-500/30 focus-visible:border-amber-400"
+              className="pl-[38px] pr-9 h-[42px] rounded-[11px] bg-white border-slate-200 shadow-card placeholder:text-slate-400 focus-visible:ring-amber-500/15 focus-visible:!border-amber-400"
             />
             {search && (
               <button
@@ -356,7 +357,7 @@ function TripsPageContent() {
             )}
           </div>
           <div className="flex gap-2 flex-wrap sm:flex-nowrap">
-            <div className="flex h-10 items-center rounded-md border border-slate-200 bg-white p-1 shadow-sm" role="radiogroup" aria-label="Filter by trip type">
+            <div className="flex h-[42px] items-center rounded-[11px] border border-slate-200 bg-white p-1 shadow-card" role="radiogroup" aria-label="Filter by trip type">
               {TYPE_FILTERS.map(({ value, label }) => {
                 const active = typeFilter === value;
                 return (
@@ -366,7 +367,7 @@ function TripsPageContent() {
                     role="radio"
                     aria-checked={active}
                     onClick={() => setTypeFilter(value)}
-                    className={`h-full rounded px-3 text-sm font-medium transition-colors cursor-pointer ${
+                    className={`h-full rounded-md px-3.5 text-[13px] font-semibold transition-colors cursor-pointer ${
                       active
                         ? 'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200'
                         : 'text-slate-500 hover:text-slate-700 active:text-slate-700'
@@ -378,7 +379,7 @@ function TripsPageContent() {
               })}
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-44 h-10 bg-white border-slate-200 shadow-sm" aria-label="Filter by status">
+              <SelectTrigger className="w-full sm:w-44 h-[42px] rounded-[11px] bg-white border-slate-200 shadow-card" aria-label="Filter by status">
                 <div className="flex items-center gap-2">
                   <SlidersHorizontal className="size-3.5 text-slate-400" />
                   <SelectValue />
@@ -393,7 +394,7 @@ function TripsPageContent() {
               </SelectContent>
             </Select>
             <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-full sm:w-44 h-10 bg-white border-slate-200 shadow-sm" aria-label="Sort trips">
+              <SelectTrigger className="w-full sm:w-44 h-[42px] rounded-[11px] bg-white border-slate-200 shadow-card" aria-label="Sort trips">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -473,10 +474,10 @@ function TripsPageContent() {
             actionHref="/trips/new"
           />
         ) : (
-          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/50 py-16 text-center">
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 py-16 px-5 text-center">
             <Search className="mb-4 size-10 text-slate-300" />
-            <h3 className="text-lg font-semibold text-slate-900">No matching trips</h3>
-            <p className="mt-1 text-sm text-slate-500">
+            <h3 className="text-[17px] font-semibold text-slate-900">No matching trips</h3>
+            <p className="mt-1.5 text-[13px] text-slate-400">
               No trips match your current search or filters.
             </p>
             <Button onClick={clearFilters} variant="outline" size="sm" className="mt-4">
