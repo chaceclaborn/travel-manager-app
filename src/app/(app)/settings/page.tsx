@@ -93,7 +93,7 @@ function NavToggle({
       aria-checked={checked}
       aria-label={`${checked ? 'Hide' : 'Show'} ${label} in sidebar`}
       onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:ring-offset-2 ${
+      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:ring-offset-2 after:absolute after:-inset-x-1 after:-inset-y-2.5 after:content-[''] ${
         checked ? 'bg-amber-500' : 'bg-slate-300'
       }`}
     >

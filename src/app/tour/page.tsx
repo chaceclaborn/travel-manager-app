@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState, useEffect } from 'react';
+import { Suspense, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -24,7 +24,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/lib/travelmanager/useAuth';
-import { isNativePlatform } from '@/lib/mobile-auth';
 
 const errorMessages: Record<string, string> = {
   session_expired: 'Your session expired. Please sign in again.',
@@ -105,35 +104,45 @@ export default function TourPage() {
 }
 
 /**
- * Email + password sign-in. Kept understated (revealed behind a link) because
- * the product's primary sign-in is OAuth. Two reasons it exists:
- *  1. It's the reliable auth path inside the native iOS shell, where the OAuth
- *     redirect to /auth/callback isn't part of the bundled static export.
- *  2. It's the demo path we hand to App Review so the reviewer never has to
- *     clear a third-party OAuth (Google) challenge.
+ * Email + password sign-in AND account creation, revealed behind a link
+ * (OAuth is the primary path on every platform now — native uses the
+ * platform sheets via native-oauth.ts). Email remains:
+ *  1. The demo path we hand to App Review (reviewer taps "Sign in with
+ *     email" and uses the demo credentials).
+ *  2. The account option for users who don't want Google/Apple.
  */
 function EmailSignIn() {
-  const { signInWithEmail } = useAuth();
+  const { signInWithEmail, signUpWithEmail } = useAuth();
   const [open, setOpen] = useState(false);
-  // In the native shell OAuth is hidden, so email is the only sign-in path —
-  // reveal the form by default there.
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time post-hydration platform detection, not a render cascade
-  useEffect(() => { if (isNativePlatform()) setOpen(true); }, []);
+  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [confirmationSent, setConfirmationSent] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (submitting) return;
     setError(null);
     setSubmitting(true);
-    const err = await signInWithEmail(email.trim(), password);
+    if (mode === 'signin') {
+      const err = await signInWithEmail(email.trim(), password);
+      if (err) {
+        setError(err);
+        setSubmitting(false); // on success we navigate away, so only reset on error
+      }
+      return;
+    }
+    const { error: err, needsConfirmation } = await signUpWithEmail(email.trim(), password);
     if (err) {
       setError(err);
-      setSubmitting(false); // on success we navigate away, so only reset on error
+      setSubmitting(false);
+    } else if (needsConfirmation) {
+      setConfirmationSent(true);
+      setSubmitting(false);
     }
+    // else: confirmations are off and we're signed in — the hook navigates.
   }
 
   if (!open) {
@@ -143,8 +152,29 @@ function EmailSignIn() {
         onClick={() => setOpen(true)}
         className="mt-1 text-sm text-slate-400 underline-offset-2 hover:text-slate-600 hover:underline active:text-slate-600"
       >
-        Sign in with email
+        Sign in or create an account with email
       </button>
+    );
+  }
+
+  if (confirmationSent) {
+    return (
+      <div className="mt-2 w-64 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-center">
+        <p className="text-sm font-semibold text-emerald-800">Check your email</p>
+        <p className="mt-1 text-xs text-emerald-700">
+          We sent a confirmation link to {email}. Open it, then come back and sign in.
+        </p>
+        <button
+          type="button"
+          onClick={() => {
+            setConfirmationSent(false);
+            setMode('signin');
+          }}
+          className="mt-2 text-xs font-medium text-emerald-800 underline underline-offset-2"
+        >
+          Back to sign in
+        </button>
+      </div>
     );
   }
 
@@ -162,38 +192,49 @@ function EmailSignIn() {
       />
       <Input
         type="password"
-        autoComplete="current-password"
-        placeholder="Password"
+        autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
+        placeholder={mode === 'signin' ? 'Password' : 'Password (6+ characters)'}
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         required
+        minLength={mode === 'signup' ? 6 : undefined}
         aria-label="Password"
       />
       {error && <p className="text-xs text-red-600">{error}</p>}
       <Button
         type="submit"
         disabled={submitting}
-        className="w-full gap-2 bg-slate-800 text-white hover:bg-slate-900 active:bg-slate-900"
+        className="h-11 md:h-9 w-full gap-2 bg-slate-800 text-white hover:bg-slate-900 active:bg-slate-900"
       >
         {submitting ? <Loader2 className="size-4 animate-spin" /> : <Mail className="size-4" />}
-        {submitting ? 'Signing in…' : 'Sign in'}
+        {submitting
+          ? mode === 'signin' ? 'Signing in…' : 'Creating account…'
+          : mode === 'signin' ? 'Sign in' : 'Create account'}
       </Button>
+      <button
+        type="button"
+        onClick={() => {
+          setMode((m) => (m === 'signin' ? 'signup' : 'signin'));
+          setError(null);
+        }}
+        className="text-xs text-slate-500 underline-offset-2 hover:text-slate-700 hover:underline"
+      >
+        {mode === 'signin' ? 'New here? Create an account' : 'Already have an account? Sign in'}
+      </button>
     </form>
   );
 }
 
 function TourPageContent() {
+  // Google/Apple render on EVERY platform: web uses the redirect OAuth flow,
+  // the native shell runs the platform sign-in sheets (see native-oauth.ts) —
+  // no /auth/callback needed, so no more hiding the buttons natively.
   const { signInWithGoogle, signInWithApple } = useAuth();
-  // In the native iOS shell the OAuth redirect target (/auth/callback) isn't part
-  // of the bundled static export, so Google/Apple sign-in can't complete — hide
-  // those buttons and use email/password (which works natively). Detected after
-  // mount so the first render still matches the prerendered (web) HTML.
-  const [native, setNative] = useState(false);
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time post-hydration platform detection, not a render cascade
-  useEffect(() => { setNative(isNativePlatform()); }, []);
+  const [oauthError, setOauthError] = useState<string | null>(null);
   const searchParams = useSearchParams();
   const errorCode = searchParams.get('error');
   const errorMessage = errorCode ? errorMessages[errorCode] ?? errorMessages.auth : null;
+  const emailConfirmed = searchParams.get('confirmed') === '1';
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-amber-50/60 via-white to-slate-50">
@@ -210,6 +251,15 @@ function TourPageContent() {
           >
             <AlertCircle className="size-5 shrink-0 text-red-500" />
             <p className="text-sm text-red-700">{errorMessage}</p>
+          </motion.div>
+        )}
+        {emailConfirmed && !errorMessage && (
+          <motion.div
+            variants={item}
+            className="mb-6 flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3"
+          >
+            <UserCheck className="size-5 shrink-0 text-emerald-600" />
+            <p className="text-sm text-emerald-700">Email confirmed — sign in below to get started.</p>
           </motion.div>
         )}
 
@@ -240,25 +290,30 @@ function TourPageContent() {
             Plan trips, manage vendors, track clients — all in one place
           </p>
           <div className="mt-8 flex flex-col items-center gap-3">
-            {!native && (
-              <>
-                <Button
-                  onClick={signInWithGoogle}
-                  size="lg"
-                  className="bg-amber-500 hover:bg-amber-600 text-white px-8 text-base w-64"
-                >
-                  Sign in with Google
-                </Button>
-                <Button
-                  onClick={signInWithApple}
-                  size="lg"
-                  className="bg-black hover:bg-neutral-800 text-white px-8 text-base w-64 gap-2"
-                >
-                  <AppleLogo className="size-5" />
-                  Sign in with Apple
-                </Button>
-              </>
-            )}
+            <Button
+              onClick={async () => {
+                setOauthError(null);
+                const err = await signInWithGoogle();
+                if (err) setOauthError(err);
+              }}
+              size="lg"
+              className="bg-amber-500 hover:bg-amber-600 text-white px-8 text-base w-64"
+            >
+              Sign in with Google
+            </Button>
+            <Button
+              onClick={async () => {
+                setOauthError(null);
+                const err = await signInWithApple();
+                if (err) setOauthError(err);
+              }}
+              size="lg"
+              className="bg-black hover:bg-neutral-800 text-white px-8 text-base w-64 gap-2"
+            >
+              <AppleLogo className="size-5" />
+              Sign in with Apple
+            </Button>
+            {oauthError && <p className="max-w-64 text-xs text-red-600">{oauthError}</p>}
             <EmailSignIn />
           </div>
         </motion.div>
@@ -315,29 +370,35 @@ function TourPageContent() {
           </p>
         </motion.div>
 
-        {/* Footer CTA — hidden in the native shell (OAuth redirect isn't in the static export; email is the native path) */}
-        {!native && (
-          <motion.div variants={item} className="mt-16 pb-8 text-center">
-            <div className="flex flex-col items-center gap-3">
-              <Button
-                onClick={signInWithGoogle}
-                size="lg"
-                className="bg-amber-500 hover:bg-amber-600 text-white px-8 text-base w-64"
-              >
-                Sign in with Google
-              </Button>
-              <Button
-                onClick={signInWithApple}
-                size="lg"
-                className="bg-black hover:bg-neutral-800 text-white px-8 text-base w-64 gap-2"
-              >
-                <AppleLogo className="size-5" />
-                Sign in with Apple
-              </Button>
-            </div>
-            <p className="mt-3 text-sm text-slate-400">Secure sign-in with your Google or Apple account</p>
-          </motion.div>
-        )}
+        {/* Footer CTA — native runs the platform sign-in sheets (native-oauth.ts) */}
+        <motion.div variants={item} className="mt-16 pb-8 text-center">
+          <div className="flex flex-col items-center gap-3">
+            <Button
+              onClick={async () => {
+                setOauthError(null);
+                const err = await signInWithGoogle();
+                if (err) setOauthError(err);
+              }}
+              size="lg"
+              className="bg-amber-500 hover:bg-amber-600 text-white px-8 text-base w-64"
+            >
+              Sign in with Google
+            </Button>
+            <Button
+              onClick={async () => {
+                setOauthError(null);
+                const err = await signInWithApple();
+                if (err) setOauthError(err);
+              }}
+              size="lg"
+              className="bg-black hover:bg-neutral-800 text-white px-8 text-base w-64 gap-2"
+            >
+              <AppleLogo className="size-5" />
+              Sign in with Apple
+            </Button>
+          </div>
+          <p className="mt-3 text-sm text-slate-400">Secure sign-in with your Google or Apple account</p>
+        </motion.div>
       </motion.div>
     </div>
   );

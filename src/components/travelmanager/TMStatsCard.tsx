@@ -75,24 +75,24 @@ export function TMStatsCard({ title, value, icon: Icon, color, href }: TMStatsCa
         y: -3,
         boxShadow: '0 8px 24px -6px rgba(15,23,42,0.13)',
       }}
-      className={`relative overflow-hidden rounded-[16px] bg-white p-5 shadow-card border border-[#eef2f6] transition-colors${
+      className={`relative overflow-hidden rounded-[16px] bg-white p-4 sm:p-5 shadow-card border border-[#eef2f6] transition-colors${
         href ? ' cursor-pointer hover:bg-slate-50/40' : ''
       }`}
     >
       {/* Bottom border accent */}
       <div className={`absolute inset-x-0 bottom-0 h-[3px] ${colors.border} rounded-b-[16px]`} />
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3 sm:gap-4">
         <div
-          className={`flex size-[46px] shrink-0 items-center justify-center rounded-[13px] ${colors.bg}`}
+          className={`flex size-10 sm:size-[46px] shrink-0 items-center justify-center rounded-[13px] ${colors.bg}`}
         >
-          <Icon className={`size-[21px] ${colors.text}`} />
+          <Icon className={`size-5 sm:size-[21px] ${colors.text}`} />
         </div>
         <div className="min-w-0">
-          <p className="text-[28px] font-bold tracking-[-0.02em] tabular-nums text-slate-900">
+          <p className="truncate text-xl sm:text-[28px] font-bold tracking-[-0.02em] tabular-nums text-slate-900">
             {displayValue}
           </p>
-          <p className="mt-0.5 text-[11px] font-semibold tracking-[0.06em] text-slate-400 uppercase">
+          <p className="mt-0.5 break-words text-[11px] font-semibold tracking-[0.06em] text-slate-400 uppercase">
             {title}
           </p>
         </div>

@@ -370,7 +370,7 @@ export default function TravelManagerLayout({
                     </div>
                     <button
                       onClick={() => setMobileMenuOpen(false)}
-                      className="text-white p-1"
+                      className="text-white min-w-11 min-h-11 -mr-2 flex items-center justify-center"
                       aria-label="Close menu"
                     >
                       <X className="size-5" />

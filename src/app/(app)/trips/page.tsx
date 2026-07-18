@@ -344,12 +344,12 @@ function TripsPageContent() {
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by trip name or destination..."
               aria-label="Search trips"
-              className="pl-[38px] pr-9 h-[42px] rounded-[11px] bg-white border-slate-200 shadow-card placeholder:text-slate-400 focus-visible:ring-amber-500/15 focus-visible:!border-amber-400"
+              className="pl-[38px] pr-11 sm:pr-9 h-[42px] rounded-[11px] bg-white border-slate-200 shadow-card placeholder:text-slate-400 focus-visible:ring-amber-500/15 focus-visible:!border-amber-400"
             />
             {search && (
               <button
                 onClick={() => setSearch('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                className="absolute right-0 top-0 h-full w-11 sm:w-9 inline-flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
                 aria-label="Clear search"
               >
                 <X className="size-4" />
@@ -551,22 +551,23 @@ function TripsPageContent() {
       )}
 
       {selectMode && selectedIds.size > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 md:left-64 z-40 border-t border-slate-200 bg-white p-3 shadow-lg">
+        <div className="fixed bottom-0 left-0 right-0 md:left-64 z-40 border-t border-slate-200 bg-white px-3 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-lg">
           <div className="mx-auto flex max-w-6xl items-center gap-3 flex-wrap">
             <span className="font-semibold text-slate-800">
               {selectedIds.size} selected
             </span>
-            <Button variant="outline" size="sm" onClick={() => setSelectedIds(new Set())}>
+            <Button variant="outline" size="sm" className="h-10 sm:h-8" onClick={() => setSelectedIds(new Set())}>
               Clear
             </Button>
             <Button
               variant="destructive"
               size="sm"
+              className="h-10 sm:h-8"
               onClick={() => setBulkDeleteOpen(true)}
             >
               Delete
             </Button>
-            <Button variant="outline" size="sm" onClick={handleBulkExportCsv}>
+            <Button variant="outline" size="sm" className="h-10 sm:h-8" onClick={handleBulkExportCsv}>
               Export CSV
             </Button>
           </div>

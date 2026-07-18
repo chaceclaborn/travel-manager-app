@@ -45,10 +45,22 @@ export function useAuth() {
     return () => (listener as { subscription: { unsubscribe: () => void } }).subscription.unsubscribe();
   }, [supabase]);
 
-  async function signInWithGoogle() {
+  /**
+   * Google / Apple sign-in. On WEB this is the redirect OAuth flow through
+   * /auth/callback. In the NATIVE shell that route doesn't exist (static
+   * export), so we run the platform-native sheet and exchange the ID token
+   * directly — see native-oauth.ts. Returns an error message to display, or
+   * null when there is nothing to show (success navigates away; a dismissed
+   * native sheet is not an error).
+   */
+  async function signInWithGoogle(): Promise<string | null> {
     if (!supabase?.auth) {
       console.error('Supabase client not initialized — check NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY');
-      return;
+      return 'Sign-in is unavailable right now. Please try again later.';
+    }
+    if (isNativePlatform()) {
+      const { nativeOAuthSignIn } = await import('@/lib/native-oauth');
+      return nativeOAuthSignIn(supabase, 'google');
     }
     await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -56,12 +68,17 @@ export function useAuth() {
         redirectTo: window.location.origin + '/auth/callback',
       },
     });
+    return null;
   }
 
-  async function signInWithApple() {
+  async function signInWithApple(): Promise<string | null> {
     if (!supabase?.auth) {
       console.error('Supabase client not initialized — check NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY');
-      return;
+      return 'Sign-in is unavailable right now. Please try again later.';
+    }
+    if (isNativePlatform()) {
+      const { nativeOAuthSignIn } = await import('@/lib/native-oauth');
+      return nativeOAuthSignIn(supabase, 'apple');
     }
     await supabase.auth.signInWithOAuth({
       provider: 'apple',
@@ -69,6 +86,7 @@ export function useAuth() {
         redirectTo: window.location.origin + '/auth/callback',
       },
     });
+    return null;
   }
 
   /**
@@ -102,6 +120,49 @@ export function useAuth() {
     return null;
   }
 
+  /**
+   * Email + password account creation. Mirrors signInWithEmail's contract but
+   * also reports whether Supabase wants the address confirmed first (when
+   * "Confirm email" is enabled, signUp returns a user with NO session — the
+   * caller should tell the user to check their inbox, then sign in).
+   *
+   * The confirmation link must land on the WEB origin (the native shell can't
+   * serve it), so emailRedirectTo is pinned to production, not
+   * window.location.origin (which is capacitor://localhost natively).
+   */
+  async function signUpWithEmail(
+    email: string,
+    password: string
+  ): Promise<{ error: string | null; needsConfirmation: boolean }> {
+    if (!supabase?.auth) {
+      return { error: 'Sign-up is unavailable right now. Please try again later.', needsConfirmation: false };
+    }
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo: 'https://www.travels-manager.com/tour?confirmed=1' },
+    });
+    if (error) {
+      return { error: error.message || 'Could not create the account.', needsConfirmation: false };
+    }
+    // Existing-email probe: Supabase (with confirmations on) answers an
+    // already-registered address with a user object that has EMPTY identities
+    // rather than an error, to avoid leaking who has an account. Surface a
+    // helpful message instead of a misleading "check your email".
+    if (data.user && !data.session && (data.user.identities?.length ?? 0) === 0) {
+      return { error: 'An account with this email already exists. Try signing in instead.', needsConfirmation: false };
+    }
+    if (data.session) {
+      // Confirmations disabled — signed in immediately; same path as sign-in.
+      if (data.session.access_token) {
+        await setStoredToken(data.session.access_token);
+      }
+      window.location.href = '/';
+      return { error: null, needsConfirmation: false };
+    }
+    return { error: null, needsConfirmation: true };
+  }
+
   async function signOut() {
     await clearStoredToken();
     // scope: 'local' clears the session without the network round-trip that
@@ -121,5 +182,5 @@ export function useAuth() {
     window.location.href = isNativePlatform() ? '/tour/' : '/tour';
   }
 
-  return { user, loading, signInWithGoogle, signInWithApple, signInWithEmail, signOut };
+  return { user, loading, signInWithGoogle, signInWithApple, signInWithEmail, signUpWithEmail, signOut };
 }

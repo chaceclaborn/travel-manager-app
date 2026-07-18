@@ -299,7 +299,7 @@ function MeetingCard({
               <Input
                 value={form.title}
                 onChange={(e) => updateForm('title', e.target.value)}
-                className="h-8 text-xs"
+                className="h-11 text-base sm:h-8 sm:text-xs"
               />
             </div>
             <div className="min-w-0">
@@ -312,7 +312,7 @@ function MeetingCard({
                   type="time"
                   value={form.startTime}
                   onChange={(e) => updateForm('startTime', e.target.value)}
-                  className="w-20 shrink-0 h-8 text-xs"
+                  className="w-24 shrink-0 h-11 text-base sm:h-8 sm:text-xs"
                   aria-label="Start time"
                 />
               </div>
@@ -332,7 +332,7 @@ function MeetingCard({
                   type="time"
                   value={form.endTime}
                   onChange={(e) => updateForm('endTime', e.target.value)}
-                  className="w-20 shrink-0 h-8 text-xs"
+                  className="w-24 shrink-0 h-11 text-base sm:h-8 sm:text-xs"
                   aria-label="End time"
                 />
               </div>
@@ -340,7 +340,7 @@ function MeetingCard({
             <div className="sm:col-span-2">
               <Label className="text-xs">Timezone</Label>
               <Select value={form.timezone} onValueChange={(v) => updateForm('timezone', v)}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-11 text-base sm:h-8 sm:text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent className="max-h-64">
                   {timezones.map((tz) => (
                     <SelectItem key={tz} value={tz}>{tz}</SelectItem>
@@ -353,13 +353,13 @@ function MeetingCard({
               <Input
                 value={form.location}
                 onChange={(e) => updateForm('location', e.target.value)}
-                className="h-8 text-xs"
+                className="h-11 text-base sm:h-8 sm:text-xs"
               />
             </div>
             <div>
               <Label className="text-xs">Link to Trip</Label>
               <Select value={form.tripId || 'none'} onValueChange={(v) => updateForm('tripId', v === 'none' ? '' : v)}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="None" /></SelectTrigger>
+                <SelectTrigger className="h-11 text-base sm:h-8 sm:text-xs"><SelectValue placeholder="None" /></SelectTrigger>
                 <SelectContent position="popper" sideOffset={4}>
                   <SelectItem value="none">None</SelectItem>
                   {trips.map((trip) => (
@@ -373,7 +373,7 @@ function MeetingCard({
             <div>
               <Label className="text-xs">Link to Client</Label>
               <Select value={form.clientId || 'none'} onValueChange={(v) => updateForm('clientId', v === 'none' ? '' : v)}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="None" /></SelectTrigger>
+                <SelectTrigger className="h-11 text-base sm:h-8 sm:text-xs"><SelectValue placeholder="None" /></SelectTrigger>
                 <SelectContent position="popper" sideOffset={4}>
                   <SelectItem value="none">None</SelectItem>
                   {clients.map((client) => (
@@ -389,15 +389,15 @@ function MeetingCard({
               <Input
                 value={form.notes}
                 onChange={(e) => updateForm('notes', e.target.value)}
-                className="h-8 text-xs"
+                className="h-11 text-base sm:h-8 sm:text-xs"
               />
             </div>
           </div>
           <div className="flex gap-2">
-            <Button type="submit" size="sm" disabled={saving} className="h-7 text-xs bg-amber-500 hover:bg-amber-600">
+            <Button type="submit" size="sm" disabled={saving} className="h-11 sm:h-7 text-xs bg-amber-500 hover:bg-amber-600">
               {saving ? <><Loader2 className="size-3.5 animate-spin" />Saving...</> : 'Save'}
             </Button>
-            <Button type="button" size="sm" variant="outline" onClick={() => setEditing(false)} className="h-7 text-xs">
+            <Button type="button" size="sm" variant="outline" onClick={() => setEditing(false)} className="h-11 sm:h-7 text-xs">
               Cancel
             </Button>
           </div>

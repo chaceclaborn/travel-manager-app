@@ -381,7 +381,7 @@ export default function VendorsPage() {
       )}
 
       {selectMode && selectedIds.size > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 md:left-64 z-40 border-t border-slate-200 bg-white p-3 shadow-lg">
+        <div className="fixed bottom-0 left-0 right-0 md:left-64 z-40 border-t border-slate-200 bg-white px-3 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-lg">
           <div className="mx-auto flex max-w-6xl items-center gap-3 flex-wrap">
             <span className="font-semibold text-slate-800">
               {selectedIds.size} selected

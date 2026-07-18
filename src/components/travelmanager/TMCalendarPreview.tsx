@@ -252,7 +252,7 @@ export function TMCalendarPreview({ trips, meetings = [] }: TMCalendarPreviewPro
         <div className="flex items-center gap-1">
           <button
             onClick={prevMonth}
-            className="size-[30px] flex items-center justify-center rounded-[9px] hover:bg-slate-100 active:bg-slate-200 transition-colors text-slate-400 hover:text-slate-600"
+            className="size-11 sm:size-[30px] flex items-center justify-center rounded-[9px] hover:bg-slate-100 active:bg-slate-200 transition-colors text-slate-400 hover:text-slate-600"
             aria-label="Previous month"
           >
             <ChevronLeft className="size-4" />
@@ -276,7 +276,7 @@ export function TMCalendarPreview({ trips, meetings = [] }: TMCalendarPreviewPro
           </div>
           <button
             onClick={nextMonth}
-            className="size-[30px] flex items-center justify-center rounded-[9px] hover:bg-slate-100 active:bg-slate-200 transition-colors text-slate-400 hover:text-slate-600"
+            className="size-11 sm:size-[30px] flex items-center justify-center rounded-[9px] hover:bg-slate-100 active:bg-slate-200 transition-colors text-slate-400 hover:text-slate-600"
             aria-label="Next month"
           >
             <ChevronRight className="size-4" />
@@ -392,7 +392,9 @@ export function TMCalendarPreview({ trips, meetings = [] }: TMCalendarPreviewPro
                         {(info.isStart || info.isSingle) && (
                           <span className={`flex items-center gap-1 px-1 min-w-0 ${text}`}>
                             <span className={`shrink-0 size-[5px] rounded-full ${dot}`} />
-                            <span className="truncate text-[10px] font-semibold leading-none">{info.trip.title}</span>
+                            {/* At base width day cells are ~40px — a 2-char truncated title is
+                                noise, so show only the bar + status dot below sm */}
+                            <span className="hidden sm:block truncate text-[10px] font-semibold leading-none">{info.trip.title}</span>
                           </span>
                         )}
                       </Link>

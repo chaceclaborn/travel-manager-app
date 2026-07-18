@@ -145,14 +145,14 @@ export function TripCard({ trip, onSaved, onDeleted }: TripCardProps) {
               <button type="button" onClick={() => setEditing(false)} className="rounded-md p-2.5 sm:p-2 min-w-11 min-h-11 sm:min-w-0 sm:min-h-0 inline-flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-600 focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:outline-none" aria-label="Cancel editing"><X className="size-4" /></button>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="sm:col-span-2"><Label className="text-xs">Title *</Label><Input value={form.title} onChange={(e) => setForm(f => ({ ...f, title: e.target.value }))} className="h-8 text-xs" /></div>
-              <div className="sm:col-span-2"><Label className="text-xs">Destination</Label><Input value={form.destination} onChange={(e) => setForm(f => ({ ...f, destination: e.target.value }))} className="h-8 text-xs" placeholder="City, Country" /></div>
+              <div className="sm:col-span-2"><Label className="text-xs">Title *</Label><Input value={form.title} onChange={(e) => setForm(f => ({ ...f, title: e.target.value }))} className="h-10 text-base sm:h-8 sm:text-xs" /></div>
+              <div className="sm:col-span-2"><Label className="text-xs">Destination</Label><Input value={form.destination} onChange={(e) => setForm(f => ({ ...f, destination: e.target.value }))} className="h-10 text-base sm:h-8 sm:text-xs" placeholder="City, Country" /></div>
               <div><Label className="text-xs">Start Date</Label><DatePicker date={form.startDate} onDateChange={(d) => setForm(f => ({ ...f, startDate: d }))} /></div>
               <div><Label className="text-xs">End Date</Label><DatePicker date={form.endDate} onDateChange={(d) => setForm(f => ({ ...f, endDate: d }))} minDate={form.startDate} defaultMonth={form.startDate} /></div>
               <div>
                 <Label className="text-xs">Status</Label>
                 <Select value={form.status} onValueChange={(v) => setForm(f => ({ ...f, status: v }))}>
-                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-10 text-base sm:h-8 sm:text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="DRAFT">Draft</SelectItem>
                     <SelectItem value="PLANNED">Planned</SelectItem>
@@ -162,11 +162,11 @@ export function TripCard({ trip, onSaved, onDeleted }: TripCardProps) {
                   </SelectContent>
                 </Select>
               </div>
-              <div><Label className="text-xs">Budget</Label><Input type="number" step="0.01" value={form.budget} onChange={(e) => setForm(f => ({ ...f, budget: e.target.value }))} className="h-8 text-xs" placeholder="0.00" /></div>
+              <div><Label className="text-xs">Budget</Label><Input type="number" step="0.01" value={form.budget} onChange={(e) => setForm(f => ({ ...f, budget: e.target.value }))} className="h-10 text-base sm:h-8 sm:text-xs" placeholder="0.00" /></div>
               <div>
                 <Label className="text-xs">Type</Label>
                 <Select value={form.tripType} onValueChange={(v) => setForm(f => ({ ...f, tripType: v }))}>
-                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-10 text-base sm:h-8 sm:text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="PERSONAL">Personal</SelectItem>
                     <SelectItem value="WORK">Work</SelectItem>
@@ -175,8 +175,8 @@ export function TripCard({ trip, onSaved, onDeleted }: TripCardProps) {
               </div>
             </div>
             <div className="flex gap-2">
-              <Button type="submit" size="sm" disabled={saving} className="h-7 text-xs bg-amber-500 hover:bg-amber-600">{saving ? <><Loader2 className="size-3.5 animate-spin" />Saving...</> : 'Save'}</Button>
-              <Button type="button" size="sm" variant="outline" onClick={() => setEditing(false)} className="h-7 text-xs">Cancel</Button>
+              <Button type="submit" size="sm" disabled={saving} className="h-10 text-sm sm:h-7 sm:text-xs bg-amber-500 hover:bg-amber-600">{saving ? <><Loader2 className="size-3.5 animate-spin" />Saving...</> : 'Save'}</Button>
+              <Button type="button" size="sm" variant="outline" onClick={() => setEditing(false)} className="h-10 text-sm sm:h-7 sm:text-xs">Cancel</Button>
             </div>
           </form>
         </div>
