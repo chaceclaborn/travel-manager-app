@@ -84,9 +84,14 @@ export async function nativeOAuthSignIn(
       });
       idToken = (res.result as { idToken?: string })?.idToken;
     }
-  } catch {
-    // The native sheet throws when the user cancels — not an error to surface.
-    return null;
+  } catch (e) {
+    // A dismissed sheet is not an error — but anything else must be VISIBLE.
+    // (Build 6 shipped without the native plugin linked; the old blanket
+    // `return null` here turned that into silent dead buttons.)
+    const msg = e instanceof Error ? e.message : String(e);
+    if (/cancel|dismiss/i.test(msg)) return null;
+    console.error(`[native-oauth] ${provider} sign-in failed:`, msg);
+    return `Couldn't start ${provider === 'apple' ? 'Apple' : 'Google'} sign-in. Please try again or use email.`;
   }
 
   if (!idToken) return null; // dismissed / no token — nothing to show
