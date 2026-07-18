@@ -22,7 +22,7 @@ import { setStoredToken } from './mobile-auth';
 // Google Cloud Console → APIs & Services → Credentials → "Travel Manager iOS".
 // This is a public identifier (it ships in the app bundle), not a secret.
 export const GOOGLE_IOS_CLIENT_ID =
-  'REPLACE_WITH_IOS_CLIENT_ID.apps.googleusercontent.com';
+  '615013387724-kq9f2unerj5o02d6osjanna2vlhllgrr.apps.googleusercontent.com';
 
 let initialized = false;
 
