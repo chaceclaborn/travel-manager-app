@@ -78,10 +78,14 @@ export async function nativeOAuthSignIn(
       const result = res.result as { idToken?: string; identityToken?: string };
       idToken = result?.idToken ?? result?.identityToken;
     } else {
-      const res = await SocialLogin.login({
-        provider: 'google',
-        options: { scopes: ['email', 'profile'] },
-      });
+      // A 30s guard so a wedged native flow surfaces an error instead of a
+      // forever-pending promise (see build-6/7 postmortem: dead buttons).
+      const res = (await Promise.race([
+        SocialLogin.login({ provider: 'google', options: { scopes: ['email', 'profile'] } }),
+        new Promise<never>((_, rej) =>
+          setTimeout(() => rej(new Error('Google sign-in timed out. Please try again.')), 30000)
+        ),
+      ])) as Awaited<ReturnType<typeof SocialLogin.login>>;
       idToken = (res.result as { idToken?: string })?.idToken;
     }
   } catch (e) {

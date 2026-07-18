@@ -48,7 +48,9 @@ export default function TravelManagerLayout({
   const PUBLIC_PATHS = ['/tour', '/privacy', '/terms', '/support'];
   const isPublicPage = PUBLIC_PATHS.includes(pathname);
 
-  const pageTitle = pathname === '/' ? 'Dashboard'
+  // Root shows no page title — the brand block alone is the header ("Dashboard"
+  // as a label was hated, reasonably)
+  const pageTitle = pathname === '/' ? ''
     : pathname.includes('/trips') ? 'Trips'
     : pathname.includes('/bookings') ? 'Bookings'
     : pathname.includes('/vendors') ? 'Vendors'
@@ -277,7 +279,7 @@ export default function TravelManagerLayout({
               </div>
               <div>
                 <h1 className="text-[15px] font-bold leading-[1.15] tracking-[-0.01em] text-white">Travel Manager</h1>
-                <p className="text-[11px] text-slate-500">Trip Planning Dashboard</p>
+                <p className="text-[11px] text-slate-500">Trips · Clients · Vendors</p>
               </div>
             </div>
             <TMSidebar isAdmin={isAdminChecked && isAdmin} />
@@ -365,7 +367,7 @@ export default function TravelManagerLayout({
                       <span className="flex size-[42px] shrink-0 items-center justify-center rounded-[13px] bg-white p-1 shadow-[0_4px_14px_-4px_rgba(0,0,0,0.5)]"><Image src="/brand/logo.png" alt="" width={42} height={42} className="size-full object-contain" aria-hidden="true" /></span>
                       <div>
                         <h1 className="text-base font-bold text-white leading-tight">Travel Manager</h1>
-                        <p className="text-[11px] text-slate-400">Trip Planning Dashboard</p>
+                        <p className="text-[11px] text-slate-400">Trips · Clients · Vendors</p>
                       </div>
                     </div>
                     <button

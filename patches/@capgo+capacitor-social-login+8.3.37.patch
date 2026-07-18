@@ -1,0 +1,19 @@
+diff --git a/node_modules/@capgo/capacitor-social-login/ios/Sources/SocialLoginPlugin/GoogleProvider.swift b/node_modules/@capgo/capacitor-social-login/ios/Sources/SocialLoginPlugin/GoogleProvider.swift
+index 9169503..36454c2 100644
+--- a/node_modules/@capgo/capacitor-social-login/ios/Sources/SocialLoginPlugin/GoogleProvider.swift
++++ b/node_modules/@capgo/capacitor-social-login/ios/Sources/SocialLoginPlugin/GoogleProvider.swift
+@@ -38,7 +38,13 @@ class GoogleProvider {
+             }
+ 
+             func login() {
+-                guard let presentingVc = UIApplication.shared.windows.first?.rootViewController else {
++                // Patched (travel-manager): `windows.first` can be an invisible
++                // auxiliary window on iOS 15+; an ASWebAuthenticationSession
++                // anchored to it never becomes visible. Use the key window.
++                let keyWindow = UIApplication.shared.connectedScenes
++                    .compactMap { ($0 as? UIWindowScene)?.keyWindow }
++                    .first ?? UIApplication.shared.windows.first(where: { $0.isKeyWindow })
++                guard let presentingVc = keyWindow?.rootViewController else {
+                     completion(.failure(NSError(domain: "GoogleProvider", code: 0, userInfo: [NSLocalizedDescriptionKey: "No presenting view controller found"])))
+                     return
+                 }
