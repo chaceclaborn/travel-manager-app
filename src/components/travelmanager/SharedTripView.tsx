@@ -217,7 +217,7 @@ export default function SharedTripView({ trip, weather }: SharedTripViewProps) {
         />
         <div className="relative mx-auto max-w-3xl px-6 pb-12 pt-10 sm:px-8 sm:pb-16 sm:pt-12">
           <div className="mb-8 flex items-center gap-2.5">
-            <Image src="/icons/icon-192.png" alt="" width={28} height={28} className="size-7" aria-hidden="true" />
+            <Image src="/brand/logo.png" alt="" width={28} height={28} className="size-7" aria-hidden="true" />
             <span className="text-xs font-semibold uppercase tracking-widest text-amber-400">
               Shared itinerary
             </span>
@@ -490,7 +490,7 @@ export default function SharedTripView({ trip, weather }: SharedTripViewProps) {
             )}
           </div>
           <div className="mt-6 flex items-center justify-center gap-1.5 border-t border-stone-100 pt-5 text-xs text-stone-400">
-            <Image src="/icons/icon-192.png" alt="" width={16} height={16} className="size-4" aria-hidden="true" />
+            <Image src="/brand/logo.png" alt="" width={16} height={16} className="size-4" aria-hidden="true" />
             Crafted with{' '}
             <a
               href="https://www.travels-manager.com/tour"

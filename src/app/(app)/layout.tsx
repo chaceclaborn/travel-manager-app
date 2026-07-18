@@ -273,7 +273,7 @@ export default function TravelManagerLayout({
           <aside className="hidden md:flex w-64 flex-col fixed inset-y-0 left-0 bg-gradient-to-b from-slate-900 to-slate-950 border-r border-white/[0.06] z-40 safe-area-top safe-area-bottom safe-area-left" role="navigation" aria-label="Main navigation">
             <div className="flex items-center gap-[11px] px-[18px] py-[18px] border-b border-white/[0.08]">
               <div className="flex size-[42px] shrink-0 items-center justify-center rounded-[13px] bg-white p-1 shadow-[0_4px_14px_-4px_rgba(0,0,0,0.5)]">
-                <Image src="/icons/icon-192.png" alt="" width={42} height={42} className="size-full object-contain" aria-hidden="true" />
+                <Image src="/brand/logo.png" alt="" width={42} height={42} className="size-full object-contain" aria-hidden="true" />
               </div>
               <div>
                 <h1 className="text-[15px] font-bold leading-[1.15] tracking-[-0.01em] text-white">Travel Manager</h1>
@@ -305,7 +305,7 @@ export default function TravelManagerLayout({
             <div className="flex items-center justify-between px-4 h-16">
               <div>
                 <h1 className="text-lg font-bold text-white flex items-center gap-2">
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-[10px] bg-white p-[3px] shadow-[0_2px_8px_-2px_rgba(0,0,0,0.4)]"><Image src="/icons/icon-192.png" alt="" width={32} height={32} className="size-full object-contain" aria-hidden="true" /></span>
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-[10px] bg-white p-[3px] shadow-[0_2px_8px_-2px_rgba(0,0,0,0.4)]"><Image src="/brand/logo.png" alt="" width={32} height={32} className="size-full object-contain" aria-hidden="true" /></span>
                   Travel Manager
                 </h1>
                 {pageTitle && (
@@ -362,7 +362,7 @@ export default function TravelManagerLayout({
                 >
                   <div className="flex items-center justify-between px-5 py-5 border-b border-white/10">
                     <div className="flex items-center gap-2.5">
-                      <span className="flex size-[42px] shrink-0 items-center justify-center rounded-[13px] bg-white p-1 shadow-[0_4px_14px_-4px_rgba(0,0,0,0.5)]"><Image src="/icons/icon-192.png" alt="" width={42} height={42} className="size-full object-contain" aria-hidden="true" /></span>
+                      <span className="flex size-[42px] shrink-0 items-center justify-center rounded-[13px] bg-white p-1 shadow-[0_4px_14px_-4px_rgba(0,0,0,0.5)]"><Image src="/brand/logo.png" alt="" width={42} height={42} className="size-full object-contain" aria-hidden="true" /></span>
                       <div>
                         <h1 className="text-base font-bold text-white leading-tight">Travel Manager</h1>
                         <p className="text-[11px] text-slate-400">Trip Planning Dashboard</p>

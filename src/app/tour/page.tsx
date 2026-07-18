@@ -275,7 +275,7 @@ function TourPageContent() {
             className="pointer-events-none absolute left-1/2 top-4 size-72 -translate-x-1/2 rounded-full bg-amber-400/15 blur-3xl"
           />
           <Image
-            src="/icons/icon-192.png"
+            src="/brand/logo.png"
             alt=""
             width={96}
             height={96}

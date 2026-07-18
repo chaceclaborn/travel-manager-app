@@ -163,7 +163,7 @@ export default function PrivacyPolicyPage() {
           className="mb-8 inline-flex items-center gap-2 text-sm text-slate-600 transition-colors hover:text-amber-600"
         >
           <span aria-hidden="true">&larr;</span>
-          <Image src="/icons/icon-192.png" alt="" width={20} height={20} className="size-5" aria-hidden="true" />
+          <Image src="/brand/logo.png" alt="" width={20} height={20} className="size-5" aria-hidden="true" />
           Travel Manager
         </Link>
 

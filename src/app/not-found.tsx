@@ -14,7 +14,7 @@ export default function NotFound() {
         transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
         className="text-center max-w-md"
       >
-        <Image src="/icons/icon-192.png" alt="" width={80} height={80} className="mx-auto mb-6 size-20" aria-hidden="true" />
+        <Image src="/brand/logo.png" alt="" width={80} height={80} className="mx-auto mb-6 size-20" aria-hidden="true" />
         <h1 className="text-6xl font-bold text-slate-900">404</h1>
         <h2 className="mt-2 text-xl font-semibold text-slate-700">Page not found</h2>
         <p className="mt-3 text-sm text-slate-500">
