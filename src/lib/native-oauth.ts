@@ -62,15 +62,18 @@ export async function nativeOAuthSignIn(
   provider: 'google' | 'apple'
 ): Promise<string | null> {
   let idToken: string | undefined;
-  let rawNonce: string | undefined;
+  // Both providers need a nonce. The native sheet receives the SHA-256 of the
+  // raw nonce (embedded verbatim as the id_token's `nonce` claim); Supabase then
+  // re-hashes the RAW nonce we pass to signInWithIdToken and compares. Google's
+  // interactive flow ALWAYS mints a token with a nonce claim, so if we passed
+  // none, Supabase would reject with "Passed nonce and nonce in id_token should
+  // either both exist or both not exist" — the exact failure new users hit.
+  const rawNonce = randomNonce();
+  const hashed = await sha256Hex(rawNonce);
 
   try {
     const SocialLogin = await socialLogin();
     if (provider === 'apple') {
-      // Apple requires the SHA-256 of the nonce in the request; Supabase then
-      // verifies the RAW nonce against the hash embedded in the identity token.
-      rawNonce = randomNonce();
-      const hashed = await sha256Hex(rawNonce);
       const res = await SocialLogin.login({
         provider: 'apple',
         options: { nonce: hashed, scopes: ['email', 'name'] },
@@ -78,10 +81,22 @@ export async function nativeOAuthSignIn(
       const result = res.result as { idToken?: string; identityToken?: string };
       idToken = result?.idToken ?? result?.identityToken;
     } else {
+      // Force the interactive path. The plugin otherwise silently restores a
+      // cached session whose refreshed token has NO nonce — which would flip
+      // the mismatch the other way (we pass a nonce, token has none). Clearing
+      // first guarantees the token carries OUR hashed nonce.
+      try {
+        await SocialLogin.logout({ provider: 'google' });
+      } catch {
+        // No previous session to clear — fine.
+      }
       // A 30s guard so a wedged native flow surfaces an error instead of a
       // forever-pending promise (see build-6/7 postmortem: dead buttons).
       const res = (await Promise.race([
-        SocialLogin.login({ provider: 'google', options: { scopes: ['email', 'profile'] } }),
+        SocialLogin.login({
+          provider: 'google',
+          options: { nonce: hashed, scopes: ['email', 'profile'] },
+        }),
         new Promise<never>((_, rej) =>
           setTimeout(() => rej(new Error('Google sign-in timed out. Please try again.')), 30000)
         ),
@@ -103,7 +118,7 @@ export async function nativeOAuthSignIn(
   const { data, error } = await supabase.auth.signInWithIdToken({
     provider,
     token: idToken,
-    ...(rawNonce ? { nonce: rawNonce } : {}),
+    nonce: rawNonce,
   });
   if (error) {
     return error.message || 'Sign-in failed. Please try again.';
