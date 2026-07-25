@@ -638,6 +638,13 @@ export default function TripDetailContent({ id }: { id: string }) {
   const clientLinkedIds = tripClients.map((tc) => tc.client.id);
   const friendLinkedIds = tripFriends.map((tf) => tf.friend.id);
   const isCancelled = trip.status === 'CANCELLED';
+  // A forecast is only useful before/during a trip. Past trips drop the
+  // weather card entirely rather than showing next week's outlook for a
+  // journey that already happened.
+  const isPastTrip =
+    trip.status === 'COMPLETED' ||
+    isCancelled ||
+    (!!trip.endDate && new Date(trip.endDate) < new Date(new Date().toDateString()));
   // The People tab shows friends on every trip; vendors/clients are a
   // work-trip concern, so those panels only render on work trips (any
   // existing links are kept, just not shown).
@@ -768,7 +775,7 @@ export default function TripDetailContent({ id }: { id: string }) {
               </div>
 
               {/* Right: Edit + Share visible, everything else in the ⋯ menu */}
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="mt-3 flex shrink-0 items-center gap-2 md:mt-0">
                 <Button variant="outline" size="sm" className="tm-btn tm-btn-secondary h-8 md:h-9" onClick={() => setEditing(true)}>
                   <Pencil className="size-3.5" />
                   Edit
@@ -853,9 +860,15 @@ export default function TripDetailContent({ id }: { id: string }) {
               </div>
             </div>
 
-            {/* Trip progress indicator */}
+            {/* Trip progress indicator. Hidden on phones once the trip is
+                over — a full bar labelled "Completed" says nothing the status
+                pill in the header hasn't already said. */}
             {!isCancelled && (
-              <div className="mt-4 border-t border-tm-divider pt-3.5 md:mt-5 md:pt-5">
+              <div
+                className={`mt-4 border-t border-tm-divider pt-3.5 md:mt-5 md:pt-5 ${
+                  trip.status === 'COMPLETED' ? 'hidden md:block' : ''
+                }`}
+              >
                 <div className="mb-2 flex items-center justify-between">
                   <span className="tm-label-micro">
                     Trip progress
@@ -932,11 +945,13 @@ export default function TripDetailContent({ id }: { id: string }) {
             <h2 className="tm-label-micro hidden md:block">Trip overview</h2>
           </div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <TripWeatherWidget
-              latitude={trip.latitude}
-              longitude={trip.longitude}
-              destination={trip.destination}
-            />
+            {!isPastTrip && (
+              <TripWeatherWidget
+                latitude={trip.latitude}
+                longitude={trip.longitude}
+                destination={trip.destination}
+              />
+            )}
             <TripMiniMap
               latitude={trip.latitude}
               longitude={trip.longitude}
