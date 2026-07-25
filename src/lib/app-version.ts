@@ -20,7 +20,7 @@ export const MIN_SUPPORTED_APP_VERSION = '1.0';
  * The newest version live on the App Store. Drives the soft "update
  * available" banner. Update when a release is approved (not merely submitted).
  */
-export const LATEST_APP_VERSION = '1.0';
+export const LATEST_APP_VERSION = '1.0.2';
 
 export const IOS_APP_STORE_URL = 'https://apps.apple.com/app/id6787768170';
 
