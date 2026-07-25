@@ -24,7 +24,9 @@ import {
 /* ───────────────────────── Color Palette ───────────────────────── */
 
 const PIE_COLORS = [
-  '#f59e0b', '#3b82f6', '#10b981', '#ef4444',
+  '#0F172A', '#F59E0B', '#94A3B8', '#CBD5E1', '#E4E8EE',
+  // Retained tail for datasets with more categories than the design's five.
+  '#3b82f6', '#10b981', '#ef4444',
   '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6b7280',
 ];
 
@@ -238,7 +240,7 @@ export default function AnalyticsPage() {
         <div className="tm-card mt-6">
           <TMErrorState
             title="Couldn't load your analytics"
-            description="Something went wrong on our end. Your data is safe \u2014 nothing was lost."
+            description="Something went wrong on our end. Your data is safe — nothing was lost."
             onRetry={refetch}
           />
         </div>
@@ -252,14 +254,14 @@ export default function AnalyticsPage() {
     { label: 'Total spent', value: formatCurrency(data.totalSpent) },
     { label: 'Trips taken', value: data.totalTrips.toString() },
     { label: 'Avg trip cost', value: formatCurrency(data.averageTripCost) },
-    { label: 'Most visited', value: data.mostVisited || '\u2014' },
+    { label: 'Most visited', value: data.mostVisited || '—' },
   ];
 
   return (
     <TMPageShell width={1120}>
       <TMScreenHeader
         title="Analytics"
-        subtitle={`${data.totalTrips} ${data.totalTrips === 1 ? 'trip' : 'trips'} \u00B7 ${formatCurrency(data.totalSpent)} tracked`}
+        subtitle={`${data.totalTrips} ${data.totalTrips === 1 ? 'trip' : 'trips'} · ${formatCurrency(data.totalSpent)} tracked`}
         actions={
           <div className="tm-seg" role="radiogroup" aria-label="Time period">
             {PERIODS.map((p) => (
@@ -401,20 +403,20 @@ export default function AnalyticsPage() {
               <BarChart data={data.tripsByMonth} barCategoryGap="20%">
                 <defs>
                   <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#fbbf24" />
-                    <stop offset="100%" stopColor="#f59e0b" />
+                    <stop offset="0%" stopColor="#1E293B" />
+                    <stop offset="100%" stopColor="#0F172A" />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#EEF1F5" vertical={false} />
                 <XAxis
                   dataKey="month"
-                  tick={{ fontSize: 11, fill: '#94a3b8' }}
-                  axisLine={{ stroke: '#e2e8f0' }}
+                  tick={{ fontSize: 11, fill: '#A6AEBC' }}
+                  axisLine={{ stroke: '#E9EDF2' }}
                   tickLine={false}
                 />
                 <YAxis
                   allowDecimals={false}
-                  tick={{ fontSize: 11, fill: '#94a3b8' }}
+                  tick={{ fontSize: 11, fill: '#A6AEBC' }}
                   axisLine={false}
                   tickLine={false}
                 />
@@ -453,16 +455,16 @@ export default function AnalyticsPage() {
               <BarChart data={data.topDestinations} layout="vertical" barCategoryGap="25%">
                 <defs>
                   <linearGradient id="hBarGradient" x1="0" y1="0" x2="1" y2="0">
-                    <stop offset="0%" stopColor="#60a5fa" />
-                    <stop offset="100%" stopColor="#3b82f6" />
+                    <stop offset="0%" stopColor="#334155" />
+                    <stop offset="100%" stopColor="#0F172A" />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#EEF1F5" horizontal={false} />
                 <XAxis
                   type="number"
                   allowDecimals={false}
-                  tick={{ fontSize: 11, fill: '#94a3b8' }}
-                  axisLine={{ stroke: '#e2e8f0' }}
+                  tick={{ fontSize: 11, fill: '#A6AEBC' }}
+                  axisLine={{ stroke: '#E9EDF2' }}
                   tickLine={false}
                 />
                 <YAxis
@@ -512,16 +514,16 @@ export default function AnalyticsPage() {
                     <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.02} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#EEF1F5" vertical={false} />
                 <XAxis
                   dataKey="quarter"
-                  tick={{ fontSize: 11, fill: '#94a3b8' }}
-                  axisLine={{ stroke: '#e2e8f0' }}
+                  tick={{ fontSize: 11, fill: '#A6AEBC' }}
+                  axisLine={{ stroke: '#E9EDF2' }}
                   tickLine={false}
                 />
                 <YAxis
                   allowDecimals={false}
-                  tick={{ fontSize: 11, fill: '#94a3b8' }}
+                  tick={{ fontSize: 11, fill: '#A6AEBC' }}
                   axisLine={false}
                   tickLine={false}
                 />
@@ -576,7 +578,7 @@ export default function AnalyticsPage() {
                 </div>
                 <div>
                   <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Pending payout</p>
-                  <p className="text-xl font-bold text-amber-600">{formatCurrency(data.commissionPending)}</p>
+                  <p className="text-[20px] font-semibold text-tm-accent-text">{formatCurrency(data.commissionPending)}</p>
                 </div>
               </div>
               <div role="img" aria-label="Commissions per month stacked bar chart" className="[&_svg]:focus:outline-none [&_.recharts-wrapper_svg]:outline-none">
@@ -588,19 +590,19 @@ export default function AnalyticsPage() {
                       <stop offset="100%" stopColor="#10b981" />
                     </linearGradient>
                     <linearGradient id="commissionPendingGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#fbbf24" />
-                      <stop offset="100%" stopColor="#f59e0b" />
+                      <stop offset="0%" stopColor="#D1FAE5" />
+                      <stop offset="100%" stopColor="#A7F3D0" />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#EEF1F5" vertical={false} />
                   <XAxis
                     dataKey="month"
-                    tick={{ fontSize: 11, fill: '#94a3b8' }}
-                    axisLine={{ stroke: '#e2e8f0' }}
+                    tick={{ fontSize: 11, fill: '#A6AEBC' }}
+                    axisLine={{ stroke: '#E9EDF2' }}
                     tickLine={false}
                   />
                   <YAxis
-                    tick={{ fontSize: 11, fill: '#94a3b8' }}
+                    tick={{ fontSize: 11, fill: '#A6AEBC' }}
                     axisLine={false}
                     tickLine={false}
                     tickFormatter={(v: number) => formatCurrency(v)}

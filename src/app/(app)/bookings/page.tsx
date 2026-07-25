@@ -345,7 +345,7 @@ function BookingCard({
         {!editing && booking.confirmationNum && (
           <TMMonoChip className="shrink-0">{booking.confirmationNum}</TMMonoChip>
         )}
-        <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+        <div className="flex shrink-0 items-center gap-0.5 md:hidden md:group-hover:flex md:group-focus-within:flex">
           {!editing && (
             <>
               <button onClick={startEdit} className="inline-flex size-8 cursor-pointer items-center justify-center rounded-[7px] text-tm-ghost hover:bg-tm-fill hover:text-tm-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tm-accent/40" title="Edit booking" aria-label="Edit booking"><Pencil className="size-4" /></button>
@@ -493,7 +493,7 @@ function BookingCard({
             </details>
           </div>
           <div className="flex gap-2">
-            <Button type="submit" size="sm" disabled={saving} className="h-7 text-xs bg-amber-500 hover:bg-amber-600">
+            <Button type="submit" size="sm" disabled={saving} className="h-7 text-xs tm-btn tm-btn-primary">
               {saving ? <><Loader2 className="size-3.5 animate-spin" />Saving...</> : 'Save'}
             </Button>
             <Button type="button" size="sm" variant="outline" onClick={() => setEditing(false)} className="h-7 text-xs">
@@ -848,7 +848,7 @@ export default function BookingsPage() {
         <TMScreenHeader title="Bookings" />
         <div className="pt-5 md:pt-7" role="status" aria-label="Loading bookings">
           <TMCardGridSkeleton count={6} columns={3} />
-          <span className="sr-only">Loading bookings\u2026</span>
+          <span className="sr-only">Loading bookings…</span>
         </div>
       </TMPageShell>
     );
@@ -1192,7 +1192,7 @@ export default function BookingsPage() {
           </div>
 
           <div className="flex gap-2">
-            <Button type="submit" size="sm" disabled={submitting} className="bg-amber-500 hover:bg-amber-600">
+            <Button type="submit" size="sm" disabled={submitting} className="tm-btn tm-btn-primary">
               {submitting ? 'Creating...' : 'Create Booking'}
             </Button>
             <Button
@@ -1244,7 +1244,7 @@ export default function BookingsPage() {
         {/* Type pills carry their counts. On a phone they scroll sideways
             rather than wrapping into three rows of chrome. */}
         <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:flex-wrap md:px-0">
-          {BOOKING_TYPES.map((t) => (
+          {BOOKING_TYPES.filter((t) => t === 'ALL' || (typeCounts[t] ?? 0) > 0 || typeFilter === t).map((t) => (
             <button
               key={t}
               type="button"
@@ -1370,7 +1370,7 @@ export default function BookingsPage() {
                 size="sm"
                 disabled={!linkTripId || isLinking}
                 onClick={handleLinkTrip}
-                className="bg-amber-500 hover:bg-amber-600"
+                className="tm-btn tm-btn-primary"
               >
                 {isLinking ? 'Linking...' : 'Link to Trip'}
               </Button>

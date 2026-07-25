@@ -180,7 +180,7 @@ export default function VendorsPage() {
           isLoading
             ? undefined
             : `${vendors.length} ${vendors.length === 1 ? 'vendor' : 'vendors'}${
-                cityCount ? ` \u00B7 across ${cityCount} ${cityCount === 1 ? 'city' : 'cities'}` : ''
+                cityCount ? ` · across ${cityCount} ${cityCount === 1 ? 'city' : 'cities'}` : ''
               }`
         }
         actions={
@@ -241,8 +241,8 @@ export default function VendorsPage() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="name-az">Name \u00B7 A\u2013Z</SelectItem>
-              <SelectItem value="name-za">Name \u00B7 Z\u2013A</SelectItem>
+              <SelectItem value="name-az">Name · A–Z</SelectItem>
+              <SelectItem value="name-za">Name · Z–A</SelectItem>
               <SelectItem value="category">Category</SelectItem>
             </SelectContent>
           </Select>
@@ -256,7 +256,7 @@ export default function VendorsPage() {
           <div className="tm-card">
             <TMErrorState
               title="Couldn't load your vendors"
-              description="Something went wrong on our end. Your data is safe \u2014 nothing was lost."
+              description="Something went wrong on our end. Your data is safe — nothing was lost."
               onRetry={fetchVendors}
             />
           </div>

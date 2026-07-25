@@ -269,7 +269,7 @@ export default function MapPage() {
       <div className="px-4 md:px-10">
         <TMScreenHeader
           title="Where you travel"
-          subtitle={`${trips.length} ${trips.length === 1 ? 'trip' : 'trips'} \u00B7 ${uniqueDestinations} ${uniqueDestinations === 1 ? 'city' : 'cities'}`}
+          subtitle={`${trips.length} ${trips.length === 1 ? 'trip' : 'trips'} · ${uniqueDestinations} ${uniqueDestinations === 1 ? 'city' : 'cities'}`}
         />
       </div>
 

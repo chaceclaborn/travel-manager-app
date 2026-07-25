@@ -183,7 +183,7 @@ export function TripJournal({ tripId }: TripJournalProps) {
         <Button
           size="sm"
           onClick={() => setShowForm(!showForm)}
-          className="bg-amber-500 hover:bg-amber-600"
+          className="tm-btn tm-btn-primary"
         >
           <Plus className="mr-1 size-4" />
           Add Entry
@@ -219,7 +219,7 @@ export function TripJournal({ tripId }: TripJournalProps) {
               />
             </div>
             <div className="flex gap-2">
-              <Button type="submit" size="sm" disabled={isSubmitting} className="bg-amber-500 hover:bg-amber-600">
+              <Button type="submit" size="sm" disabled={isSubmitting} className="tm-btn tm-btn-primary">
                 {isSubmitting ? 'Saving...' : 'Save'}
               </Button>
               <Button type="button" size="sm" variant="outline" onClick={() => setShowForm(false)}>
@@ -306,7 +306,7 @@ export function TripJournal({ tripId }: TripJournalProps) {
                               />
                             </div>
                             <div className="flex gap-2">
-                              <Button type="submit" size="sm" disabled={isEditSubmitting} className="bg-amber-500 hover:bg-amber-600">
+                              <Button type="submit" size="sm" disabled={isEditSubmitting} className="tm-btn tm-btn-primary">
                                 {isEditSubmitting ? 'Saving...' : 'Save'}
                               </Button>
                               <Button type="button" size="sm" variant="outline" onClick={() => setEditingId(null)}>

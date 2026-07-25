@@ -177,7 +177,7 @@ export default function ClientsPage() {
           loading
             ? undefined
             : `${clients.length} ${clients.length === 1 ? 'client' : 'clients'}${
-                upcomingCount ? ` \u00B7 ${upcomingCount} with upcoming travel` : ''
+                upcomingCount ? ` · ${upcomingCount} with upcoming travel` : ''
               }`
         }
         actions={
@@ -223,8 +223,8 @@ export default function ClientsPage() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="name-az">Name \u00B7 A\u2013Z</SelectItem>
-            <SelectItem value="name-za">Name \u00B7 Z\u2013A</SelectItem>
+            <SelectItem value="name-az">Name · A–Z</SelectItem>
+            <SelectItem value="name-za">Name · Z–A</SelectItem>
             <SelectItem value="company">Company</SelectItem>
           </SelectContent>
         </Select>
@@ -237,7 +237,7 @@ export default function ClientsPage() {
           <div className="tm-card">
             <TMErrorState
               title="Couldn't load your clients"
-              description="Something went wrong on our end. Your data is safe \u2014 nothing was lost."
+              description="Something went wrong on our end. Your data is safe — nothing was lost."
               onRetry={fetchClients}
             />
           </div>

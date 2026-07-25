@@ -231,7 +231,7 @@ export function ConnectionsPanel() {
                     size="sm"
                     onClick={() => addFriend(user)}
                     disabled={addingId === user.id || !user.username}
-                    className="bg-amber-500 hover:bg-amber-600 text-white"
+                    className="tm-btn tm-btn-primary"
                   >
                     {addingId === user.id ? (
                       <Loader2 className="size-3.5 animate-spin" />

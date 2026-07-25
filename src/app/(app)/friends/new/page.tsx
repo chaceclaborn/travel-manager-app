@@ -105,7 +105,7 @@ export default function NewFriendPage() {
             />
           </div>
           <div className="flex gap-2">
-            <Button type="submit" disabled={isLoading} className="bg-amber-500 hover:bg-amber-600">
+            <Button type="submit" disabled={isLoading} className="tm-btn tm-btn-primary">
               {isLoading ? 'Adding...' : 'Add Friend'}
             </Button>
             <Button type="button" variant="outline" onClick={() => router.push('/friends')}>

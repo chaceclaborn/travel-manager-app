@@ -92,7 +92,7 @@ export default function FriendsPage() {
     <TMPageShell width={1120}>
       <TMScreenHeader
         title="Friends"
-        subtitle={loading ? undefined : `People you travel with \u00B7 ${friends.length}`}
+        subtitle={loading ? undefined : `People you travel with · ${friends.length}`}
         actions={
           <Link href="/friends/new" className="tm-btn tm-btn-primary">
             Add Friend
@@ -127,8 +127,8 @@ export default function FriendsPage() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="name-az">Name \u00B7 A\u2013Z</SelectItem>
-              <SelectItem value="name-za">Name \u00B7 Z\u2013A</SelectItem>
+              <SelectItem value="name-az">Name · A–Z</SelectItem>
+              <SelectItem value="name-za">Name · Z–A</SelectItem>
               <SelectItem value="trips">Most trips</SelectItem>
             </SelectContent>
           </Select>
@@ -141,7 +141,7 @@ export default function FriendsPage() {
             <div className="tm-card">
               <TMErrorState
                 title="Couldn't load your friends"
-                description="Something went wrong on our end. Your data is safe \u2014 nothing was lost."
+                description="Something went wrong on our end. Your data is safe — nothing was lost."
                 onRetry={fetchFriends}
               />
             </div>

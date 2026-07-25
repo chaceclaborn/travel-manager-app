@@ -192,7 +192,7 @@ export function VendorCard({ vendor, onSaved, onDeleted, variant = 'card' }: Ven
             {location && <p className="mt-0.5 truncate text-[12px] text-tm-subtle">{location}</p>}
           </Link>
           <span className="flex shrink-0 items-center gap-1">
-            <span className="flex opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+            <span className="flex md:hidden md:group-hover:flex md:group-focus-within:flex">
               {actions}
             </span>
             {categoryChip}

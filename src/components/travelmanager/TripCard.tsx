@@ -213,7 +213,7 @@ export function TripCard({ trip, onSaved, onDeleted, isNext = false }: TripCardP
     <>
       <Link
         href={detailHref('trips', trip.id)}
-        className="tm-card tm-card-interactive group relative block overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-tm-accent focus-visible:ring-offset-2"
+        className="tm-card tm-card-interactive group relative block h-full overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-tm-accent focus-visible:ring-offset-2"
       >
         {/* Full-height status bar. Three pixels of color is the whole status
             signal on the card edge; the dot+label repeats it in words. */}
@@ -239,7 +239,7 @@ export function TripCard({ trip, onSaved, onDeleted, isNext = false }: TripCardP
         </div>
 
         {/* Desktop: the full card. */}
-        <div className="hidden px-[18px] pb-3.5 pt-[18px] md:block">
+        <div className="hidden h-full flex-col px-[18px] pb-3.5 pt-[18px] md:flex">
           <div className="flex items-start gap-3">
             <TMCodeTile code={code} size={38} highlight={isNext} />
             <div className="min-w-0 flex-1">
@@ -249,7 +249,7 @@ export function TripCard({ trip, onSaved, onDeleted, isNext = false }: TripCardP
             <TMStatusBadge status={trip.status} className="shrink-0 pt-0.5" />
           </div>
 
-          <div className="mt-3.5 flex items-center gap-1.5 text-[12px] text-tm-muted">
+          <div className="mb-3.5 mt-3.5 flex items-center gap-1.5 text-[12px] text-tm-muted">
             <CalendarDays className="size-[13px] shrink-0 text-tm-faint" aria-hidden="true" />
             <span className="truncate tm-nums">{dateLine}</span>
             {days && (
@@ -260,7 +260,7 @@ export function TripCard({ trip, onSaved, onDeleted, isNext = false }: TripCardP
           </div>
 
           {(vendorCount > 0 || clientCount > 0 || friendCount > 0 || trip.tripType === 'WORK') && (
-            <div className="mt-3 flex flex-wrap items-center gap-1.5">
+            <div className="mb-3.5 mt-3 flex flex-wrap items-center gap-1.5">
               {trip.tripType === 'WORK' && <TMChip icon={Briefcase}>Work</TMChip>}
               {friendCount > 0 && (
                 <TMChip tone="outline" icon={HeartHandshake}>
@@ -280,7 +280,7 @@ export function TripCard({ trip, onSaved, onDeleted, isNext = false }: TripCardP
             </div>
           )}
 
-          <div className="mt-3.5 flex items-center justify-between gap-2 border-t border-tm-divider pt-3">
+          <div className="mt-auto flex items-center justify-between gap-2 border-t border-tm-divider pt-3">
             {trip.budget != null ? (
               <span className="text-[13px] font-semibold text-tm-ink tm-nums">{formatBudget(trip.budget)}</span>
             ) : (
@@ -289,7 +289,7 @@ export function TripCard({ trip, onSaved, onDeleted, isNext = false }: TripCardP
             <span className="flex items-center gap-0.5">
               {/* Row actions stay hidden until hover so the card's resting
                   state is data only — but focus reveals them for keyboards. */}
-              <span className="flex opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+              <span className="flex md:hidden md:group-hover:flex md:group-focus-within:flex">
                 {rowActions}
               </span>
               <ChevronRight className="size-[15px] shrink-0 text-tm-ghost" aria-hidden="true" />

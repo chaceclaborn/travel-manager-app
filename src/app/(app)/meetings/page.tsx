@@ -262,9 +262,9 @@ function MeetingCard({
               </p>
               <p className="mt-0.5 truncate text-[12px] text-tm-subtle tm-nums">
                 {formatDateTime(meeting.startDateTime)}
-                {meeting.endDateTime ? ` \u2013 ${formatDateTime(meeting.endDateTime)}` : ''}
+                {meeting.endDateTime ? ` – ${formatDateTime(meeting.endDateTime)}` : ''}
                 {meeting.timezone ? ` (${getTzAbbreviation(meeting.timezone)})` : ''}
-                {meeting.location ? ` \u00B7 ${meeting.location}` : ''}
+                {meeting.location ? ` · ${meeting.location}` : ''}
               </p>
               <div className="mt-1.5 flex flex-wrap gap-1.5">
                 {meeting.trip && (
@@ -434,7 +434,7 @@ function MeetingCard({
             </div>
           </div>
           <div className="flex gap-2">
-            <Button type="submit" size="sm" disabled={saving} className="h-11 sm:h-7 text-xs bg-amber-500 hover:bg-amber-600">
+            <Button type="submit" size="sm" disabled={saving} className="h-11 sm:h-7 text-xs tm-btn tm-btn-primary">
               {saving ? <><Loader2 className="size-3.5 animate-spin" />Saving...</> : 'Save'}
             </Button>
             <Button type="button" size="sm" variant="outline" onClick={() => setEditing(false)} className="h-11 sm:h-7 text-xs">
@@ -672,7 +672,7 @@ export default function MeetingsPage() {
         <div className="tm-card mt-6">
           <TMErrorState
             title="Couldn't load your meetings"
-            description="Something went wrong on our end. Your data is safe \u2014 nothing was lost."
+            description="Something went wrong on our end. Your data is safe — nothing was lost."
             onRetry={fetchMeetings}
           />
         </div>
@@ -693,7 +693,7 @@ export default function MeetingsPage() {
         title="Meetings"
         subtitle={
           meetings.length > 0
-            ? `${upcoming.length} upcoming \u00B7 ${past.length} past`
+            ? `${upcoming.length} upcoming · ${past.length} past`
             : undefined
         }
         actions={
@@ -871,7 +871,7 @@ export default function MeetingsPage() {
           </div>
 
           <div className="flex gap-2">
-            <Button type="submit" size="sm" disabled={submitting} className="bg-amber-500 hover:bg-amber-600">
+            <Button type="submit" size="sm" disabled={submitting} className="tm-btn tm-btn-primary">
               {submitting ? (
                 <>
                   <Loader2 className="mr-1.5 size-3.5 animate-spin" />

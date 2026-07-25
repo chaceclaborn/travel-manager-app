@@ -54,7 +54,7 @@ const faqs: Faq[] = [
     icon: Share2,
     question: 'How do I share a trip with a client?',
     answer:
-      'Open the trip, tap the share icon, and toggle \u201cShare with client\u201d on. Copy the generated link and send it. Your client sees a clean, read-only itinerary with weather and a map \u2014 no login required. You can revoke the link or set an expiration date any time.',
+      'Open the trip, tap the share icon, and toggle \u201cShare with client\u201d on. Copy the generated link and send it. Your client sees a clean, read-only itinerary with weather and a map — no login required. You can revoke the link or set an expiration date any time.',
   },
   {
     icon: Wallet,
@@ -66,13 +66,13 @@ const faqs: Faq[] = [
     icon: Download,
     question: 'How do I export my data?',
     answer:
-      'Go to Settings \u2192 Account \u2192 Export my data. You\u2019ll download a complete JSON archive of everything in your account \u2014 trips, clients, vendors, bookings, notes, and attachments metadata.',
+      'Go to Settings → Account → Export my data. You’ll download a complete JSON archive of everything in your account — trips, clients, vendors, bookings, notes, and attachments metadata.',
   },
   {
     icon: Trash2,
     question: 'How do I delete my account?',
     answer:
-      'Go to Settings \u2192 Account \u2192 Delete my account. Deletion is immediate and permanent \u2014 all trips, clients, vendors, bookings, and sign-in history are removed and cannot be recovered. Export your data first if you want a copy.',
+      'Go to Settings → Account → Delete my account. Deletion is immediate and permanent — all trips, clients, vendors, bookings, and sign-in history are removed and cannot be recovered. Export your data first if you want a copy.',
   },
   {
     icon: HelpCircle,

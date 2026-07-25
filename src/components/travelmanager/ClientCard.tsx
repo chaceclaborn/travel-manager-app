@@ -184,7 +184,7 @@ export function ClientCard({ client, onSaved, onDeleted, index = 0, variant = 'c
               {client.company && <span className="mt-0.5 block truncate text-[12px] text-tm-subtle">{client.company}</span>}
             </span>
           </Link>
-          <span className="flex opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+          <span className="flex md:hidden md:group-hover:flex md:group-focus-within:flex">
             {actions}
           </span>
         </div>

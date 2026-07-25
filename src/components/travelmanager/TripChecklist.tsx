@@ -291,7 +291,7 @@ export function TripChecklist({ tripId }: TripChecklistProps) {
           size="sm"
           onClick={() => addItem(newLabel)}
           disabled={adding || !newLabel.trim()}
-          className="bg-amber-500 hover:bg-amber-600 text-white"
+          className="tm-btn tm-btn-primary"
         >
           <Plus className="size-4" />
         </Button>

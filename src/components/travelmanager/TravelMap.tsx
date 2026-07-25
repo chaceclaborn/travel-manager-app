@@ -317,7 +317,7 @@ export function TravelMap({ trips, homeLocation, stops = [] }: TravelMapProps) {
                   <div className="text-xs text-slate-500 mt-1">
                     {trip.transportMode === 'FLIGHT' ? '\u2708\uFE0F' : '\uD83D\uDE97'}{' '}
                     {trip.transportMode === 'FLIGHT' && trip.departureAirportCode && trip.arrivalAirportCode
-                      ? `${trip.departureAirportCode} \u2192 ${trip.arrivalAirportCode}`
+                      ? `${trip.departureAirportCode} → ${trip.arrivalAirportCode}`
                       : trip.transportMode === 'FLIGHT' ? 'Flight' : 'Driving'}
                   </div>
                 )}

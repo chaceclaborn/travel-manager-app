@@ -312,7 +312,10 @@ export default function TravelManagerLayout({
           <main
             id="main-content"
             className="min-w-0 flex-1 overflow-x-clip md:ml-[248px]"
-            style={{ paddingBottom: 'calc(74px + var(--safe-area-bottom))' }}
+            // Must clear the mobile tab bar, which is 10 + 60 + 30 = 100px tall
+            // before the safe-area inset. The detail-screen action footer
+            // (12 + 44 + 32 = 88px) fits inside the same allowance.
+            style={{ paddingBottom: 'calc(100px + var(--safe-area-bottom))' }}
           >
             {/* Desktop sticky top bar (md+). A sticky child of <main>, not a
                 fixed element, so it scrolls with the document's containing

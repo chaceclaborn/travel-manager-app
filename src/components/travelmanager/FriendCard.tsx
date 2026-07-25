@@ -110,7 +110,7 @@ export function FriendCard({ friend, onSaved, onDeleted, index = 0 }: FriendCard
             </h3>
             {friend.email && <p className="mt-0.5 truncate text-[12px] text-tm-subtle">{friend.email}</p>}
           </div>
-          <span className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+          <span className="flex shrink-0 items-center gap-0.5 md:hidden md:group-hover:flex md:group-focus-within:flex">
             <button
               onClick={startEdit}
               className="inline-flex size-8 items-center justify-center rounded-[7px] text-tm-ghost hover:bg-tm-fill hover:text-tm-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tm-accent/40"

@@ -435,7 +435,7 @@ export default function SettingsPage() {
           <Button
             onClick={handleSaveUsername}
             disabled={savingUsername || usernameCheck.status !== 'available'}
-            className="h-[42px] rounded-[11px] px-5 bg-gradient-to-br from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 shadow-[0_4px_14px_-4px_rgba(245,158,11,0.55)] motion-safe:hover:-translate-y-px transition-transform"
+            className="tm-btn tm-btn-primary"
           >
             {savingUsername ? <Loader2 className="size-4 animate-spin" /> : 'Save'}
           </Button>
@@ -467,12 +467,12 @@ export default function SettingsPage() {
             disabled={!userInfo || savingPublic}
             onClick={() => handleTogglePublic(!(userInfo?.isPublic ?? true))}
             className={`relative mt-0.5 inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:ring-offset-2 disabled:opacity-50 ${
-              (userInfo?.isPublic ?? true) ? 'bg-amber-500' : 'bg-slate-300'
+              (userInfo?.isPublic ?? true) ? 'bg-tm-action' : 'bg-tm-control'
             }`}
           >
             <span
-              className={`inline-block size-5 transform rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.25)] transition-transform ${
-                (userInfo?.isPublic ?? true) ? 'translate-x-[22px]' : 'translate-x-0.5'
+              className={`inline-block size-[17px] transform rounded-full bg-white shadow-[0_1px_3px_rgba(15,23,42,0.3)] transition-transform duration-150 ${
+                (userInfo?.isPublic ?? true) ? 'translate-x-[20px]' : 'translate-x-[3px]'
               }`}
             />
           </button>
@@ -642,13 +642,13 @@ export default function SettingsPage() {
               setAnalyticsOptOut(nextOptOut);
               showToast(nextOptOut ? 'Usage analytics turned off' : 'Usage analytics turned on');
             }}
-            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:ring-offset-2 ${
-              analyticsOptOut ? 'bg-slate-300' : 'bg-amber-500'
+            className={`relative inline-flex h-[23px] w-10 shrink-0 items-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:ring-offset-2 ${
+              analyticsOptOut ? 'bg-tm-control' : 'bg-tm-action'
             }`}
           >
             <span
-              className={`inline-block size-5 transform rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.25)] transition-transform ${
-                analyticsOptOut ? 'translate-x-0.5' : 'translate-x-[22px]'
+              className={`inline-block size-[17px] transform rounded-full bg-white shadow-[0_1px_3px_rgba(15,23,42,0.3)] transition-transform duration-150 ${
+                analyticsOptOut ? 'translate-x-[3px]' : 'translate-x-[20px]'
               }`}
             />
           </button>

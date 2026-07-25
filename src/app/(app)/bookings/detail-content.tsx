@@ -178,7 +178,7 @@ export default function BookingDetailContent({ id }: { id: string }) {
         <div className="tm-card mt-6">
           <TMErrorState
             title="Couldn't load this booking"
-            description="Something went wrong on our end. Your data is safe \u2014 nothing was lost."
+            description="Something went wrong on our end. Your data is safe — nothing was lost."
             onRetry={fetchBooking}
           />
         </div>
@@ -329,7 +329,7 @@ export default function BookingDetailContent({ id }: { id: string }) {
 
             <div className="flex gap-2">
               <Button type="submit" disabled={saving} className="tm-btn tm-btn-primary">
-                {saving ? 'Saving\u2026' : 'Save changes'}
+                {saving ? 'Saving…' : 'Save changes'}
               </Button>
               <Button type="button" variant="outline" onClick={() => setEditing(false)} className="tm-btn tm-btn-secondary">
                 Cancel
@@ -338,7 +338,7 @@ export default function BookingDetailContent({ id }: { id: string }) {
           </form>
         ) : (
           <>
-            {/* Band 1 \u2014 white: who and what. */}
+            {/* Band 1 — white: who and what. */}
             <div className="flex flex-wrap items-start justify-between gap-4 px-5 py-5 md:px-7 md:py-6">
               <div className="flex min-w-0 items-start gap-4">
                 <TMIconTile icon={TypeIcon} size={52} bg={palette.bg} fg={palette.fg} />
@@ -377,12 +377,12 @@ export default function BookingDetailContent({ id }: { id: string }) {
               </div>
             </div>
 
-            {/* Band 2 \u2014 dark: the journey itself, read left to right. */}
+            {/* Band 2 — dark: the journey itself, read left to right. */}
             {isRoute && (booking.location || booking.endLocation) && (
               <div className="grid grid-cols-3 items-center gap-3 bg-tm-nav px-5 py-5 md:px-7 md:py-6">
                 <div className="min-w-0">
                   <p className="truncate font-mono text-[22px] font-semibold tracking-[0.02em] text-white md:text-[32px]">
-                    {booking.location || '\u2014'}
+                    {booking.location || '—'}
                   </p>
                   {booking.startDateTime && (
                     <p className="mt-1.5 truncate text-[13px] font-medium text-tm-on-dark tm-nums">
@@ -411,7 +411,7 @@ export default function BookingDetailContent({ id }: { id: string }) {
 
                 <div className="min-w-0 text-right">
                   <p className="truncate font-mono text-[22px] font-semibold tracking-[0.02em] text-white md:text-[32px]">
-                    {booking.endLocation || '\u2014'}
+                    {booking.endLocation || '—'}
                   </p>
                   {booking.endDateTime && (
                     <p className="mt-1.5 truncate text-[13px] font-medium text-tm-on-dark tm-nums">
@@ -422,7 +422,7 @@ export default function BookingDetailContent({ id }: { id: string }) {
               </div>
             )}
 
-            {/* Band 3 \u2014 facts. 2-up on a phone, 4-up on a desktop. */}
+            {/* Band 3 — facts. 2-up on a phone, 4-up on a desktop. */}
             <div className="grid grid-cols-2 gap-x-4 gap-y-4 border-t border-tm-divider px-5 py-5 md:grid-cols-4 md:px-7">
               {booking.location && !isRoute && (
                 <div className="min-w-0">

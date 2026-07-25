@@ -626,7 +626,7 @@ export default function TripDetailContent({ id }: { id: string }) {
         <div className="tm-card mt-6">
           <TMErrorState
             title="Couldn't load this trip"
-            description="Something went wrong on our end. Your data is safe \u2014 nothing was lost."
+            description="Something went wrong on our end. Your data is safe — nothing was lost."
             onRetry={fetchTrip}
           />
         </div>
@@ -744,7 +744,7 @@ export default function TripDetailContent({ id }: { id: string }) {
                             <Plane className="size-3.5 text-tm-faint" aria-hidden="true" />
                             <span className="font-mono text-[12px] tracking-[0.02em] text-tm-body">
                               {trip.departureAirportCode && trip.arrivalAirportCode
-                                ? `${trip.departureAirportCode} \u2192 ${trip.arrivalAirportCode}`
+                                ? `${trip.departureAirportCode} → ${trip.arrivalAirportCode}`
                                 : 'Flight'}
                             </span>
                           </>

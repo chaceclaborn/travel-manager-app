@@ -669,7 +669,7 @@ export function TripForm({ initialData, onSubmit, isLoading }: TripFormProps) {
         <p className="text-xs text-slate-400">{notes.length}/5000</p>
       </div>
 
-      <Button type="submit" disabled={isLoading} className="bg-amber-500 hover:bg-amber-600">
+      <Button type="submit" disabled={isLoading} className="tm-btn tm-btn-primary">
         {isLoading ? 'Saving...' : initialData ? 'Update Trip' : 'Create Trip'}
       </Button>
     </form>

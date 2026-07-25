@@ -18,7 +18,7 @@ import { TMCodeTile, TMCard, TMCardHeader, TMTimeline } from '@/components/trave
 import { TripTemplateCard } from '@/components/travelmanager/TripTemplateCard';
 import { TRIP_TEMPLATES } from '@/lib/travelmanager/templates';
 import { statusPalette, tripCode } from '@/lib/travelmanager/design';
-import { formatDate } from '@/lib/date-utils';
+import { formatDate, formatDateShort } from '@/lib/date-utils';
 import { useAuth } from '@/lib/travelmanager/useAuth';
 import type { TripWithRelations } from '@/lib/travelmanager/types';
 
@@ -364,7 +364,9 @@ export default function TravelManagerDashboard() {
       label: 'Upcoming',
       value: stats.upcomingTrips,
       href: '/trips',
-      emphasis: nextTrip?.startDate ? `next departs ${formatDate(nextTrip.startDate as unknown as string)}` : undefined,
+      // Short form ("Jul 30", not "Jul 30, 2026") — the year pushes this past
+      // the cell width and truncates mid-word.
+      emphasis: nextTrip?.startDate ? `next departs ${formatDateShort(nextTrip.startDate as unknown as string)}` : undefined,
     },
     { label: 'Clients', value: stats.totalClients, href: '/clients' },
     { label: 'Vendors', value: stats.totalVendors, href: '/vendors' },

@@ -46,7 +46,7 @@ export function TripPhotos({ tripId }: TripPhotosProps) {
           <Button
             size="sm"
             onClick={() => setSlideshowOpen(true)}
-            className="bg-amber-500 hover:bg-amber-600"
+            className="tm-btn tm-btn-primary"
           >
             <Play className="mr-1 size-4" />
             Play slideshow

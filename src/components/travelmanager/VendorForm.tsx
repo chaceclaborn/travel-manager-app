@@ -207,7 +207,7 @@ export function VendorForm({ initialData, onSubmit, isLoading }: VendorFormProps
         />
       </div>
 
-      <Button type="submit" disabled={isLoading} className="bg-amber-500 hover:bg-amber-600 text-white">
+      <Button type="submit" disabled={isLoading} className="tm-btn tm-btn-primary">
         {isLoading ? 'Saving...' : initialData ? 'Update Vendor' : 'Create Vendor'}
       </Button>
     </form>

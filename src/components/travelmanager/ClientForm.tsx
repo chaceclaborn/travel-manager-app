@@ -135,7 +135,7 @@ export function ClientForm({ initialData, onSubmit, isLoading }: ClientFormProps
       <Button
         type="submit"
         disabled={isLoading}
-        className="bg-amber-500 hover:bg-amber-600 text-white"
+        className="tm-btn tm-btn-primary"
       >
         {isLoading ? 'Saving...' : initialData ? 'Update Client' : 'Create Client'}
       </Button>

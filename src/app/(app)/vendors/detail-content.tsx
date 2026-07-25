@@ -137,7 +137,7 @@ export default function VendorDetailContent({ id }: { id: string }) {
         <div className="tm-card mt-6">
           <TMErrorState
             title="Couldn't load this vendor"
-            description="Something went wrong on our end. Your data is safe \u2014 nothing was lost."
+            description="Something went wrong on our end. Your data is safe — nothing was lost."
             onRetry={fetchVendor}
           />
         </div>
@@ -293,7 +293,7 @@ export default function VendorDetailContent({ id }: { id: string }) {
                       <p className="truncate text-[13px] font-medium text-tm-ink">{trip.title}</p>
                       <p className="mt-0.5 truncate text-[12px] text-tm-subtle tm-nums">
                         {trip.startDate && trip.endDate
-                          ? `${formatDate(trip.startDate)} \u2013 ${formatDate(trip.endDate)}`
+                          ? `${formatDate(trip.startDate)} – ${formatDate(trip.endDate)}`
                           : 'Dates not set'}
                       </p>
                     </div>

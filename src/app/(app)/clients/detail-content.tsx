@@ -136,7 +136,7 @@ export default function ClientDetailContent({ id }: { id: string }) {
         <div className="tm-card mt-6">
           <TMErrorState
             title="Couldn't load this client"
-            description="Something went wrong on our end. Your data is safe \u2014 nothing was lost."
+            description="Something went wrong on our end. Your data is safe — nothing was lost."
             onRetry={fetchClient}
           />
         </div>
@@ -146,7 +146,7 @@ export default function ClientDetailContent({ id }: { id: string }) {
 
   const trips = client.trips.map((t) => t.trip);
   // "Upcoming" is what makes this record urgent, so it earns the accent pill
-  // in the header \u2014 nothing else on the page uses accent.
+  // in the header — nothing else on the page uses accent.
   const nextTrip = trips
     .filter((t) => t.startDate && new Date(t.startDate) >= new Date() && t.status !== 'COMPLETED' && t.status !== 'CANCELLED')
     .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())[0];
@@ -274,7 +274,7 @@ export default function ClientDetailContent({ id }: { id: string }) {
                         <p className="truncate text-[13px] font-medium text-tm-ink">{trip.title}</p>
                         <p className="mt-0.5 truncate text-[12px] text-tm-subtle tm-nums">
                           {trip.startDate && trip.endDate
-                            ? `${formatDate(trip.startDate)} \u2013 ${formatDate(trip.endDate)}`
+                            ? `${formatDate(trip.startDate)} – ${formatDate(trip.endDate)}`
                             : 'Dates not set'}
                         </p>
                       </div>
@@ -288,7 +288,7 @@ export default function ClientDetailContent({ id }: { id: string }) {
         </div>
       )}
 
-      {/* Mobile action footer \u2014 the tab bar is replaced on detail screens. */}
+      {/* Mobile action footer — the tab bar is replaced on detail screens. */}
       <TMActionFooter>
         <button type="button" className="tm-btn tm-btn-secondary h-11 flex-1" onClick={() => setDeleteOpen(true)}>
           Delete
