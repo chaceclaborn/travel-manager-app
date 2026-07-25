@@ -50,6 +50,64 @@ async function sha256Hex(input: string): Promise<string> {
 }
 
 /**
+ * Resolve `promise`, but fail fast if the auth sheet closes without a result.
+ *
+ * The native sheet (ASWebAuthenticationSession) hides this page while it is
+ * open, so `visibilitychange` is a reliable "the user is done interacting"
+ * signal that costs no plugin. While the sheet is up we wait indefinitely —
+ * the person may be hunting for a password. Once it closes, a result should be
+ * milliseconds away; if none arrives within the grace period the callback was
+ * dropped and we say so rather than spinning.
+ *
+ * A long backstop still applies for the case where the sheet never presents at
+ * all (then the page never hides, so the visibility path never arms).
+ */
+function withSheetWatchdog<T>(promise: Promise<T>, graceMs = 8000, backstopMs = 5 * 60 * 1000): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    let settled = false;
+    let sawHidden = false;
+    let graceTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const cleanup = () => {
+      settled = true;
+      clearTimeout(graceTimer);
+      clearTimeout(backstopTimer);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+
+    function onVisibility() {
+      if (settled) return;
+      if (document.visibilityState === 'hidden') {
+        sawHidden = true;
+        clearTimeout(graceTimer);
+        return;
+      }
+      // Visible again after having been hidden => the sheet just closed.
+      if (sawHidden) {
+        graceTimer = setTimeout(() => {
+          if (settled) return;
+          cleanup();
+          reject(new Error('Sign-in closed without returning a result. Please try again.'));
+        }, graceMs);
+      }
+    }
+
+    const backstopTimer = setTimeout(() => {
+      if (settled) return;
+      cleanup();
+      reject(new Error('Google sign-in timed out. Please try again.'));
+    }, backstopMs);
+
+    document.addEventListener('visibilitychange', onVisibility);
+
+    promise.then(
+      (value) => { if (!settled) { cleanup(); resolve(value); } },
+      (err) => { if (!settled) { cleanup(); reject(err); } },
+    );
+  });
+}
+
+/**
  * Runs the native OAuth sheet for `provider` and creates a Supabase session
  * from the returned ID token. On success persists the Bearer token (native
  * API auth — see mobile-auth.ts) and hard-navigates to the dashboard.
@@ -90,25 +148,27 @@ export async function nativeOAuthSignIn(
       } catch {
         // No previous session to clear — fine.
       }
-      // A guard so a wedged native flow surfaces an error instead of a
-      // forever-pending promise (see build-6/7 postmortem: dead buttons).
+      // Guard against a native flow that never settles (build-6/7 postmortem:
+      // dead buttons). A plain timeout is the wrong instrument here, and both
+      // ways of setting it are wrong:
+      //   - short (30s) fails a valid sign-in while the person is still
+      //     typing a password or doing 2FA;
+      //   - long (5min) turns a dropped callback into a five-minute hang.
+      // What actually distinguishes the two is whether the sheet is still
+      // open. While it is, the page is hidden and the user is working; once it
+      // closes the page becomes visible again and a result should arrive
+      // almost immediately. So the watchdog only starts on that transition.
       //
-      // This was 30s, which was wrong: the timer covers the WHOLE flow,
-      // including however long the person spends in Google's sheet. Reaching
-      // for a password manager, typing a password, or completing 2FA passes
-      // 30s routinely, so a perfectly good sign-in was reported as a failure —
-      // reproduced on the simulator 2026-07-25. The guard only needs to be
-      // shorter than "user gave up", not shorter than "user is still typing".
-      const SIGN_IN_TIMEOUT_MS = 5 * 60 * 1000;
-      const res = (await Promise.race([
+      // Observed on the simulator 2026-07-25: the sheet completed (the log
+      // shows SafariViewService matching our callback scheme) and the plugin
+      // promise never resolved. This surfaces that in seconds instead of
+      // hanging, and says so plainly.
+      const res = (await withSheetWatchdog(
         SocialLogin.login({
           provider: 'google',
           options: { nonce: hashed, scopes: ['email', 'profile'] },
         }),
-        new Promise<never>((_, rej) =>
-          setTimeout(() => rej(new Error('Google sign-in timed out. Please try again.')), SIGN_IN_TIMEOUT_MS)
-        ),
-      ])) as Awaited<ReturnType<typeof SocialLogin.login>>;
+      )) as Awaited<ReturnType<typeof SocialLogin.login>>;
       idToken = (res.result as { idToken?: string })?.idToken;
     }
   } catch (e) {
@@ -118,7 +178,10 @@ export async function nativeOAuthSignIn(
     const msg = e instanceof Error ? e.message : String(e);
     if (/cancel|dismiss/i.test(msg)) return null;
     console.error(`[native-oauth] ${provider} sign-in failed:`, msg);
-    return `Couldn't start ${provider === 'apple' ? 'Apple' : 'Google'} sign-in. Please try again or use email.`;
+    // Surface the real reason. The old copy always said "Couldn't start …",
+    // which sent us hunting for a plugin/linking fault when the sheet had in
+    // fact started fine and the *result* never came back.
+    return `${provider === 'apple' ? 'Apple' : 'Google'} sign-in failed: ${msg}`;
   }
 
   if (!idToken) return null; // dismissed / no token — nothing to show
