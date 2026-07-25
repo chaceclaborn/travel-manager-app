@@ -209,14 +209,9 @@ export function useNavPreferences() {
     setTabKeysState(next);
   }, []);
 
-  /** Move a tab one position left (-1) or right (+1) along the bar. */
-  const moveTabKey = useCallback((key: string, direction: -1 | 1) => {
-    const current = readTabKeys();
-    const from = current.indexOf(key);
-    const to = from + direction;
-    if (from === -1 || to < 0 || to >= current.length) return;
-    const next = [...current];
-    [next[from], next[to]] = [next[to], next[from]];
+  /** Replace the whole order at once — used by drag-to-reorder. */
+  const setTabOrder = useCallback((keys: string[]) => {
+    const next = sanitizeTabKeys(keys);
     writeTabKeys(next);
     setTabKeysState(next);
   }, []);
@@ -233,6 +228,6 @@ export function useNavPreferences() {
 
   return {
     hidden, isHidden, setHidden, reset, hydrated, visibleItems,
-    tabKeys, tabItems, setTabKey, moveTabKey, resetTabs,
+    tabKeys, tabItems, setTabKey, setTabOrder, resetTabs,
   };
 }

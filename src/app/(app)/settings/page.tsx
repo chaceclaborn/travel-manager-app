@@ -3,8 +3,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { Shield, Download, FileText, Trash2, Loader2, Monitor, MapPin, X, Mail, Wrench, PanelLeft, Smartphone, RotateCcw, AtSign, BarChart3, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Shield, Download, FileText, Trash2, Loader2, Monitor, MapPin, X, Mail, Wrench, PanelLeft, Smartphone, RotateCcw, AtSign, BarChart3, GripVertical } from 'lucide-react';
 import { useNavPreferences, TOGGLEABLE_NAV_ITEMS, TABBABLE_NAV_ITEMS, MOBILE_TAB_SLOTS } from '@/lib/travelmanager/useNavPreferences';
+import { TMReorderList } from '@/components/travelmanager/TMReorderList';
 import { useGeocodingSearch, formatGeoName } from '@/lib/travelmanager/useGeocodingSearch';
 import type { GeoResult } from '@/lib/travelmanager/useGeocodingSearch';
 import { Input } from '@/components/ui/input';
@@ -116,7 +117,7 @@ function NavToggle({
 export default function SettingsPage() {
   const { user } = useAuth();
   const { showToast } = useTMToast();
-  const { isHidden, setHidden, reset: resetNav, hydrated: navHydrated, tabKeys, setTabKey, moveTabKey, resetTabs } = useNavPreferences();
+  const { isHidden, setHidden, reset: resetNav, hydrated: navHydrated, tabKeys, setTabKey, setTabOrder, resetTabs } = useNavPreferences();
   const offTabItems = TABBABLE_NAV_ITEMS.filter((i) => !tabKeys.includes(i.key));
   const hiddenCount = TOGGLEABLE_NAV_ITEMS.filter((i) => isHidden(i.key)).length;
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
@@ -566,50 +567,31 @@ export default function SettingsPage() {
           </button>
         </div>
         <p className="mb-4 text-[13px] text-tm-subtle">
-          Choose up to {MOBILE_TAB_SLOTS} destinations for the phone&apos;s bottom bar, and the
-          order they appear in. Home and More are always there; anything you leave off is
-          still available under More.
+          Choose up to {MOBILE_TAB_SLOTS} destinations for the phone&apos;s bottom bar and drag
+          them into the order you want. Home and More are always there; anything you leave
+          off is still available under More.
         </p>
 
-        {/* On the bar, in order. Arrows rather than drag-and-drop: with three
-            items it is fewer interactions, and it works with a keyboard and a
-            screen reader without a gesture layer. */}
-        <h3 className="tm-label-upper mb-2">On the bar</h3>
-        <div className="divide-y divide-tm-divider">
-          {tabKeys.map((key, idx) => {
-            const navItem = TABBABLE_NAV_ITEMS.find((i) => i.key === key);
-            if (!navItem) return null;
+        {/* On the bar, in order — drag a row to rearrange. */}
+        <h3 className="tm-label-upper mb-1">On the bar &middot; drag to reorder</h3>
+        <TMReorderList
+          items={tabKeys
+            .map((k) => TABBABLE_NAV_ITEMS.find((i) => i.key === k))
+            .filter((i): i is (typeof TABBABLE_NAV_ITEMS)[number] => !!i)}
+          onReorder={setTabOrder}
+          renderItem={(navItem) => {
             const Icon = navItem.icon;
             return (
-              <div key={key} className="flex items-center gap-3 py-2.5">
-                <span className="w-4 shrink-0 text-center text-[12px] font-medium text-tm-faint tm-nums">
-                  {idx + 2}
-                </span>
+              <div className="flex w-full items-center gap-3 px-1">
+                <GripVertical className="size-4 shrink-0 text-tm-ghost" aria-hidden="true" />
                 <span className="flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-tm-fill">
                   <Icon className="size-[17px] text-tm-label" />
                 </span>
                 <p className="min-w-0 flex-1 truncate text-[13px] font-medium text-tm-ink">{navItem.label}</p>
                 <button
                   type="button"
-                  onClick={() => moveTabKey(key, -1)}
-                  disabled={idx === 0}
-                  aria-label={`Move ${navItem.label} left`}
-                  className="tm-btn-icon size-8 disabled:opacity-30"
-                >
-                  <ArrowLeft className="size-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => moveTabKey(key, 1)}
-                  disabled={idx === tabKeys.length - 1}
-                  aria-label={`Move ${navItem.label} right`}
-                  className="tm-btn-icon size-8 disabled:opacity-30"
-                >
-                  <ArrowRight className="size-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setTabKey(key, false); showToast(`${navItem.label} moved to More`); }}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={() => { setTabKey(navItem.key, false); showToast(`${navItem.label} moved to More`); }}
                   disabled={tabKeys.length <= 1}
                   aria-label={`Remove ${navItem.label} from the bar`}
                   className="tm-btn-icon size-8 disabled:opacity-30"
@@ -618,8 +600,8 @@ export default function SettingsPage() {
                 </button>
               </div>
             );
-          })}
-        </div>
+          }}
+        />
 
         {offTabItems.length > 0 && (
           <>
