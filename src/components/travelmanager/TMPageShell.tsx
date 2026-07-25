@@ -72,13 +72,8 @@ export function TMScreenHeader({
           height on every screen for the whole session — and on a Dynamic
           Island phone the 59px inset has already spent the budget. */}
       <header
-        className="sticky top-0 z-30 -mx-4 flex items-center justify-between gap-3 border-b border-[rgba(226,232,240,0.8)] px-5 pb-2.5 md:hidden"
-        style={{
-          paddingTop: 'calc(var(--safe-area-top) + 8px)',
-          background: 'rgba(247,248,250,0.92)',
-          backdropFilter: 'blur(14px) saturate(1.5)',
-          WebkitBackdropFilter: 'blur(14px) saturate(1.5)',
-        }}
+        className="tm-sticky-header -mx-4 flex items-center justify-between gap-3 border-b border-[rgba(226,232,240,0.8)] px-5 pb-2.5 md:hidden"
+        style={{ paddingTop: 'calc(var(--safe-area-top) + 8px)' }}
       >
         <h1 className="min-w-0 flex-1 truncate text-[22px] font-semibold tracking-[-0.025em] text-tm-ink">
           {title}
@@ -128,13 +123,8 @@ export function TMBackRow({
 }) {
   return (
     <header
-      className="sticky top-0 z-30 -mx-4 flex items-center justify-between gap-3 border-b border-[rgba(226,232,240,0.8)] px-5 pb-3 md:static md:mx-0 md:border-0 md:bg-transparent md:px-0 md:pb-0 md:pt-8 md:backdrop-blur-none"
-      style={{
-        paddingTop: 'calc(var(--safe-area-top) + 8px)',
-        background: 'rgba(247,248,250,0.92)',
-        backdropFilter: 'blur(14px) saturate(1.5)',
-        WebkitBackdropFilter: 'blur(14px) saturate(1.5)',
-      }}
+      className="tm-sticky-header -mx-4 flex items-center justify-between gap-3 border-b border-[rgba(226,232,240,0.8)] px-5 pb-3 md:static md:mx-0 md:border-0 md:px-0 md:pb-0 md:pt-8 md:shadow-none"
+      style={{ paddingTop: 'calc(var(--safe-area-top) + 8px)' }}
     >
       <div className="flex min-w-0 items-center gap-2.5">
         <Link href={href} className="tm-btn-icon size-8 md:hidden" aria-label={`Back to ${section}`}>

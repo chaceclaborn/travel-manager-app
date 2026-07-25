@@ -283,12 +283,12 @@ export default function TravelManagerLayout({
         <NotificationOptInCard />
         <OfflineIndicator />
 
-        {/* On mobile this is a fixed app frame: the shell is exactly one
-            viewport tall and does not scroll, <main> scrolls inside it, and the
-            header/tab bar are pinned to that frame. Letting the document scroll
-            instead made the chrome feel like it grew and left dead space on
-            rubber-band. Desktop keeps normal document flow. */}
-        <div className="flex h-[100dvh] max-w-[100vw] overflow-hidden overflow-x-clip md:h-auto md:min-h-screen md:overflow-visible">
+        {/* The document scrolls — deliberately NOT an inner scroll container.
+            A 100dvh shell with <main> scrolling inside looked tidier but made
+            the whole app unscrollable on iOS the moment a flex sizing detail
+            was off, which is far worse than the cosmetic overscroll it fixed.
+            The header stretch is handled in the header itself instead. */}
+        <div className="flex min-h-screen max-w-[100vw] overflow-x-clip">
           {/* Desktop sidebar — 248px, flat #0B1220, no bottom rule under the
               brand (the nav's own padding is enough separation). */}
           <aside
@@ -319,11 +319,7 @@ export default function TravelManagerLayout({
             // `overscroll-contain` is what stops the sticky header stretching
             // when you swipe down hard: without it WKWebView rubber-bands the
             // whole scroller and drags the pinned header with it.
-            // `min-h-0` is load-bearing: a flex child will not shrink below its
-            // content height without it, so `overflow-y-auto` never engages —
-            // the element just grows and the shell's `overflow-hidden` clips
-            // it, leaving a page that cannot scroll at all.
-            className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain overflow-x-clip md:ml-[248px] md:min-h-full md:overflow-y-visible"
+            className="min-w-0 flex-1 overflow-x-clip md:ml-[248px]"
             // Clears the tab bar exactly: 6px top padding + 48px item +
             // max(8px, inset) bottom. Matching the bar's own math instead of
             // guessing keeps the last row reachable without leaving a gap.

@@ -597,12 +597,18 @@
 .tm-pin-past { background: #94A3B8; }
 .tm-pin-sm { height: 22px; min-width: 22px; font-size: 9px; }
 
-/* WKWebView rubber-band: a `position: sticky` header is dragged (and visually
-   stretched by the translucent backdrop) when the scroller bounces past its
-   top. Containing the overscroll on the scroll container stops the bounce from
-   reaching the header at all. */
-@supports (-webkit-touch-callout: none) {
-  main { overscroll-behavior-y: contain; }
+/* WKWebView rubber-band: when the document bounces past the top, a sticky
+   header appears to stretch because the gap above it shows the page behind.
+   Rather than fight the bounce (an inner scroll container broke scrolling
+   outright), the header paints a slab of its own background upward with a
+   box-shadow, so anything revealed by the bounce is the same colour and there
+   is nothing to see stretching. */
+@utility tm-sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: var(--color-tm-app);
+  box-shadow: 0 -120px 0 var(--color-tm-app);
 }
 
 /* iOS safe area support — accounts for notch / Dynamic Island and home indicator.
