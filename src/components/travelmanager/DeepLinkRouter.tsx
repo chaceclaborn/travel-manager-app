@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { isNativePlatform } from '@/lib/mobile-auth';
 
 /**
@@ -21,6 +21,32 @@ import { isNativePlatform } from '@/lib/mobile-auth';
  */
 export function DeepLinkRouter() {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // Record where the user actually is, so a rebuild can put them back on the
+  // exact screen — not just the right tab. Capacitor Preferences writes to the
+  // app container's plist, which is readable from outside the app:
+  //
+  //   C=$(xcrun simctl get_app_container <udid> com.chaceclaborn.travelmanager data)
+  //   plutil -extract 'CapacitorStorage.tm-last-route' raw -o - \
+  //     "$C/Library/Preferences/com.chaceclaborn.travelmanager.plist"
+  //
+  // Without this there is no way to know which trip was open, so "put it back
+  // where I was" is guesswork.
+  useEffect(() => {
+    if (!isNativePlatform()) return;
+    const qs = searchParams.toString();
+    const route = qs ? `${pathname}?${qs}` : pathname;
+    (async () => {
+      try {
+        const { Preferences } = await import('@capacitor/preferences');
+        await Preferences.set({ key: 'tm-last-route', value: route });
+      } catch {
+        // Recording the route is a dev convenience; never let it break nav.
+      }
+    })();
+  }, [pathname, searchParams]);
 
   useEffect(() => {
     if (!isNativePlatform()) return;

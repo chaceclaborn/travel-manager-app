@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import Image from 'next/image';
@@ -279,7 +279,9 @@ export default function TravelManagerLayout({
         {/* PushRegister must live inside TMToastProvider because it calls
             useTMToast() to surface foreground pushes as in-app toasts. The
             opt-in card primes the user before the OS permission dialog. */}
-        <DeepLinkRouter />
+        <Suspense fallback={null}>
+          <DeepLinkRouter />
+        </Suspense>
         <PushRegister />
         <AppUpdateGate />
         <NotificationOptInCard />
