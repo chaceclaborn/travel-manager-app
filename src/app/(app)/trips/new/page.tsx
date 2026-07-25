@@ -1,10 +1,10 @@
 'use client';
 import { detailHref } from '@/lib/travelmanager/detail-routes';
+import { TMPageShell, TMBackRow } from '@/components/travelmanager/TMPageShell';
 
 import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { TripForm } from '@/components/travelmanager/TripForm';
-import { TMBreadcrumb } from '@/components/travelmanager/TMBreadcrumb';
 import { useTMToast } from '@/components/travelmanager/TMToast';
 
 export default function NewTripPage() {
@@ -73,14 +73,16 @@ function NewTripPageContent() {
   };
 
   return (
-    <div className="space-y-6">
-      <TMBreadcrumb items={[{ label: 'Dashboard', href: '/' }, { label: 'Trips', href: '/trips' }, { label: 'New Trip' }]} />
+    <TMPageShell width={760}>
+      <TMBackRow href="/trips" section="Trips" />
+      <div className="space-y-5 pt-4 md:pt-6">
 
-      <h1 className="text-2xl font-bold text-slate-800">New Trip</h1>
+      <h1 className="text-[24px] font-semibold tracking-[-0.02em] text-tm-ink">New Trip</h1>
 
       <div className="rounded-xl bg-white p-4 sm:p-6 shadow-sm">
         <TripForm onSubmit={handleSubmit} isLoading={isLoading} initialData={prefillStartDate ? { startDate: prefillStartDate } : undefined} />
       </div>
-    </div>
+      </div>
+    </TMPageShell>
   );
 }

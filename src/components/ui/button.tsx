@@ -5,30 +5,36 @@ import { Slot } from "radix-ui"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
+  // Base geometry matches the design system's button: 9px radius, 13px/500
+  // label, no transform on hover. `transition-colors` (not `transition-all`)
+  // keeps the hover from animating size or shadow.
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[9px] text-[13px] font-medium transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-[15px] shrink-0 [&_svg]:shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-tm-accent/40 aria-invalid:border-tm-danger-border",
   {
     variants: {
       variant: {
+        // Primary actions are near-black, not amber. Amber is reserved for
+        // "next / active / accent" — spending it on every button left the
+        // accent with no meaning.
         default:
-          "bg-primary text-primary-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_1px_2px_rgba(15,23,42,0.12)] hover:bg-primary/90 active:bg-amber-600",
+          "bg-tm-action text-white shadow-tm-action hover:bg-tm-action-hover",
         destructive:
-          "bg-destructive text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_1px_2px_rgba(15,23,42,0.12)] hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
+          "bg-white border border-tm-danger-border text-tm-danger hover:bg-tm-danger-bg",
         outline:
-          "border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50",
+          "border border-tm-control bg-white text-tm-body shadow-tm-control hover:border-tm-control-hover hover:bg-tm-wash",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+          "bg-tm-fill text-tm-body hover:bg-tm-strong",
         ghost:
-          "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
-        link: "text-primary underline-offset-4 hover:underline",
+          "text-tm-muted hover:bg-tm-fill hover:text-tm-body",
+        link: "text-tm-accent-text underline-offset-4 hover:text-tm-accent-text-hover hover:underline",
       },
       size: {
-        default: "h-9 px-4 py-2 has-[>svg]:px-3",
-        xs: "h-6 gap-1 rounded-md px-2 text-xs has-[>svg]:px-1.5 [&_svg:not([class*='size-'])]:size-3",
-        sm: "h-8 rounded-md gap-1.5 px-3 has-[>svg]:px-2.5",
-        lg: "h-10 rounded-md px-6 has-[>svg]:px-4",
+        default: "h-9 px-4 has-[>svg]:px-3.5",
+        xs: "h-7 gap-1 rounded-[7px] px-2 text-[11px] has-[>svg]:px-1.5 [&_svg:not([class*='size-'])]:size-3",
+        sm: "h-8 gap-1.5 rounded-[8px] px-3 text-[12px] has-[>svg]:px-2.5",
+        lg: "h-10 px-6 has-[>svg]:px-4",
         icon: "size-9",
-        "icon-xs": "size-6 rounded-md [&_svg:not([class*='size-'])]:size-3",
-        "icon-sm": "size-8",
+        "icon-xs": "size-7 rounded-[7px] [&_svg:not([class*='size-'])]:size-3",
+        "icon-sm": "size-8 rounded-[8px]",
         "icon-lg": "size-10",
       },
     },

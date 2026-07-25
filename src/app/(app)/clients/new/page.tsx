@@ -1,10 +1,10 @@
 'use client';
 import { detailHref } from '@/lib/travelmanager/detail-routes';
+import { TMPageShell, TMBackRow } from '@/components/travelmanager/TMPageShell';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ClientForm } from '@/components/travelmanager/ClientForm';
-import { TMBreadcrumb } from '@/components/travelmanager/TMBreadcrumb';
 import { useTMToast } from '@/components/travelmanager/TMToast';
 
 export default function NewClientPage() {
@@ -38,14 +38,16 @@ export default function NewClientPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <TMBreadcrumb items={[{ label: 'Dashboard', href: '/' }, { label: 'Clients', href: '/clients' }, { label: 'New Client' }]} />
+    <TMPageShell width={760}>
+      <TMBackRow href="/clients" section="Clients" />
+      <div className="space-y-5 pt-4 md:pt-6">
 
-      <h1 className="text-2xl font-bold text-slate-800">New Client</h1>
+      <h1 className="text-[24px] font-semibold tracking-[-0.02em] text-tm-ink">New Client</h1>
 
-      <div className="max-w-lg rounded-lg bg-white p-6 shadow-sm">
+      <div className="tm-card p-6">
         <ClientForm onSubmit={handleSubmit} isLoading={isLoading} />
       </div>
-    </div>
+      </div>
+    </TMPageShell>
   );
 }

@@ -3,18 +3,21 @@ import { detailHref } from '@/lib/travelmanager/detail-routes';
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { Pencil, X, MapPin, Clock, Hash, Armchair, Plane, AlertCircle, RefreshCw } from 'lucide-react';
+import { Pencil, X, MapPin, Plane, Trash2, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TMDeleteDialog } from '@/components/travelmanager/TMDeleteDialog';
-import { TMBreadcrumb } from '@/components/travelmanager/TMBreadcrumb';
+import { TMEmptyState, TMErrorState, TMSkeleton } from '@/components/travelmanager/TMEmptyState';
+import { TMPageShell, TMBackRow, TMActionFooter } from '@/components/travelmanager/TMPageShell';
+import { TMIconTile, TMChip, TMMonoChip, TMCard, TMCardHeader, TMFact } from '@/components/travelmanager/TMPrimitives';
+import { bookingTypePalette } from '@/lib/travelmanager/design';
 import { useTMToast } from '@/components/travelmanager/TMToast';
 import { useDeleteEntity } from '@/lib/travelmanager/useDeleteEntity';
 import { DatePicker } from '@/components/travelmanager/DatePicker';
 import { formatDate, formatDateTime, toDateTimeInputValue } from '@/lib/date-utils';
-import { type BookingType, typeConfig, typeLabels, getBookingFormHelpers } from '@/lib/travelmanager/booking-config';
+import { type BookingType, typeConfig, typeLabels, getBookingFormHelpers, BOOKING_TYPE_ICON } from '@/lib/travelmanager/booking-config';
 
 interface BookingData {
   id: string;
@@ -27,6 +30,11 @@ interface BookingData {
   endLocation: string | null;
   seat: string | null;
   notes: string | null;
+  timezone: string | null;
+  commissionAmount: number | null;
+  commissionRate: number | null;
+  commissionPaid: boolean;
+  commissionNotes: string | null;
   tripId: string | null;
   trip: { id: string; title: string; destination: string | null } | null;
   createdAt: string;
@@ -133,70 +141,92 @@ export default function BookingDetailContent({ id }: { id: string }) {
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="h-8 w-48 animate-pulse rounded bg-slate-200" />
-        <div className="h-64 animate-pulse rounded-xl bg-white" />
-      </div>
+      <TMPageShell width={860}>
+        <TMBackRow href="/bookings" section="Bookings" />
+        <div className="pt-5 md:pt-6">
+          <TMSkeleton className="h-[320px] w-full" style={{ borderRadius: 16 }} />
+          <div className="mt-5 grid gap-5 md:grid-cols-2">
+            <TMSkeleton className="h-[180px] w-full" style={{ borderRadius: 14 }} />
+            <TMSkeleton className="h-[180px] w-full" style={{ borderRadius: 14 }} />
+          </div>
+        </div>
+      </TMPageShell>
     );
   }
 
   if (notFound) {
     return (
-      <div className="text-center py-12">
-        <Plane className="mx-auto size-12 text-slate-300" />
-        <p className="mt-4 text-lg text-slate-500">Booking not found</p>
-        <p className="mt-1 text-sm text-slate-400">This booking may have been deleted.</p>
-        <Link href="/bookings" className="mt-3 inline-block text-sm text-amber-600 hover:underline">Back to bookings</Link>
-      </div>
+      <TMPageShell width={860}>
+        <TMBackRow href="/bookings" section="Bookings" />
+        <div className="tm-card mt-6">
+          <TMEmptyState
+            title="Booking not found"
+            description="This booking may have been deleted. Head back to the list to pick another."
+            actionLabel="Back to Bookings"
+            actionHref="/bookings"
+            icon={Plane}
+          />
+        </div>
+      </TMPageShell>
     );
   }
 
   if (error || !booking) {
     return (
-      <div className="flex flex-col items-center justify-center py-24 text-center">
-        <div className="relative mb-6">
-          <div className="size-20 rounded-full bg-red-50 flex items-center justify-center">
-            <AlertCircle className="size-10 text-red-400" />
-          </div>
-          <div className="absolute -bottom-1 -right-1 size-7 rounded-full bg-red-100 flex items-center justify-center">
-            <RefreshCw className="size-3.5 text-red-400" />
-          </div>
+      <TMPageShell width={860}>
+        <TMBackRow href="/bookings" section="Bookings" />
+        <div className="tm-card mt-6">
+          <TMErrorState
+            title="Couldn't load this booking"
+            description="Something went wrong on our end. Your data is safe \u2014 nothing was lost."
+            onRetry={fetchBooking}
+          />
         </div>
-        <h2 className="text-xl font-semibold text-slate-900">Couldn&apos;t load booking</h2>
-        <p className="mt-2 text-sm text-slate-500 max-w-sm">
-          Something went wrong. Check your connection and try again.
-        </p>
-        <Button
-          onClick={fetchBooking}
-          className="mt-6 bg-slate-900 hover:bg-slate-800 text-white shadow-sm"
-        >
-          <RefreshCw className="mr-2 size-4" />
-          Try again
-        </Button>
-      </div>
+      </TMPageShell>
     );
   }
 
   const config = typeConfig[booking.type];
+  const palette = bookingTypePalette(booking.type);
+  const TypeIcon = BOOKING_TYPE_ICON[booking.type];
   const { showEndLocation, showSeat, dateOnly } = getBookingFormHelpers(form.type);
   const formTypeConfig = typeConfig[form.type];
+  const FormTypeIcon = BOOKING_TYPE_ICON[form.type];
+  const formPalette = bookingTypePalette(form.type);
+
+  // The dark route band only makes sense for point-to-point travel; a hotel
+  // has one location, so it falls back to the facts band alone.
+  const isRoute = booking.type === 'FLIGHT' || booking.type === 'TRAIN' || booking.type === 'BUS';
+  const hasCommission = booking.commissionAmount != null || booking.commissionRate != null;
+
+  const startLabel = booking.type === 'HOTEL' ? 'Check-in' : booking.type === 'CAR_RENTAL' ? 'Pickup' : 'Departure';
+  const endLabel = booking.type === 'HOTEL' ? 'Check-out' : booking.type === 'CAR_RENTAL' ? 'Dropoff' : 'Arrival';
+  const fmt = (v: string) => (booking.type === 'HOTEL' ? formatDate(v) : formatDateTime(v));
 
   return (
-    <div className="space-y-6">
-      <TMBreadcrumb items={[{ label: 'Bookings', href: '/bookings' }, { label: booking.provider }]} />
+    <TMPageShell width={860}>
+      <TMBackRow
+        href="/bookings"
+        section="Bookings"
+        action={
+          <button type="button" onClick={() => setEditing(true)} className="tm-btn-icon size-8" aria-label="Edit booking">
+            <Pencil className="size-4" />
+          </button>
+        }
+      />
 
-      <div className="rounded-xl bg-white p-6 shadow-sm">
+      <div className={editing ? 'tm-card mt-4 p-6 md:mt-6' : 'tm-card mt-4 overflow-hidden md:mt-6'}>
         {editing ? (
           <form onSubmit={handleSave} className="space-y-5">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className={`flex items-center justify-center rounded-lg p-1.5 ring-1 ${formTypeConfig.iconBg}`}>
-                  {formTypeConfig.icon}
-                </span>
-                <h1 className="text-xl font-bold text-slate-800">Edit {formTypeConfig.label} Booking</h1>
+              <div className="flex items-center gap-2.5">
+                <TMIconTile icon={FormTypeIcon} size={38} bg={formPalette.bg} fg={formPalette.fg} />
+                <h1 className="text-[18px] font-semibold tracking-[-0.01em] text-tm-ink">
+                  Edit {formTypeConfig.label} booking
+                </h1>
               </div>
-              <button type="button" onClick={() => setEditing(false)} className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
-                <X className="size-5" />
+              <button type="button" onClick={() => setEditing(false)} className="tm-btn-icon" aria-label="Cancel editing">
+                <X className="size-4" />
               </button>
             </div>
 
@@ -298,112 +328,199 @@ export default function BookingDetailContent({ id }: { id: string }) {
             </div>
 
             <div className="flex gap-2">
-              <Button type="submit" disabled={saving} className="bg-amber-500 hover:bg-amber-600">
-                {saving ? 'Saving...' : 'Save Changes'}
+              <Button type="submit" disabled={saving} className="tm-btn tm-btn-primary">
+                {saving ? 'Saving\u2026' : 'Save changes'}
               </Button>
-              <Button type="button" variant="outline" onClick={() => setEditing(false)}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={() => setEditing(false)} className="tm-btn tm-btn-secondary">
+                Cancel
+              </Button>
             </div>
           </form>
         ) : (
           <>
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-3">
-                <span className={`flex items-center justify-center rounded-xl p-3 ring-2 ${config.iconBg}`}>
-                  {config.icon}
-                </span>
-                <div>
-                  <h1 className="text-2xl font-bold text-slate-800">{booking.provider}</h1>
-                  <span className={`inline-block mt-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${config.badgeColor}`}>
-                    {config.label}
-                  </span>
+            {/* Band 1 \u2014 white: who and what. */}
+            <div className="flex flex-wrap items-start justify-between gap-4 px-5 py-5 md:px-7 md:py-6">
+              <div className="flex min-w-0 items-start gap-4">
+                <TMIconTile icon={TypeIcon} size={52} bg={palette.bg} fg={palette.fg} />
+                <div className="min-w-0">
+                  <h1 className="truncate text-[22px] font-semibold tracking-[-0.02em] text-tm-ink md:text-[24px]">
+                    {booking.provider}
+                  </h1>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                    <TMChip>{config.label}</TMChip>
+                    {booking.confirmationNum && (
+                      <>
+                        <span className="text-[12px] text-tm-subtle">Confirmation</span>
+                        <TMMonoChip>{booking.confirmationNum}</TMMonoChip>
+                      </>
+                    )}
+                  </div>
+                  {booking.trip && (
+                    <Link
+                      href={detailHref('trips', booking.trip.id)}
+                      className="mt-2 inline-flex items-center gap-1.5 text-[13px] text-tm-muted hover:text-tm-body"
+                    >
+                      <MapPin className="size-3.5 text-tm-faint" aria-hidden="true" />
+                      {booking.trip.title}
+                    </Link>
+                  )}
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
-                  <Pencil className="mr-1 size-3.5" /> Edit
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => setDeleteOpen(true)} className="text-red-600 hover:text-red-700 hover:bg-red-50">
-                  Delete
-                </Button>
+
+              <div className="hidden items-center gap-2 md:flex">
+                <button type="button" className="tm-btn tm-btn-secondary" onClick={() => setEditing(true)}>
+                  Edit
+                </button>
+                <button type="button" className="tm-btn-icon" onClick={() => setDeleteOpen(true)} aria-label="Delete booking">
+                  <Trash2 className="size-4" />
+                </button>
               </div>
             </div>
 
-            {booking.trip && (
-              <Link href={detailHref('trips', booking.trip.id)} className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-sm font-medium text-amber-700 hover:bg-amber-100 transition-colors">
-                <MapPin className="size-3.5" />
-                {booking.trip.title}
-              </Link>
+            {/* Band 2 \u2014 dark: the journey itself, read left to right. */}
+            {isRoute && (booking.location || booking.endLocation) && (
+              <div className="grid grid-cols-3 items-center gap-3 bg-tm-nav px-5 py-5 md:px-7 md:py-6">
+                <div className="min-w-0">
+                  <p className="truncate font-mono text-[22px] font-semibold tracking-[0.02em] text-white md:text-[32px]">
+                    {booking.location || '\u2014'}
+                  </p>
+                  {booking.startDateTime && (
+                    <p className="mt-1.5 truncate text-[13px] font-medium text-tm-on-dark tm-nums">
+                      {fmt(booking.startDateTime)}
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex flex-col items-center gap-2 px-1">
+                  <div className="flex w-full items-center gap-1.5">
+                    <span
+                      className="size-[7px] shrink-0 rounded-full"
+                      style={{ boxShadow: 'inset 0 0 0 1.5px #5B6472' }}
+                      aria-hidden="true"
+                    />
+                    <span
+                      className="h-px flex-1"
+                      style={{ background: 'linear-gradient(to right, #5B6472, #F59E0B)' }}
+                      aria-hidden="true"
+                    />
+                    <TypeIcon className="size-[15px] shrink-0 text-tm-accent" aria-hidden="true" />
+                    <span className="size-[7px] shrink-0 rounded-full bg-tm-accent" aria-hidden="true" />
+                  </div>
+                  {booking.seat && <p className="text-[11px] text-tm-nav-meta">Seat {booking.seat}</p>}
+                </div>
+
+                <div className="min-w-0 text-right">
+                  <p className="truncate font-mono text-[22px] font-semibold tracking-[0.02em] text-white md:text-[32px]">
+                    {booking.endLocation || '\u2014'}
+                  </p>
+                  {booking.endDateTime && (
+                    <p className="mt-1.5 truncate text-[13px] font-medium text-tm-on-dark tm-nums">
+                      {fmt(booking.endDateTime)}
+                    </p>
+                  )}
+                </div>
+              </div>
             )}
 
-            <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            {/* Band 3 \u2014 facts. 2-up on a phone, 4-up on a desktop. */}
+            <div className="grid grid-cols-2 gap-x-4 gap-y-4 border-t border-tm-divider px-5 py-5 md:grid-cols-4 md:px-7">
+              {booking.location && !isRoute && (
+                <div className="min-w-0">
+                  <p className="tm-label-micro">{booking.type === 'CAR_RENTAL' ? 'Pickup' : 'Location'}</p>
+                  <p className="mt-1 truncate text-[14px] font-semibold text-tm-ink">{booking.location}</p>
+                </div>
+              )}
+              {booking.endLocation && !isRoute && (
+                <div className="min-w-0">
+                  <p className="tm-label-micro">Dropoff</p>
+                  <p className="mt-1 truncate text-[14px] font-semibold text-tm-ink">{booking.endLocation}</p>
+                </div>
+              )}
+              {booking.startDateTime && !isRoute && (
+                <div className="min-w-0">
+                  <p className="tm-label-micro">{startLabel}</p>
+                  <p className="mt-1 truncate text-[14px] font-semibold text-tm-ink tm-nums">{fmt(booking.startDateTime)}</p>
+                </div>
+              )}
+              {booking.endDateTime && !isRoute && (
+                <div className="min-w-0">
+                  <p className="tm-label-micro">{endLabel}</p>
+                  <p className="mt-1 truncate text-[14px] font-semibold text-tm-ink tm-nums">{fmt(booking.endDateTime)}</p>
+                </div>
+              )}
+              {booking.seat && !isRoute && (
+                <div className="min-w-0">
+                  <p className="tm-label-micro">Seat</p>
+                  <p className="mt-1 truncate text-[14px] font-semibold text-tm-ink">{booking.seat}</p>
+                </div>
+              )}
               {booking.confirmationNum && (
-                <div className="rounded-lg border border-slate-100 p-4">
-                  <div className="flex items-center gap-2 text-sm text-slate-500 mb-1">
-                    <Hash className="size-4" /> Confirmation
-                  </div>
-                  <p className="font-mono text-lg font-semibold text-slate-800">{booking.confirmationNum}</p>
+                <div className="min-w-0">
+                  <p className="tm-label-micro">Confirmation</p>
+                  <p className="mt-1 truncate font-mono text-[14px] font-semibold tracking-[0.04em] text-tm-ink">
+                    {booking.confirmationNum}
+                  </p>
                 </div>
               )}
-
-              {booking.location && (
-                <div className="rounded-lg border border-slate-100 p-4">
-                  <div className="flex items-center gap-2 text-sm text-slate-500 mb-1">
-                    <MapPin className="size-4" /> {booking.type === 'FLIGHT' ? 'Departure' : booking.type === 'CAR_RENTAL' ? 'Pickup' : 'Location'}
-                  </div>
-                  <p className="font-medium text-slate-800">{booking.location}</p>
-                </div>
-              )}
-
-              {booking.endLocation && (
-                <div className="rounded-lg border border-slate-100 p-4">
-                  <div className="flex items-center gap-2 text-sm text-slate-500 mb-1">
-                    <MapPin className="size-4" /> {booking.type === 'FLIGHT' ? 'Arrival' : 'Dropoff'}
-                  </div>
-                  <p className="font-medium text-slate-800">{booking.endLocation}</p>
-                </div>
-              )}
-
-              {booking.startDateTime && (
-                <div className="rounded-lg border border-slate-100 p-4">
-                  <div className="flex items-center gap-2 text-sm text-slate-500 mb-1">
-                    <Clock className="size-4" /> {booking.type === 'HOTEL' ? 'Check-in' : 'Departure'}
-                  </div>
-                  <p className="font-medium text-slate-800">{booking.type === 'HOTEL' ? formatDate(booking.startDateTime) : formatDateTime(booking.startDateTime)}</p>
-                </div>
-              )}
-
-              {booking.endDateTime && (
-                <div className="rounded-lg border border-slate-100 p-4">
-                  <div className="flex items-center gap-2 text-sm text-slate-500 mb-1">
-                    <Clock className="size-4" /> {booking.type === 'HOTEL' ? 'Check-out' : 'Arrival'}
-                  </div>
-                  <p className="font-medium text-slate-800">{booking.type === 'HOTEL' ? formatDate(booking.endDateTime) : formatDateTime(booking.endDateTime)}</p>
-                </div>
-              )}
-
-              {booking.seat && (
-                <div className="rounded-lg border border-slate-100 p-4">
-                  <div className="flex items-center gap-2 text-sm text-slate-500 mb-1">
-                    <Armchair className="size-4" /> Seat
-                  </div>
-                  <p className="font-medium text-slate-800">{booking.seat}</p>
-                </div>
-              )}
-            </div>
-
-            {booking.notes && (
-              <div className="mt-4 rounded-lg border border-slate-100 p-4">
-                <p className="text-sm text-slate-500 mb-1">Notes</p>
-                <p className="text-slate-700">{booking.notes}</p>
+              <div className="min-w-0">
+                <p className="tm-label-micro">Trip</p>
+                <p className="mt-1 truncate text-[14px] font-semibold text-tm-ink">
+                  {booking.trip ? booking.trip.title : 'Standalone'}
+                </p>
               </div>
-            )}
-
-            <p className="mt-6 text-xs text-slate-400">
-              Created {formatDate(booking.createdAt)} &middot; Updated {formatDate(booking.updatedAt)}
-            </p>
+              <div className="min-w-0">
+                <p className="tm-label-micro">Updated</p>
+                <p className="mt-1 truncate text-[14px] font-semibold text-tm-ink tm-nums">{formatDate(booking.updatedAt)}</p>
+              </div>
+            </div>
           </>
         )}
       </div>
+
+      {!editing && (hasCommission || booking.notes) && (
+        <div className="mt-5 grid gap-5 md:grid-cols-2">
+          {hasCommission && (
+            <TMCard>
+              <TMCardHeader title="Commission" />
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <span className="text-[26px] font-semibold tracking-[-0.02em] text-tm-ink tm-nums">
+                  {booking.commissionAmount != null
+                    ? `$${booking.commissionAmount.toFixed(2)}`
+                    : `${booking.commissionRate}%`}
+                </span>
+                <TMChip tone={booking.commissionPaid ? 'success' : 'pending'} icon={booking.commissionPaid ? Check : undefined}>
+                  {booking.commissionPaid ? 'Paid' : 'Pending'}
+                </TMChip>
+              </div>
+              <div className="mt-4 space-y-2.5">
+                {booking.commissionRate != null && <TMFact label="Rate">{booking.commissionRate}%</TMFact>}
+                {booking.commissionNotes && <TMFact label="Notes">{booking.commissionNotes}</TMFact>}
+              </div>
+            </TMCard>
+          )}
+
+          {booking.notes && (
+            <TMCard>
+              <TMCardHeader title="Notes" />
+              <p className="tm-prose mt-3 whitespace-pre-wrap text-[13px] leading-[1.6] text-tm-muted">
+                {booking.notes}
+              </p>
+            </TMCard>
+          )}
+        </div>
+      )}
+
+      {/* Mobile action footer. */}
+      {!editing && (
+        <TMActionFooter>
+          <button type="button" className="tm-btn tm-btn-secondary h-11 flex-1" onClick={() => setDeleteOpen(true)}>
+            Delete
+          </button>
+          <button type="button" className="tm-btn tm-btn-primary h-11 flex-[2]" onClick={() => setEditing(true)}>
+            Edit booking
+          </button>
+        </TMActionFooter>
+      )}
 
       <TMDeleteDialog
         open={deleteOpen}
@@ -413,6 +530,6 @@ export default function BookingDetailContent({ id }: { id: string }) {
         description="Are you sure you want to delete this booking? This action cannot be undone."
         isDeleting={deleting}
       />
-    </div>
+    </TMPageShell>
   );
 }

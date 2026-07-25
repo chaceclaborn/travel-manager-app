@@ -17,7 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { TMBreadcrumb } from '@/components/travelmanager/TMBreadcrumb';
+import { TMPageShell, TMScreenHeader } from '@/components/travelmanager/TMPageShell';
 import { useTMToast } from '@/components/travelmanager/TMToast';
 import { CurrencyConverter } from '@/components/travelmanager/CurrencyConverter';
 import { NotificationsSettingCard } from '@/components/travelmanager/NotificationsSettingCard';
@@ -93,14 +93,21 @@ function NavToggle({
       aria-checked={checked}
       aria-label={`${checked ? 'Hide' : 'Show'} ${label} in sidebar`}
       onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:ring-offset-2 after:absolute after:-inset-x-1 after:-inset-y-2.5 after:content-[''] ${
-        checked ? 'bg-amber-500' : 'bg-slate-300'
-      }`}
+      // The knob's `left` transition is one of only two motions in the whole
+      // design system. Everything else here is instantaneous.
+      className="relative h-[23px] w-10 shrink-0 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-tm-accent/40 after:absolute after:-inset-x-1 after:-inset-y-2.5 after:content-['']"
+      style={{ background: checked ? '#0F172A' : '#E4E8EE' }}
     >
       <span
-        className={`inline-block size-5 transform rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.25)] transition-transform ${
-          checked ? 'translate-x-[22px]' : 'translate-x-0.5'
-        }`}
+        className="absolute rounded-full bg-white"
+        style={{
+          width: 17,
+          height: 17,
+          top: 3,
+          left: checked ? 20 : 3,
+          transition: 'left 140ms ease',
+          boxShadow: '0 1px 3px rgba(15,23,42,0.3)',
+        }}
       />
     </button>
   );
@@ -351,22 +358,19 @@ export default function SettingsPage() {
   }
 
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="max-w-[720px] mx-auto space-y-[18px]">
-      <TMBreadcrumb
-        items={[
-          { label: 'Travel Manager', href: '/' },
-          { label: 'Settings' },
-        ]}
-      />
+    <TMPageShell width={760}>
+      <TMScreenHeader title="Settings" subtitle="Manage your account, data, and preferences" />
 
-      <motion.div variants={item}>
-        <h1 className="text-[26px] font-bold tracking-[-0.02em] text-slate-900">Settings</h1>
-        <p className="text-sm text-slate-500 mt-1">Manage your account, data, and preferences</p>
-      </motion.div>
+      <motion.div
+        variants={container}
+        initial="hidden"
+        animate="show"
+        className="flex flex-col gap-[18px] pt-5 md:pt-7"
+      >
 
       {/* Account Info */}
-      <motion.div variants={item} className="rounded-2xl border border-[#eef2f6] bg-white p-[22px] shadow-card">
-        <h2 className="text-base font-semibold text-slate-900 mb-4">Account Information</h2>
+      <motion.div variants={item} className="tm-card px-6 py-[22px]">
+        <h2 className="mb-4 text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">Account Information</h2>
         <div className="flex items-center gap-4">
           {avatarUrl && !avatarError ? (
             <Image
@@ -398,10 +402,10 @@ export default function SettingsPage() {
       </motion.div>
 
       {/* Username */}
-      <motion.div variants={item} className="rounded-2xl border border-[#eef2f6] bg-white p-[22px] shadow-card">
+      <motion.div variants={item} className="tm-card px-6 py-[22px]">
         <div className="flex items-center gap-2 mb-4">
           <AtSign className="size-[18px] text-amber-600" />
-          <h2 className="text-base font-semibold text-slate-900">Username</h2>
+          <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">Username</h2>
         </div>
         <p className="text-xs text-slate-500 mb-3">
           Your unique @handle lets friends find and add you.
@@ -476,10 +480,10 @@ export default function SettingsPage() {
       </motion.div>
 
       {/* Home Location */}
-      <motion.div variants={item} className="rounded-2xl border border-[#eef2f6] bg-white p-[22px] shadow-card">
+      <motion.div variants={item} className="tm-card px-6 py-[22px]">
         <div className="flex items-center gap-2 mb-4">
           <MapPin className="size-[18px] text-amber-600" />
-          <h2 className="text-base font-semibold text-slate-900">Home Location</h2>
+          <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">Home Location</h2>
         </div>
         <p className="text-xs text-slate-500 mb-3">
           Set your home city to calculate round-trip distances on the map.
@@ -545,11 +549,11 @@ export default function SettingsPage() {
       </motion.div>
 
       {/* Sidebar Customization */}
-      <motion.div variants={item} className="rounded-2xl border border-[#eef2f6] bg-white p-[22px] shadow-card">
+      <motion.div variants={item} className="tm-card px-6 py-[22px]">
         <div className="flex items-center justify-between gap-2 mb-1">
           <div className="flex items-center gap-2">
             <PanelLeft className="size-[18px] text-amber-600" />
-            <h2 className="text-base font-semibold text-slate-900">Sidebar</h2>
+            <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">Sidebar</h2>
           </div>
           {hiddenCount > 0 && (
             <button
@@ -601,7 +605,7 @@ export default function SettingsPage() {
       <motion.div variants={item}>
         <div className="mb-3 flex items-center gap-2 px-1">
           <Wrench className="size-[18px] text-amber-600" />
-          <h2 className="text-base font-semibold text-slate-900">Tools</h2>
+          <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">Tools</h2>
         </div>
         <p className="mb-3 px-1 text-xs text-slate-500">
           Handy utilities for trip planning.
@@ -610,10 +614,10 @@ export default function SettingsPage() {
       </motion.div>
 
       {/* Privacy */}
-      <motion.div variants={item} className="rounded-2xl border border-[#eef2f6] bg-white p-[22px] shadow-card">
+      <motion.div variants={item} className="tm-card px-6 py-[22px]">
         <div className="flex items-center gap-2 mb-4">
           <BarChart3 className="size-[18px] text-amber-600" />
-          <h2 className="text-base font-semibold text-slate-900">Privacy</h2>
+          <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">Privacy</h2>
         </div>
         <div className="flex items-start justify-between gap-4 rounded-xl border border-slate-100 p-4">
           <div>
@@ -652,10 +656,10 @@ export default function SettingsPage() {
       </motion.div>
 
       {/* Security */}
-      <motion.div variants={item} className="rounded-2xl border border-[#eef2f6] bg-white p-[22px] shadow-card">
+      <motion.div variants={item} className="tm-card px-6 py-[22px]">
         <div className="flex items-center gap-2 mb-4">
           <Shield className="size-[18px] text-amber-600" />
-          <h2 className="text-base font-semibold text-slate-900">Security</h2>
+          <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">Security</h2>
         </div>
         <h3 className="text-sm font-medium text-slate-700 mb-3">Recent Sign-ins</h3>
         {loadingSessions ? (
@@ -706,10 +710,10 @@ export default function SettingsPage() {
       </motion.div>
 
       {/* Data Management */}
-      <motion.div variants={item} className="rounded-2xl border border-[#eef2f6] bg-white p-[22px] shadow-card">
+      <motion.div variants={item} className="tm-card px-6 py-[22px]">
         <div className="flex items-center gap-2 mb-4">
           <Download className="size-[18px] text-amber-600" />
-          <h2 className="text-base font-semibold text-slate-900">Data Management</h2>
+          <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">Data Management</h2>
         </div>
 
         <div className="space-y-5">
@@ -766,10 +770,10 @@ export default function SettingsPage() {
       </motion.div>
 
       {/* About & Legal */}
-      <motion.div variants={item} className="rounded-2xl border border-[#eef2f6] bg-white p-[22px] shadow-card">
+      <motion.div variants={item} className="tm-card px-6 py-[22px]">
         <div className="flex items-center gap-2 mb-4">
           <Shield className="size-[18px] text-amber-600" />
-          <h2 className="text-base font-semibold text-slate-900">About &amp; Legal</h2>
+          <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">About &amp; Legal</h2>
         </div>
         <p className="text-xs text-slate-500 mb-4">
           Review how Travel Manager handles your data and the terms of using the app.
@@ -869,6 +873,7 @@ export default function SettingsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </motion.div>
+      </motion.div>
+    </TMPageShell>
   );
 }

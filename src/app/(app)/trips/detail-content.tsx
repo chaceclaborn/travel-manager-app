@@ -4,7 +4,6 @@ import { detailHref } from '@/lib/travelmanager/detail-routes';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MapPin,
@@ -54,6 +53,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { TMPageShell, TMBackRow, TMActionFooter } from '@/components/travelmanager/TMPageShell';
+import { TMCodeTile, TMChip } from '@/components/travelmanager/TMPrimitives';
+import { tripCode } from '@/lib/travelmanager/design';
 import { TripWeatherWidget } from '@/components/travelmanager/TripWeatherWidget';
 import { TripStops, type TripStopData, type RouteLeg } from '@/components/travelmanager/TripStops';
 
@@ -72,10 +74,10 @@ const TripMiniMap = dynamic(
 );
 import { TMStatusBadge } from '@/components/travelmanager/TMStatusBadge';
 import { TMDeleteDialog } from '@/components/travelmanager/TMDeleteDialog';
+import { TMEmptyState, TMErrorState, TMSkeleton } from '@/components/travelmanager/TMEmptyState';
 import { TripForm } from '@/components/travelmanager/TripForm';
 import { ItineraryTimeline } from '@/components/travelmanager/ItineraryTimeline';
 import { LinkSelector } from '@/components/travelmanager/LinkSelector';
-import { TMBreadcrumb } from '@/components/travelmanager/TMBreadcrumb';
 import { TripAttachments } from '@/components/travelmanager/TripAttachments';
 import { TripExpenses } from '@/components/travelmanager/TripExpenses';
 import { TripBookings } from '@/components/travelmanager/TripBookings';
@@ -577,97 +579,58 @@ export default function TripDetailContent({ id }: { id: string }) {
     const now = new Date();
     const elapsed = Math.ceil((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
     const remaining = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-    return { total, elapsed, remaining };
+    // Days until departure — what the progress bar reports for a trip that
+    // hasn't started yet, where "remaining" would be misleading.
+    const until = Math.max(0, Math.ceil((start.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+    return { total, elapsed, remaining, until };
   }, [trip]);
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        {/* Breadcrumb skeleton */}
-        <div className="flex items-center gap-2">
-          <div className="h-4 w-20 animate-pulse rounded bg-slate-200" />
-          <div className="h-3 w-3 animate-pulse rounded bg-slate-200" />
-          <div className="h-4 w-14 animate-pulse rounded bg-slate-200" />
-          <div className="h-3 w-3 animate-pulse rounded bg-slate-200" />
-          <div className="h-4 w-32 animate-pulse rounded bg-slate-200" />
-        </div>
-        {/* Header card skeleton */}
-        <div className="rounded-xl bg-white p-6 shadow-sm space-y-4">
-          <div className="flex items-start justify-between">
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="h-8 w-56 animate-pulse rounded bg-slate-200" />
-                <div className="h-6 w-20 animate-pulse rounded-full bg-slate-200" />
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="h-4 w-32 animate-pulse rounded bg-slate-200" />
-                <div className="h-4 w-48 animate-pulse rounded bg-slate-200" />
-                <div className="h-4 w-20 animate-pulse rounded bg-slate-200" />
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <div className="h-8 w-20 animate-pulse rounded-md bg-slate-200" />
-              <div className="h-8 w-20 animate-pulse rounded-md bg-slate-200" />
-              <div className="h-8 w-16 animate-pulse rounded-md bg-slate-200" />
-            </div>
+      <TMPageShell width={1120}>
+        <TMBackRow href="/trips" section="Trips" />
+        <div className="space-y-5 pt-4 md:pt-6">
+          <TMSkeleton className="h-[190px] w-full" style={{ borderRadius: 16 }} />
+          <div className="flex gap-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <TMSkeleton key={i} className="h-8 w-24" style={{ borderRadius: 8 }} />
+            ))}
           </div>
-          {/* Progress bar skeleton */}
-          <div className="pt-2 space-y-2">
-            <div className="h-2 w-full animate-pulse rounded-full bg-slate-200" />
-            <div className="flex justify-between">
-              <div className="h-3 w-10 animate-pulse rounded bg-slate-200" />
-              <div className="h-3 w-12 animate-pulse rounded bg-slate-200" />
-              <div className="h-3 w-16 animate-pulse rounded bg-slate-200" />
-              <div className="h-3 w-16 animate-pulse rounded bg-slate-200" />
-            </div>
-          </div>
+          <TMSkeleton className="h-[320px] w-full" style={{ borderRadius: 14 }} />
         </div>
-        {/* Tab bar skeleton */}
-        <div className="flex gap-1 border-b border-slate-200 pb-1">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="h-8 w-24 animate-pulse rounded-md bg-slate-200" />
-          ))}
-        </div>
-        {/* Tab content skeleton */}
-        <div className="rounded-xl bg-white p-6 shadow-sm">
-          <div className="space-y-4">
-            <div className="h-6 w-36 animate-pulse rounded bg-slate-200" />
-            <div className="h-32 w-full animate-pulse rounded-lg bg-slate-100" />
-          </div>
-        </div>
-      </div>
+      </TMPageShell>
     );
   }
 
   if (notFound) {
     return (
-      <div className="py-12 text-center text-slate-500">
-        Trip not found. It may have been deleted.{' '}
-        <Link href="/trips" className="text-amber-500 hover:underline">
-          Back to Trips
-        </Link>
-      </div>
+      <TMPageShell width={1120}>
+        <TMBackRow href="/trips" section="Trips" />
+        <div className="tm-card mt-6">
+          <TMEmptyState
+            title="Trip not found"
+            description="This trip may have been deleted. Head back to the list to pick another."
+            actionLabel="Back to Trips"
+            actionHref="/trips"
+            icon={MapPin}
+          />
+        </div>
+      </TMPageShell>
     );
   }
 
   if (loadError || !trip) {
     return (
-      <div className="flex flex-col items-center justify-center py-24 text-center">
-        <div className="mb-6 flex size-20 items-center justify-center rounded-full bg-red-50">
-          <AlertCircle className="size-10 text-red-400" />
+      <TMPageShell width={1120}>
+        <TMBackRow href="/trips" section="Trips" />
+        <div className="tm-card mt-6">
+          <TMErrorState
+            title="Couldn't load this trip"
+            description="Something went wrong on our end. Your data is safe \u2014 nothing was lost."
+            onRetry={fetchTrip}
+          />
         </div>
-        <p className="text-lg font-medium text-slate-700">Couldn&apos;t load this trip</p>
-        <p className="mt-1 text-sm text-slate-500">
-          Check your connection and try again.
-        </p>
-        <button
-          onClick={fetchTrip}
-          className="mt-6 inline-flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-amber-600"
-        >
-          <RefreshCw className="size-4" />
-          Retry
-        </button>
-      </div>
+      </TMPageShell>
     );
   }
 
@@ -681,16 +644,23 @@ export default function TripDetailContent({ id }: { id: string }) {
   const isWorkTrip = trip.tripType === 'WORK';
 
   return (
-    <motion.div
-      className="space-y-8"
-      variants={staggerChildren}
-      initial="initial"
-      animate="animate"
-    >
-      {/* Breadcrumb */}
-      <motion.div variants={staggerItem} transition={{ duration: 0.35 }}>
-        <TMBreadcrumb items={[{ label: 'Dashboard', href: '/' }, { label: 'Trips', href: '/trips' }, { label: trip.title }]} />
-      </motion.div>
+    <TMPageShell width={1120}>
+      <TMBackRow
+        href="/trips"
+        section="Trips"
+        action={
+          <button type="button" onClick={() => setEditing(true)} className="tm-btn-icon size-8" aria-label="Edit trip">
+            <Pencil className="size-4" />
+          </button>
+        }
+      />
+
+      <motion.div
+        className="space-y-6 pt-4 md:pt-6"
+        variants={staggerChildren}
+        initial="initial"
+        animate="animate"
+      >
 
       <AnimatePresence mode="wait">
         {editing ? (
@@ -700,11 +670,11 @@ export default function TripDetailContent({ id }: { id: string }) {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.98 }}
             transition={{ duration: 0.25 }}
-            className="rounded-xl bg-white p-6 shadow-sm"
+            className="tm-card p-6"
           >
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-slate-800">Edit Trip</h2>
-              <Button variant="outline" size="sm" onClick={() => setEditing(false)}>
+              <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">Edit trip</h2>
+              <Button variant="outline" size="sm" className="tm-btn tm-btn-secondary" onClick={() => setEditing(false)}>
                 Cancel
               </Button>
             </div>
@@ -715,113 +685,92 @@ export default function TripDetailContent({ id }: { id: string }) {
             key="trip-header"
             variants={staggerItem}
             transition={{ duration: 0.4 }}
-            className="group/card rounded-xl bg-white p-6 shadow-sm transition-shadow duration-300 hover:shadow-md"
+            className="tm-card px-5 py-5 md:px-7 md:py-6"
           >
             <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
               {/* Left: Trip info */}
-              <div className="space-y-3 min-w-0 flex-1">
-                {/* Title + status badge inline */}
-                <div className="flex flex-wrap items-center gap-3">
-                  <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-                    {trip.title}
-                  </h1>
-                  <TMStatusBadge status={trip.status} />
-                  {trip.tripType === 'WORK' ? (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-700 ring-1 ring-inset ring-sky-200">
-                      <Briefcase className="size-3" />
-                      Work
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-200">
-                      <TreePalm className="size-3" />
-                      Personal
-                    </span>
-                  )}
-                </div>
+              <div className="flex min-w-0 flex-1 items-start gap-4">
+                {/* A dark code tile anchors the record the same way it anchors
+                    the row this page was reached from. */}
+                <TMCodeTile code={tripCode(trip.destination, trip.title)} size={48} highlight />
 
-                {/* Meta row */}
-                <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-slate-500">
-                  {trip.destination ? (
-                    <span className="flex items-center gap-1.5">
-                      <MapPin className="size-4 text-amber-500" />
-                      <span className="font-medium text-slate-700">{trip.destination}</span>
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-1.5 text-slate-400 italic">
-                      <MapPin className="size-4" />
-                      No destination set
-                    </span>
-                  )}
-                  <span className="hidden text-slate-300 sm:inline" aria-hidden="true">|</span>
-                  {trip.startDate && trip.endDate ? (
-                    <span className="flex items-center gap-1.5">
-                      <Calendar className="size-4 text-blue-500" />
-                      {formatDate(trip.startDate)} &ndash; {formatDate(trip.endDate)}
-                      <span className="ml-0.5 rounded-md bg-slate-100 px-1.5 py-0.5 text-xs font-medium text-slate-600">
-                        {daysInfo?.total}d
-                      </span>
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-1.5 text-slate-400 italic">
-                      <Calendar className="size-4" />
-                      Dates not set
-                    </span>
-                  )}
-                  {trip.budget != null && (
-                    <>
-                      <span className="hidden text-slate-300 sm:inline" aria-hidden="true">|</span>
+                <div className="min-w-0 space-y-2.5">
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-tm-ink md:text-[24px]">
+                      {trip.title}
+                    </h1>
+                    <TMStatusBadge status={trip.status} variant="pill" />
+                    <TMChip icon={trip.tripType === 'WORK' ? Briefcase : TreePalm}>
+                      {trip.tripType === 'WORK' ? 'Work' : 'Personal'}
+                    </TMChip>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-x-[18px] gap-y-2 text-[13px] text-tm-muted">
+                    {trip.destination ? (
                       <span className="flex items-center gap-1.5">
-                        <DollarSign className="size-4 text-emerald-500" />
-                        <span className="font-medium text-slate-700">${trip.budget.toLocaleString()}</span>
+                        <MapPin className="size-3.5 text-tm-faint" aria-hidden="true" />
+                        {trip.destination}
                       </span>
-                    </>
-                  )}
-                  {trip.transportMode && (
-                    <>
-                      <span className="hidden text-slate-300 sm:inline" aria-hidden="true">|</span>
+                    ) : (
+                      <span className="flex items-center gap-1.5 text-tm-faint">
+                        <MapPin className="size-3.5" aria-hidden="true" />
+                        No destination set
+                      </span>
+                    )}
+                    {trip.startDate && trip.endDate ? (
+                      <span className="flex items-center gap-1.5 tm-nums">
+                        <Calendar className="size-3.5 text-tm-faint" aria-hidden="true" />
+                        {formatDate(trip.startDate)} &ndash; {formatDate(trip.endDate)}
+                        <span className="rounded-[5px] bg-tm-fill px-1.5 py-0.5 font-mono text-[10px] font-semibold text-tm-label">
+                          {daysInfo?.total}d
+                        </span>
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1.5 text-tm-faint">
+                        <Calendar className="size-3.5" aria-hidden="true" />
+                        Dates not set
+                      </span>
+                    )}
+                    {trip.budget != null && (
+                      <span className="flex items-center gap-1.5 tm-nums">
+                        <DollarSign className="size-3.5 text-tm-faint" aria-hidden="true" />
+                        ${trip.budget.toLocaleString()} budget
+                      </span>
+                    )}
+                    {trip.transportMode && (
                       <span className="flex items-center gap-1.5">
                         {trip.transportMode === 'FLIGHT' ? (
                           <>
-                            <Plane className="size-4 text-amber-500" />
-                            <span className="font-medium text-slate-700">
+                            <Plane className="size-3.5 text-tm-faint" aria-hidden="true" />
+                            <span className="font-mono text-[12px] tracking-[0.02em] text-tm-body">
                               {trip.departureAirportCode && trip.arrivalAirportCode
-                                ? `${trip.departureAirportCode} → ${trip.arrivalAirportCode}`
+                                ? `${trip.departureAirportCode} \u2192 ${trip.arrivalAirportCode}`
                                 : 'Flight'}
                             </span>
                           </>
                         ) : (
                           <>
-                            <Car className="size-4 text-emerald-500" />
-                            <span className="font-medium text-slate-700">Driving</span>
+                            <Car className="size-3.5 text-tm-faint" aria-hidden="true" />
+                            Driving
                           </>
                         )}
                       </span>
-                    </>
+                    )}
+                  </div>
+
+                  {trip.notes && (
+                    <p className="tm-prose text-[13px] leading-[1.6] text-tm-subtle">{trip.notes}</p>
                   )}
                 </div>
-
-                {trip.notes && (
-                  <p className="text-sm leading-relaxed text-slate-500">{trip.notes}</p>
-                )}
               </div>
 
               {/* Right: Edit + Share visible, everything else in the ⋯ menu */}
               <div className="flex items-center gap-2 shrink-0">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-10 sm:h-8 gap-1.5 text-slate-600 hover:text-amber-600 active:text-amber-600"
-                  onClick={() => setEditing(true)}
-                >
+                <Button variant="outline" size="sm" className="tm-btn tm-btn-secondary" onClick={() => setEditing(true)}>
                   <Pencil className="size-3.5" />
                   Edit
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-10 sm:h-8 gap-1.5 text-slate-600 hover:text-sky-600 active:text-sky-600"
-                  onClick={() => setShareOpen(true)}
-                >
+                <Button variant="outline" size="sm" className="tm-btn tm-btn-secondary" onClick={() => setShareOpen(true)}>
                   <Share2 className="size-3.5" />
                   Share
                 </Button>
@@ -830,7 +779,7 @@ export default function TripDetailContent({ id }: { id: string }) {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-10 w-10 sm:h-8 sm:w-8 p-0 text-slate-600"
+                      className="tm-btn-icon p-0"
                       aria-label="More actions"
                     >
                       {duplicating ? (
@@ -903,54 +852,59 @@ export default function TripDetailContent({ id }: { id: string }) {
 
             {/* Trip progress indicator */}
             {!isCancelled && (
-              <div className="mt-5 pt-5 border-t border-slate-100">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">Trip Progress</span>
+              <div className="mt-5 border-t border-tm-divider pt-5">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="tm-label-micro">Trip progress</span>
                   {daysInfo && trip.status === 'IN_PROGRESS' && daysInfo.remaining > 0 && (
-                    <span className="text-xs text-slate-400">
+                    <span className="text-[11px] text-tm-faint">
                       {daysInfo.remaining} day{daysInfo.remaining !== 1 ? 's' : ''} remaining
                     </span>
                   )}
+                  {daysInfo && trip.status === 'PLANNED' && daysInfo.until > 0 && (
+                    <span className="text-[11px] text-tm-faint">
+                      Departs in {daysInfo.until} day{daysInfo.until !== 1 ? 's' : ''}
+                    </span>
+                  )}
                 </div>
-                <div className="relative">
-                  {/* Track */}
-                  <div className="h-1.5 w-full rounded-full bg-slate-100">
-                    <motion.div
-                      className="h-1.5 rounded-full bg-gradient-to-r from-amber-400 via-amber-500 to-emerald-500"
-                      initial={{ width: 0 }}
-                      animate={{ width: `${tripProgress}%` }}
-                      transition={{ duration: 0.8, ease: 'easeOut', delay: 0.3 }}
-                    />
-                  </div>
-                  {/* Step labels */}
-                  <div className="mt-2 flex justify-between">
-                    {statusOrder.map((s, i) => {
-                      const isActive = statusOrder.indexOf(trip.status) >= i;
-                      const isCurrent = trip.status === s;
-                      return (
-                        <span
-                          key={s}
-                          className={`text-[10px] font-medium transition-colors duration-300 ${
-                            isCurrent
-                              ? 'text-amber-600 font-semibold'
-                              : isActive
-                                ? 'text-slate-600'
-                                : 'text-slate-300'
-                          }`}
-                        >
-                          {statusLabels[s]}
-                        </span>
-                      );
-                    })}
-                  </div>
+                <div
+                  className="h-[5px] w-full overflow-hidden rounded-full bg-tm-fill"
+                  role="progressbar"
+                  aria-valuenow={Math.round(tripProgress)}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                >
+                  <div
+                    className="h-full rounded-full"
+                    style={{ width: `${tripProgress}%`, background: 'linear-gradient(to right, #FBBF24, #F59E0B)' }}
+                  />
+                </div>
+                <div className="mt-2 flex justify-between">
+                  {statusOrder.map((st, i) => {
+                    const passed = statusOrder.indexOf(trip.status) >= i;
+                    const current = trip.status === st;
+                    return (
+                      <span
+                        key={st}
+                        className={`text-[10px] ${
+                          current
+                            ? 'font-semibold text-tm-accent-text'
+                            : passed
+                              ? 'text-tm-muted'
+                              : 'text-tm-ghost'
+                        }`}
+                      >
+                        {statusLabels[st]}
+                      </span>
+                    );
+                  })}
                 </div>
               </div>
             )}
             {isCancelled && (
-              <div className="mt-5 pt-5 border-t border-slate-100">
-                <div className="flex items-center gap-2 text-xs text-red-500">
-                  <div className="h-1.5 w-full rounded-full bg-red-100">
-                    <div className="h-1.5 w-full rounded-full bg-red-300" />
+              <div className="mt-5 border-t border-tm-divider pt-5">
+                <div className="flex items-center gap-3 text-[12px] text-tm-cancel-text">
+                  <div className="h-[5px] w-full rounded-full" style={{ background: '#FEE2E2' }}>
+                    <div className="h-full w-full rounded-full" style={{ background: '#F87171' }} />
                   </div>
                   <span className="whitespace-nowrap font-medium">Cancelled</span>
                 </div>
@@ -967,9 +921,7 @@ export default function TripDetailContent({ id }: { id: string }) {
           transition={{ duration: 0.4, delay: 0.05 }}
         >
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-              Trip Overview
-            </h2>
+            <h2 className="tm-label-micro">Trip overview</h2>
           </div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <TripWeatherWidget
@@ -1007,13 +959,13 @@ export default function TripDetailContent({ id }: { id: string }) {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList
             variant="line"
-            className="flex w-full justify-start gap-1.5 sm:gap-1 border-b border-slate-200 px-0 h-auto sm:h-9 overflow-x-auto sm:overflow-visible -mx-1 px-1 sm:mx-0 sm:px-0"
+            className="-mx-4 flex h-auto w-full justify-start gap-2 overflow-x-auto border-0 px-4 pb-1 md:mx-0 md:px-0"
           >
             {tabConfig.map(({ value, label, icon: Icon }) => (
               <TabsTrigger
                 key={value}
                 value={value}
-                className="flex-shrink-0 sm:flex-1 h-11 sm:h-9 gap-1.5 px-3 py-2 text-sm whitespace-nowrap data-[state=active]:text-amber-600 after:bg-amber-500"
+                className="tm-pill h-9 flex-shrink-0 after:hidden data-[state=active]:!border-tm-action data-[state=active]:!bg-tm-action data-[state=active]:!text-white"
               >
                 <Icon className="size-4" />
                 <span>{label}</span>
@@ -1031,7 +983,7 @@ export default function TripDetailContent({ id }: { id: string }) {
               transition={{ duration: 0.2, ease: 'easeInOut' }}
             >
               <TabsContent value="itinerary" className="mt-5">
-                <div className="rounded-xl bg-white p-6 shadow-sm transition-shadow duration-300 hover:shadow-md">
+                <div className="tm-card p-6">
                   {tabErrors.itinerary ? (
                     <TabError onRetry={fetchItinerary} />
                   ) : (
@@ -1050,8 +1002,8 @@ export default function TripDetailContent({ id }: { id: string }) {
 
               <TabsContent value="people" className="mt-5">
                 <div className="grid gap-5 lg:grid-cols-2">
-                  <div className={`rounded-xl bg-white p-6 shadow-sm transition-shadow duration-300 hover:shadow-md ${isWorkTrip ? '' : 'lg:col-span-2'}`}>
-                    <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-slate-800">
+                  <div className={`tm-card p-6 ${isWorkTrip ? '' : 'lg:col-span-2'}`}>
+                    <h3 className="mb-4 flex items-center gap-2 text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">
                       <HeartHandshake className="size-4 text-slate-400" />
                       Friends
                     </h3>
@@ -1070,8 +1022,8 @@ export default function TripDetailContent({ id }: { id: string }) {
                   </div>
                   {isWorkTrip && (
                     <>
-                      <div className="rounded-xl bg-white p-6 shadow-sm transition-shadow duration-300 hover:shadow-md">
-                        <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-slate-800">
+                      <div className="tm-card p-6">
+                        <h3 className="mb-4 flex items-center gap-2 text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">
                           <Briefcase className="size-4 text-slate-400" />
                           Vendors
                         </h3>
@@ -1088,8 +1040,8 @@ export default function TripDetailContent({ id }: { id: string }) {
                           />
                         )}
                       </div>
-                      <div className="rounded-xl bg-white p-6 shadow-sm transition-shadow duration-300 hover:shadow-md">
-                        <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-slate-800">
+                      <div className="tm-card p-6">
+                        <h3 className="mb-4 flex items-center gap-2 text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">
                           <Users className="size-4 text-slate-400" />
                           Clients
                         </h3>
@@ -1112,37 +1064,37 @@ export default function TripDetailContent({ id }: { id: string }) {
               </TabsContent>
 
               <TabsContent value="attachments" className="mt-5">
-                <div className="rounded-xl bg-white p-6 shadow-sm transition-shadow duration-300 hover:shadow-md">
+                <div className="tm-card p-6">
                   <TripAttachments tripId={id} />
                 </div>
               </TabsContent>
 
               <TabsContent value="expenses" className="mt-5">
-                <div className="rounded-xl bg-white p-6 shadow-sm transition-shadow duration-300 hover:shadow-md">
+                <div className="tm-card p-6">
                   <TripExpenses tripId={id} tripStartDate={trip.startDate} tripEndDate={trip.endDate} />
                 </div>
               </TabsContent>
 
               <TabsContent value="bookings" className="mt-5">
-                <div className="rounded-xl bg-white p-6 shadow-sm transition-shadow duration-300 hover:shadow-md">
+                <div className="tm-card p-6">
                   <TripBookings tripId={id} tripStartDate={trip.startDate} tripEndDate={trip.endDate} />
                 </div>
               </TabsContent>
 
               <TabsContent value="checklist" className="mt-5">
-                <div className="rounded-xl bg-white p-6 shadow-sm transition-shadow duration-300 hover:shadow-md">
+                <div className="tm-card p-6">
                   <TripChecklist tripId={id} />
                 </div>
               </TabsContent>
 
               <TabsContent value="journal" className="mt-5">
-                <div className="rounded-xl bg-white p-6 shadow-sm transition-shadow duration-300 hover:shadow-md">
+                <div className="tm-card p-6">
                   <TripJournal tripId={id} />
                 </div>
               </TabsContent>
 
               <TabsContent value="photos" className="mt-5">
-                <div className="rounded-xl bg-white p-6 shadow-sm transition-shadow duration-300 hover:shadow-md">
+                <div className="tm-card p-6">
                   <TripPhotos tripId={id} />
                 </div>
               </TabsContent>
@@ -1315,6 +1267,23 @@ export default function TripDetailContent({ id }: { id: string }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </motion.div>
+
+      {/* Mobile action footer — replaces the tab bar on detail screens. */}
+      {!editing && (
+        <TMActionFooter>
+          <button type="button" className="tm-btn tm-btn-secondary h-11 flex-1" onClick={() => setEditing(true)}>
+            Edit
+          </button>
+          <button
+            type="button"
+            className="tm-btn tm-btn-primary h-11 flex-[2]"
+            onClick={() => setActiveTab('checklist')}
+          >
+            Checklist
+          </button>
+        </TMActionFooter>
+      )}
+      </motion.div>
+    </TMPageShell>
   );
 }
