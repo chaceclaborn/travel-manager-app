@@ -550,8 +550,9 @@ export default function SettingsPage() {
         )}
       </motion.div>
 
-      {/* Mobile tab bar — the phone's counterpart to the sidebar card below. */}
-      <motion.div variants={item} className="tm-card px-6 py-[22px]">
+      {/* Bottom tabs: phones only. Desktop has no tab bar, so this control
+          would configure something the user cannot see. */}
+      <motion.div variants={item} className="tm-card px-6 py-[22px] md:hidden">
         <div className="mb-1 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <Smartphone className="size-[18px] text-amber-600" />
@@ -635,8 +636,9 @@ export default function SettingsPage() {
         )}
       </motion.div>
 
-      {/* Sidebar Customization */}
-      <motion.div variants={item} className="tm-card px-6 py-[22px]">
+      {/* Sidebar: desktop only, for the same reason in reverse — a phone never
+          renders the sidebar, so tuning it there configures nothing. */}
+      <motion.div variants={item} className="hidden tm-card px-6 py-[22px] md:block">
         <div className="flex items-center justify-between gap-2 mb-1">
           <div className="flex items-center gap-2">
             <PanelLeft className="size-[18px] text-amber-600" />
@@ -682,8 +684,11 @@ export default function SettingsPage() {
         )}
       </motion.div>
 
-      {/* Keyboard Shortcuts */}
-      <KeyboardShortcutsCard />
+      {/* Keyboard shortcuts: desktop only — there is no keyboard to bind on a
+          phone, and the chords are driven by the sidebar nav above. */}
+      <div className="hidden md:block">
+        <KeyboardShortcutsCard />
+      </div>
 
       {/* Notifications */}
       <NotificationsSettingCard />
