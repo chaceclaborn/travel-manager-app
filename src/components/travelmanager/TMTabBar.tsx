@@ -12,9 +12,11 @@ import { LayoutDashboard, MapPin, Plane, Users, LayoutGrid } from 'lucide-react'
  * ten routes split into the five that carry daily work and a More screen for
  * the rest (Meetings, Analytics, Map, Vendors, Friends, Settings).
  *
- * The 30px of bottom padding is the home-indicator inset; it's additive to the
- * safe-area value so the bar clears both the indicator and any notch chrome on
- * devices that report a larger inset.
+ * Bottom padding is `max(10px, safe-area-inset-bottom)` — NOT a fixed 30px plus
+ * the inset. The design's "30px" was itself standing in for the home-indicator
+ * inset, so adding the real inset on top double-counted it and made the bar
+ * ~134px tall on a Dynamic Island phone. `max()` gives the true inset where
+ * there's an indicator (~34px) and a modest 10px on devices without one.
  */
 
 const TABS = [
@@ -34,7 +36,7 @@ export function TMTabBar() {
   return (
     <nav
       className="tm-tabbar fixed inset-x-0 bottom-0 z-40 flex md:hidden"
-      style={{ padding: '10px 8px calc(30px + var(--safe-area-bottom))' }}
+      style={{ padding: '6px 8px max(8px, var(--safe-area-bottom))' }}
       aria-label="Primary"
     >
       {TABS.map(({ href, label, icon: Icon, exact }) => {
@@ -50,7 +52,7 @@ export function TMTabBar() {
             key={href}
             href={href}
             aria-current={isActive ? 'page' : undefined}
-            className="flex min-h-[60px] flex-1 flex-col items-center justify-center gap-1 rounded-[10px]"
+            className="flex min-h-[48px] flex-1 flex-col items-center justify-center gap-[3px] rounded-[10px]"
           >
             <Icon
               className={`size-5 ${isActive ? 'text-tm-accent-text' : 'text-tm-nav-text'}`}

@@ -66,23 +66,32 @@ export function TMScreenHeader({
 }) {
   return (
     <>
-      {/* Mobile */}
+      {/* Mobile.
+          Only the title and one action are pinned. The eyebrow and subtitle
+          scroll away below, because anything locked into the frame costs that
+          height on every screen for the whole session — and on a Dynamic
+          Island phone the 59px inset has already spent the budget. */}
       <header
-        className="sticky top-0 z-30 -mx-4 flex items-end justify-between gap-3 border-b border-[rgba(226,232,240,0.8)] px-5 pb-3 md:hidden"
+        className="sticky top-0 z-30 -mx-4 flex items-center justify-between gap-3 border-b border-[rgba(226,232,240,0.8)] px-5 pb-2.5 md:hidden"
         style={{
-          paddingTop: 'calc(var(--safe-area-top) + 18px)',
+          paddingTop: 'calc(var(--safe-area-top) + 8px)',
           background: 'rgba(247,248,250,0.92)',
           backdropFilter: 'blur(14px) saturate(1.5)',
           WebkitBackdropFilter: 'blur(14px) saturate(1.5)',
         }}
       >
-        <div className="min-w-0">
-          {eyebrow && <p className="mb-0.5 text-[12px] font-medium text-tm-subtle">{eyebrow}</p>}
-          <h1 className="truncate text-[24px] font-semibold tracking-[-0.025em] text-tm-ink">{title}</h1>
-          {subtitle && <p className="mt-0.5 truncate text-[12px] text-tm-subtle">{subtitle}</p>}
-        </div>
-        {mobileAction && <div className="shrink-0 pb-0.5">{mobileAction}</div>}
+        <h1 className="min-w-0 flex-1 truncate text-[22px] font-semibold tracking-[-0.025em] text-tm-ink">
+          {title}
+        </h1>
+        {mobileAction && <div className="shrink-0">{mobileAction}</div>}
       </header>
+
+      {(eyebrow || subtitle) && (
+        <div className="pt-3 md:hidden">
+          {eyebrow && <p className="text-[12px] font-medium text-tm-subtle">{eyebrow}</p>}
+          {subtitle && <p className="mt-0.5 text-[12px] text-tm-subtle">{subtitle}</p>}
+        </div>
+      )}
 
       {/* Desktop */}
       <div className="hidden flex-wrap items-end justify-between gap-4 pt-9 md:flex">
@@ -121,7 +130,7 @@ export function TMBackRow({
     <header
       className="sticky top-0 z-30 -mx-4 flex items-center justify-between gap-3 border-b border-[rgba(226,232,240,0.8)] px-5 pb-3 md:static md:mx-0 md:border-0 md:bg-transparent md:px-0 md:pb-0 md:pt-8 md:backdrop-blur-none"
       style={{
-        paddingTop: 'calc(var(--safe-area-top) + 14px)',
+        paddingTop: 'calc(var(--safe-area-top) + 8px)',
         background: 'rgba(247,248,250,0.92)',
         backdropFilter: 'blur(14px) saturate(1.5)',
         WebkitBackdropFilter: 'blur(14px) saturate(1.5)',
@@ -147,7 +156,7 @@ export function TMActionFooter({ children }: { children: React.ReactNode }) {
   return (
     <div
       className="tm-tabbar fixed inset-x-0 bottom-0 z-40 flex items-center gap-2 md:hidden"
-      style={{ padding: '12px 16px calc(32px + var(--safe-area-bottom))' }}
+      style={{ padding: '10px 16px max(10px, var(--safe-area-bottom))' }}
     >
       {children}
     </div>
