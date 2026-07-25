@@ -2,59 +2,31 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import {
-  Users,
-  BarChart3,
-  Globe,
-  Building2,
-  HeartHandshake,
-  Settings,
-  MessageSquarePlus,
-  LogOut,
-  ChevronRight,
-  LifeBuoy,
-  type LucideIcon,
-} from 'lucide-react';
+import { Settings, MessageSquarePlus, LogOut, ChevronRight, LifeBuoy } from 'lucide-react';
 import { useAuth } from '@/lib/travelmanager/useAuth';
+import { useNavPreferences, TABBABLE_NAV_ITEMS } from '@/lib/travelmanager/useNavPreferences';
 import { TMAvatar } from '@/components/travelmanager/TMPrimitives';
 import { TMPageShell, TMScreenHeader } from '@/components/travelmanager/TMPageShell';
 
 /**
  * The mobile More screen.
  *
- * The tab bar holds the five destinations that carry daily work; everything
- * else lives here. This route exists only for narrow viewports — on desktop
- * the sidebar already lists all ten destinations, so it redirects nothing and
- * simply renders as a plain index if reached.
+ * Lists whatever the user has NOT put on the tab bar, driven by the same
+ * preference the bar reads — so every destination appears in exactly one of
+ * the two places, never both and never neither. Narrow viewports only; on
+ * desktop the sidebar already lists everything.
  */
 
-const GROUPS: Array<{ label: string; items: Array<{ href: string; label: string; sub: string; icon: LucideIcon }> }> = [
-  {
-    label: 'Workspace',
-    items: [
-      { href: '/meetings', label: 'Meetings', sub: 'Scheduled meetings', icon: Users },
-      { href: '/vendors', label: 'Vendors', sub: 'Suppliers and service providers', icon: Building2 },
-      { href: '/friends', label: 'Friends', sub: 'People you travel with', icon: HeartHandshake },
-    ],
-  },
-  {
-    label: 'Insight',
-    items: [
-      { href: '/analytics', label: 'Analytics', sub: 'Spending and travel insights', icon: BarChart3 },
-      { href: '/map', label: 'Map', sub: 'Everywhere you have been', icon: Globe },
-    ],
-  },
-  {
-    label: 'Account',
-    items: [
-      { href: '/settings', label: 'Settings', sub: 'Profile, preferences, workspace', icon: Settings },
-      { href: '/support', label: 'Support', sub: 'Help and contact', icon: LifeBuoy },
-    ],
-  },
+const ACCOUNT_LINKS = [
+  { href: '/settings', label: 'Settings', sub: 'Profile, preferences, workspace', icon: Settings },
+  { href: '/support', label: 'Support', sub: 'Help and contact', icon: LifeBuoy },
 ];
 
 export default function MorePage() {
   const { user, signOut } = useAuth();
+  const { tabKeys } = useNavPreferences();
+  // Anything eligible for the bar that isn't currently on it.
+  const offBar = TABBABLE_NAV_ITEMS.filter((i) => !tabKeys.includes(i.key));
   const fullName = user?.user_metadata?.full_name || 'Your account';
 
   return (
@@ -74,11 +46,14 @@ export default function MorePage() {
           </span>
         </div>
 
-        {GROUPS.map((group) => (
-          <section key={group.label}>
-            <h2 className="tm-label-upper mb-2 px-1">{group.label}</h2>
+        {/* Everything not currently on the tab bar. Driven by the same
+            preference the bar reads, so a destination is in exactly one of the
+            two places — never both, never neither. */}
+        {offBar.length > 0 && (
+          <section>
+            <h2 className="tm-label-upper mb-2 px-1">Workspace</h2>
             <div className="tm-card overflow-hidden">
-              {group.items.map((item, i) => (
+              {offBar.map((item, i) => (
                 <Link
                   key={item.href}
                   href={item.href}
@@ -90,14 +65,37 @@ export default function MorePage() {
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[14px] font-medium text-tm-ink">{item.label}</span>
-                    <span className="block truncate text-[12px] text-tm-subtle">{item.sub}</span>
+                    <span className="block truncate text-[12px] text-tm-subtle">{item.description}</span>
                   </span>
                   <ChevronRight className="size-[15px] shrink-0 text-tm-ghost" aria-hidden="true" />
                 </Link>
               ))}
             </div>
           </section>
-        ))}
+        )}
+
+        <section>
+          <h2 className="tm-label-upper mb-2 px-1">Account</h2>
+          <div className="tm-card overflow-hidden">
+            {ACCOUNT_LINKS.map((item, i) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="flex min-h-[56px] items-center gap-3 px-4 py-3 hover:bg-tm-wash"
+                style={{ borderTop: i ? '1px solid var(--color-tm-divider)' : undefined }}
+              >
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-tm-fill">
+                  <item.icon className="size-[17px] text-tm-label" aria-hidden="true" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[14px] font-medium text-tm-ink">{item.label}</span>
+                  <span className="block truncate text-[12px] text-tm-subtle">{item.sub}</span>
+                </span>
+                <ChevronRight className="size-[15px] shrink-0 text-tm-ghost" aria-hidden="true" />
+              </Link>
+            ))}
+          </div>
+        </section>
 
         <div className="tm-card overflow-hidden">
           <button

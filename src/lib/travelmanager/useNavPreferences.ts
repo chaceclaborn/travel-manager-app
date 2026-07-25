@@ -45,6 +45,59 @@ export const NAV_ITEMS: NavItemDef[] = [
 export const TOGGLEABLE_NAV_ITEMS = NAV_ITEMS.filter((i) => i.toggleable);
 
 const STORAGE_KEY = 'tm-hidden-nav';
+const TABS_KEY = 'tm-mobile-tabs';
+
+/**
+ * The mobile tab bar has five slots. Home and More are fixed — Home is the
+ * anchor and More is the escape hatch to everything else — leaving three the
+ * user can choose. Anything not chosen is still reachable under More, so this
+ * only ever changes what's one tap away, never what exists.
+ */
+export const MOBILE_TAB_SLOTS = 3;
+
+/** Everything eligible for a tab slot: the nav minus the fixed Dashboard. */
+export const TABBABLE_NAV_ITEMS = NAV_ITEMS.filter((i) => i.key !== 'dashboard');
+
+const DEFAULT_TAB_KEYS = ['trips', 'bookings', 'clients'];
+
+/**
+ * Reduce arbitrary stored input to a usable tab set: known keys only, no
+ * duplicates, never more than the available slots. Falls back to the default
+ * when the stored value is empty or unusable, so the bar can't end up blank.
+ * Pure + exported for unit testing.
+ */
+export function sanitizeTabKeys(parsed: unknown): string[] {
+  const allowed = new Set(TABBABLE_NAV_ITEMS.map((i) => i.key));
+  if (!Array.isArray(parsed)) return DEFAULT_TAB_KEYS;
+  const seen = new Set<string>();
+  const keys = parsed.filter((k): k is string => {
+    if (typeof k !== 'string' || !allowed.has(k) || seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+  return keys.length > 0 ? keys.slice(0, MOBILE_TAB_SLOTS) : DEFAULT_TAB_KEYS;
+}
+
+function readTabKeys(): string[] {
+  if (typeof window === 'undefined') return DEFAULT_TAB_KEYS;
+  try {
+    const raw = window.localStorage.getItem(TABS_KEY);
+    if (!raw) return DEFAULT_TAB_KEYS;
+    return sanitizeTabKeys(JSON.parse(raw));
+  } catch {
+    return DEFAULT_TAB_KEYS;
+  }
+}
+
+function writeTabKeys(keys: string[]) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(TABS_KEY, JSON.stringify(keys));
+  } catch {
+    // Storage unavailable — the event below still updates this session.
+  }
+  window.dispatchEvent(new Event(CHANGE_EVENT));
+}
 // Fired on the window whenever prefs change in THIS tab, so every mounted
 // consumer (sidebar + settings) updates live without a reload. Cross-tab
 // updates come through the native `storage` event instead.
@@ -92,17 +145,22 @@ function writeHidden(hidden: Set<string>) {
  */
 export function useNavPreferences() {
   const [hidden, setHiddenState] = useState<Set<string>>(() => new Set());
+  const [tabKeys, setTabKeysState] = useState<string[]>(() => DEFAULT_TAB_KEYS);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     // One-time client hydration from localStorage.
     // eslint-disable-next-line react-hooks/set-state-in-effect -- hydration, not a render cascade
     setHiddenState(readHidden());
+    setTabKeysState(readTabKeys());
     setHydrated(true);
 
-    const sync = () => setHiddenState(readHidden());
+    const sync = () => {
+      setHiddenState(readHidden());
+      setTabKeysState(readTabKeys());
+    };
     const onStorage = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEY) sync();
+      if (e.key === STORAGE_KEY || e.key === TABS_KEY) sync();
     };
     window.addEventListener(CHANGE_EVENT, sync);
     window.addEventListener('storage', onStorage);
@@ -133,5 +191,36 @@ export function useNavPreferences() {
   // (server-safe default); after, we drop hidden ones.
   const visibleItems = hydrated ? NAV_ITEMS.filter((i) => !hidden.has(i.key)) : NAV_ITEMS;
 
-  return { hidden, isHidden, setHidden, reset, hydrated, visibleItems };
+  /** Toggle a destination in or out of the mobile tab bar. */
+  const setTabKey = useCallback((key: string, inTabs: boolean) => {
+    if (!TABBABLE_NAV_ITEMS.some((i) => i.key === key)) return;
+    const current = readTabKeys();
+    let next: string[];
+    if (inTabs) {
+      if (current.includes(key)) return;
+      // Full: drop the oldest choice so a tap always visibly does something,
+      // rather than silently refusing.
+      next = [...current, key].slice(-MOBILE_TAB_SLOTS);
+    } else {
+      next = current.filter((k) => k !== key);
+      if (next.length === 0) return; // never leave the bar with no destinations
+    }
+    writeTabKeys(next);
+    setTabKeysState(next);
+  }, []);
+
+  const resetTabs = useCallback(() => {
+    writeTabKeys(DEFAULT_TAB_KEYS);
+    setTabKeysState(DEFAULT_TAB_KEYS);
+  }, []);
+
+  /** Resolved nav items for the three middle tab slots, in chosen order. */
+  const tabItems = (hydrated ? tabKeys : DEFAULT_TAB_KEYS)
+    .map((k) => TABBABLE_NAV_ITEMS.find((i) => i.key === k))
+    .filter((i): i is NavItemDef => !!i);
+
+  return {
+    hidden, isHidden, setHidden, reset, hydrated, visibleItems,
+    tabKeys, tabItems, setTabKey, resetTabs,
+  };
 }

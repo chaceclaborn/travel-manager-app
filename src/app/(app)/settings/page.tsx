@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { Shield, Download, FileText, Trash2, Loader2, Monitor, MapPin, X, Mail, Wrench, PanelLeft, RotateCcw, AtSign, BarChart3 } from 'lucide-react';
-import { useNavPreferences, TOGGLEABLE_NAV_ITEMS } from '@/lib/travelmanager/useNavPreferences';
+import { Shield, Download, FileText, Trash2, Loader2, Monitor, MapPin, X, Mail, Wrench, PanelLeft, Smartphone, RotateCcw, AtSign, BarChart3 } from 'lucide-react';
+import { useNavPreferences, TOGGLEABLE_NAV_ITEMS, TABBABLE_NAV_ITEMS, MOBILE_TAB_SLOTS } from '@/lib/travelmanager/useNavPreferences';
 import { useGeocodingSearch, formatGeoName } from '@/lib/travelmanager/useGeocodingSearch';
 import type { GeoResult } from '@/lib/travelmanager/useGeocodingSearch';
 import { Input } from '@/components/ui/input';
@@ -116,7 +116,7 @@ function NavToggle({
 export default function SettingsPage() {
   const { user } = useAuth();
   const { showToast } = useTMToast();
-  const { isHidden, setHidden, reset: resetNav, hydrated: navHydrated } = useNavPreferences();
+  const { isHidden, setHidden, reset: resetNav, hydrated: navHydrated, tabKeys, setTabKey, resetTabs } = useNavPreferences();
   const hiddenCount = TOGGLEABLE_NAV_ITEMS.filter((i) => isHidden(i.key)).length;
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -546,6 +546,56 @@ export default function SettingsPage() {
             Home set to: {userInfo.homeCity}
           </p>
         )}
+      </motion.div>
+
+      {/* Mobile tab bar — the phone's counterpart to the sidebar card below. */}
+      <motion.div variants={item} className="tm-card px-6 py-[22px]">
+        <div className="mb-1 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Smartphone className="size-[18px] text-amber-600" />
+            <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">Bottom tabs</h2>
+          </div>
+          <button
+            type="button"
+            onClick={() => { resetTabs(); showToast('Bottom tabs reset'); }}
+            className="inline-flex items-center gap-1.5 rounded px-1.5 py-1 text-xs font-medium text-slate-500 transition-colors hover:text-amber-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50"
+          >
+            <RotateCcw className="size-3.5" />
+            Reset
+          </button>
+        </div>
+        <p className="mb-4 text-[13px] text-tm-subtle">
+          Pick up to {MOBILE_TAB_SLOTS} destinations for the phone&apos;s bottom bar. Home and More
+          are always there; anything you leave off is still available under More.
+        </p>
+
+        <div className="divide-y divide-tm-divider">
+          {TABBABLE_NAV_ITEMS.map(({ key, label, icon: Icon, description }) => {
+            const on = navHydrated && tabKeys.includes(key);
+            const full = tabKeys.length >= MOBILE_TAB_SLOTS;
+            return (
+              <div key={key} className="flex items-center gap-3 py-3">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-tm-fill">
+                  <Icon className="size-[17px] text-tm-label" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[13px] font-medium text-tm-ink">{label}</p>
+                  <p className="truncate text-[12px] text-tm-subtle">{description}</p>
+                </div>
+                <NavToggle
+                  checked={on}
+                  onChange={(next) => {
+                    // Turning one on when full swaps out the oldest choice, so
+                    // the control always visibly does something.
+                    setTabKey(key, next);
+                    if (next && full) showToast(`${label} added — oldest tab moved to More`);
+                  }}
+                  label={label}
+                />
+              </div>
+            );
+          })}
+        </div>
       </motion.div>
 
       {/* Sidebar Customization */}
