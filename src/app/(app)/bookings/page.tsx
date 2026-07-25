@@ -6,8 +6,7 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plane, Trash2, Plus, X, MapPin,
-  Clock, Hash, Armchair, Search, Link2, Loader2, ExternalLink, Pencil, Ban, RotateCcw,
-  AlertCircle, RefreshCw, Check, Download, CheckSquare,
+  Search, Link2, Loader2, ExternalLink, Pencil, Ban, RotateCcw, Download,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,12 +18,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { TMEmptyState } from '@/components/travelmanager/TMEmptyState';
+import {
+  TMEmptyState,
+  TMFilteredEmpty,
+  TMErrorState,
+  TMCardGridSkeleton,
+} from '@/components/travelmanager/TMEmptyState';
+import { TMPageShell, TMScreenHeader } from '@/components/travelmanager/TMPageShell';
+import { TMIconTile, TMChip, TMMonoChip } from '@/components/travelmanager/TMPrimitives';
 import { useTMToast } from '@/components/travelmanager/TMToast';
 import { TMDeleteDialog } from '@/components/travelmanager/TMDeleteDialog';
 import { DatePicker } from '@/components/travelmanager/DatePicker';
 import { formatDate, formatDateTime, toDateTimeInputValue } from '@/lib/date-utils';
-import { type BookingType, BOOKING_TYPES, typeConfig, typeLabels, emptyBookingForm, getBookingFormHelpers } from '@/lib/travelmanager/booking-config';
+import { type BookingType, BOOKING_TYPES, typeConfig, typeLabels, emptyBookingForm, getBookingFormHelpers, BOOKING_TYPE_ICON } from '@/lib/travelmanager/booking-config';
+import { bookingTypePalette } from '@/lib/travelmanager/design';
 import type { BookingStatus } from '@/lib/travelmanager/types';
 
 interface BookingTrip {
@@ -84,74 +91,74 @@ const cardVariants = {
   }),
 };
 
+/**
+ * One labelled row in a booking card's detail block.
+ *
+ * A fixed-width key column with an ellipsized value reads as a record. The
+ * previous treatment gave a clock icon and a pin icon the same visual weight
+ * as the times and places they were labelling.
+ */
+function Fact({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-baseline gap-2 text-[12px]">
+      <span className="w-[52px] shrink-0 text-tm-faint">{label}</span>
+      <span className="min-w-0 flex-1 truncate font-medium text-tm-body">{children}</span>
+    </div>
+  );
+}
+
 function BookingCardView({ booking }: { booking: Booking }) {
   const tzSuffix = booking.timezone ? ` (${getTzAbbreviation(booking.timezone)})` : '';
   return (
-    <div className="space-y-1.5 text-sm">
+    <div className="space-y-1.5">
       {booking.type === 'FLIGHT' && (
         <>
           {(booking.location || booking.endLocation) && (
-            <div className="flex items-center gap-2 text-slate-600">
-              <MapPin className="size-3.5 shrink-0 text-blue-400" />
-              <span>{booking.location || '...'} &rarr; {booking.endLocation || '...'}</span>
-            </div>
+            <Fact label="Route">{booking.location || '…'} &rarr; {booking.endLocation || '…'}</Fact>
           )}
-          {booking.startDateTime && (
-            <div className="flex items-center gap-2 text-slate-600">
-              <Clock className="size-3.5 shrink-0 text-blue-400" />
-              <span>Depart: {formatDateTime(booking.startDateTime)}{tzSuffix}</span>
-            </div>
-          )}
-          {booking.endDateTime && (
-            <div className="flex items-center gap-2 text-slate-600">
-              <Clock className="size-3.5 shrink-0 text-blue-400" />
-              <span>Arrive: {formatDateTime(booking.endDateTime)}{tzSuffix}</span>
-            </div>
-          )}
-          {booking.seat && (
-            <div className="flex items-center gap-2 text-slate-600">
-              <Armchair className="size-3.5 shrink-0 text-blue-400" />
-              <span>Seat: {booking.seat}</span>
-            </div>
-          )}
+          {booking.startDateTime && <Fact label="Depart">{formatDateTime(booking.startDateTime)}{tzSuffix}</Fact>}
+          {booking.endDateTime && <Fact label="Arrive">{formatDateTime(booking.endDateTime)}{tzSuffix}</Fact>}
+          {booking.seat && <Fact label="Seat">{booking.seat}</Fact>}
         </>
       )}
       {booking.type === 'HOTEL' && (
         <>
-          {booking.startDateTime && <div className="flex items-center gap-2 text-slate-600"><Clock className="size-3.5 shrink-0 text-purple-400" /><span>Check-in: {formatDate(booking.startDateTime)}</span></div>}
-          {booking.endDateTime && <div className="flex items-center gap-2 text-slate-600"><Clock className="size-3.5 shrink-0 text-purple-400" /><span>Check-out: {formatDate(booking.endDateTime)}</span></div>}
-          {booking.location && <div className="flex items-center gap-2 text-slate-600"><MapPin className="size-3.5 shrink-0 text-purple-400" /><span>{booking.location}</span></div>}
+          {booking.startDateTime && <Fact label="Check-in">{formatDate(booking.startDateTime)}</Fact>}
+          {booking.endDateTime && <Fact label="Check-out">{formatDate(booking.endDateTime)}</Fact>}
+          {booking.location && <Fact label="Location">{booking.location}</Fact>}
         </>
       )}
       {booking.type === 'CAR_RENTAL' && (
         <>
-          {booking.startDateTime && <div className="flex items-center gap-2 text-slate-600"><Clock className="size-3.5 shrink-0 text-green-400" /><span>Pickup: {formatDateTime(booking.startDateTime)}{tzSuffix}</span></div>}
-          {booking.location && <div className="flex items-center gap-2 text-slate-600"><MapPin className="size-3.5 shrink-0 text-green-400" /><span>Pickup: {booking.location}</span></div>}
-          {booking.endDateTime && <div className="flex items-center gap-2 text-slate-600"><Clock className="size-3.5 shrink-0 text-green-400" /><span>Dropoff: {formatDateTime(booking.endDateTime)}{tzSuffix}</span></div>}
-          {booking.endLocation && <div className="flex items-center gap-2 text-slate-600"><MapPin className="size-3.5 shrink-0 text-green-400" /><span>Dropoff: {booking.endLocation}</span></div>}
+          {booking.startDateTime && <Fact label="Pickup">{formatDateTime(booking.startDateTime)}{tzSuffix}</Fact>}
+          {booking.location && <Fact label="From">{booking.location}</Fact>}
+          {booking.endDateTime && <Fact label="Dropoff">{formatDateTime(booking.endDateTime)}{tzSuffix}</Fact>}
+          {booking.endLocation && <Fact label="To">{booking.endLocation}</Fact>}
         </>
       )}
       {(booking.type === 'TRAIN' || booking.type === 'BUS') && (
         <>
-          {(booking.location || booking.endLocation) && <div className="flex items-center gap-2 text-slate-600"><MapPin className="size-3.5 shrink-0 text-slate-400" /><span>{booking.location || '...'} &rarr; {booking.endLocation || '...'}</span></div>}
-          {booking.startDateTime && <div className="flex items-center gap-2 text-slate-600"><Clock className="size-3.5 shrink-0 text-slate-400" /><span>Depart: {formatDateTime(booking.startDateTime)}{tzSuffix}</span></div>}
-          {booking.endDateTime && <div className="flex items-center gap-2 text-slate-600"><Clock className="size-3.5 shrink-0 text-slate-400" /><span>Arrive: {formatDateTime(booking.endDateTime)}{tzSuffix}</span></div>}
-          {booking.seat && <div className="flex items-center gap-2 text-slate-600"><Armchair className="size-3.5 shrink-0 text-slate-400" /><span>Seat: {booking.seat}</span></div>}
+          {(booking.location || booking.endLocation) && (
+            <Fact label="Route">{booking.location || '…'} &rarr; {booking.endLocation || '…'}</Fact>
+          )}
+          {booking.startDateTime && <Fact label="Depart">{formatDateTime(booking.startDateTime)}{tzSuffix}</Fact>}
+          {booking.endDateTime && <Fact label="Arrive">{formatDateTime(booking.endDateTime)}{tzSuffix}</Fact>}
+          {booking.seat && <Fact label="Seat">{booking.seat}</Fact>}
         </>
       )}
       {booking.type === 'OTHER' && (
         <>
-          {booking.startDateTime && <div className="flex items-center gap-2 text-slate-600"><Clock className="size-3.5 shrink-0 text-slate-400" /><span>{formatDateTime(booking.startDateTime)}{booking.endDateTime ? ` - ${formatDateTime(booking.endDateTime)}` : ''}{tzSuffix}</span></div>}
-          {booking.location && <div className="flex items-center gap-2 text-slate-600"><MapPin className="size-3.5 shrink-0 text-slate-400" /><span>{booking.location}</span></div>}
+          {booking.startDateTime && (
+            <Fact label="Date">
+              {formatDateTime(booking.startDateTime)}
+              {booking.endDateTime ? ` – ${formatDateTime(booking.endDateTime)}` : ''}
+              {tzSuffix}
+            </Fact>
+          )}
+          {booking.location && <Fact label="Location">{booking.location}</Fact>}
         </>
       )}
-      {booking.confirmationNum && (
-        <div className="flex items-center gap-2 text-slate-600">
-          <Hash className="size-3.5 shrink-0 text-slate-400" />
-          <span className="font-mono text-xs">{booking.confirmationNum}</span>
-        </div>
-      )}
-      {booking.notes && <p className="mt-2 text-xs text-slate-400 italic">{booking.notes}</p>}
+      {booking.notes && <p className="tm-prose pt-1 text-[12px] leading-[1.5] text-tm-subtle">{booking.notes}</p>}
     </div>
   );
 }
@@ -212,6 +219,10 @@ function BookingCard({
 
   const config = typeConfig[booking.type];
   const editConfig = typeConfig[form.type as BookingType];
+  const typeIcon = BOOKING_TYPE_ICON[booking.type];
+  const editTypeIcon = BOOKING_TYPE_ICON[form.type as BookingType];
+  const palette = bookingTypePalette(booking.type);
+  const editPalette = bookingTypePalette(form.type);
   const { showEndLocation, showSeat, dateOnly } = getBookingFormHelpers(form.type as BookingType);
   const { showToast } = useTMToast();
 
@@ -281,7 +292,15 @@ function BookingCard({
       animate="visible"
       layout
       whileTap={{ scale: 0.98 }}
-      className={`relative rounded-lg border bg-white p-4 shadow-sm transition-all duration-200 ${editing ? 'border-amber-300 ring-1 ring-amber-200' : selected ? 'border-amber-400 ring-2 ring-amber-300' : isCancelled ? 'border-slate-200 bg-slate-50/60 opacity-70' : `border-slate-100 ${config.borderAccent} hover:-translate-y-0.5 hover:shadow-md`}`}
+      className={`tm-card group relative p-[18px] ${
+        editing
+          ? '!border-tm-accent shadow-[0_0_0_3px_rgba(245,158,11,0.12)]'
+          : selected
+            ? 'ring-2 ring-tm-accent ring-offset-2'
+            : isCancelled
+              ? 'bg-tm-wash opacity-70'
+              : 'tm-card-interactive'
+      }`}
     >
       {selectMode && !editing && (
         <label className="absolute left-2 top-2 z-10 inline-flex items-center justify-center rounded-md bg-white/90 p-1.5 shadow-sm ring-1 ring-slate-200 cursor-pointer">
@@ -294,43 +313,47 @@ function BookingCard({
           />
         </label>
       )}
-      <div className={`mb-3 flex items-start justify-between ${selectMode && !editing ? 'pl-8' : ''}`}>
+      <div className={`mb-3.5 flex items-start justify-between gap-2 ${selectMode && !editing ? 'pl-8' : ''}`}>
         {editing ? (
-          <div className="flex items-center gap-2">
-            <span className={`flex items-center justify-center rounded-lg p-1.5 ring-1 ${editConfig.iconBg}`}>{editConfig.icon}</span>
-            <p className="text-sm font-medium text-slate-700">Edit {editConfig.label}</p>
+          <div className="flex items-center gap-2.5">
+            <TMIconTile icon={editTypeIcon} size={38} bg={editPalette.bg} fg={editPalette.fg} />
+            <p className="text-[13px] font-medium text-tm-body">Edit {editConfig.label}</p>
           </div>
         ) : (
-          <Link href={detailHref('bookings', booking.id)} className="flex items-center gap-2.5 min-w-0 flex-1">
-            <span className={`flex items-center justify-center rounded-xl p-2.5 ring-2 ${config.iconBg}`}>{config.icon}</span>
-            <div>
-              <p className={`font-semibold transition-colors ${isCancelled ? 'text-slate-500 line-through' : 'text-slate-800 hover:text-amber-600'}`}>{booking.provider}</p>
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${config.badgeColor}`}>{config.label}</span>
+          <Link href={detailHref('bookings', booking.id)} className="flex min-w-0 flex-1 items-start gap-3">
+            <TMIconTile icon={typeIcon} size={38} bg={palette.bg} fg={palette.fg} />
+            <div className="min-w-0">
+              <p
+                className={`truncate text-[14px] font-semibold tracking-[-0.01em] ${
+                  isCancelled ? 'text-tm-muted line-through' : 'text-tm-ink'
+                }`}
+              >
+                {booking.provider}
+              </p>
+              <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[12px] text-tm-subtle">
+                {config.label}
                 {isCancelled && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-200">
-                    <Ban className="size-2.5" />Cancelled
+                  <span className="inline-flex items-center gap-1 text-tm-cancel-text">
+                    <Ban className="size-2.5" aria-hidden="true" />
+                    Cancelled
                   </span>
                 )}
-                {(booking.commissionAmount || booking.commissionRate) && (
-                  <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${booking.commissionPaid ? 'bg-emerald-100 text-emerald-800 ring-1 ring-emerald-200' : 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100'}`}>
-                    💰 {booking.commissionAmount ? `$${booking.commissionAmount.toFixed(2)}` : `${booking.commissionRate}%`}
-                    {booking.commissionPaid && <Check className="size-3" />}
-                  </span>
-                )}
-              </div>
+              </p>
             </div>
           </Link>
         )}
-        <div className="flex items-center gap-1">
+        {!editing && booking.confirmationNum && (
+          <TMMonoChip className="shrink-0">{booking.confirmationNum}</TMMonoChip>
+        )}
+        <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
           {!editing && (
             <>
-              <button onClick={startEdit} className="cursor-pointer inline-flex items-center justify-center rounded-md p-2 sm:p-1.5 min-w-11 min-h-11 sm:min-w-0 sm:min-h-0 text-slate-300 transition-all duration-200 hover:bg-amber-50 hover:text-amber-500 focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:outline-none" title="Edit booking" aria-label="Edit booking"><Pencil className="size-4" /></button>
-              {!booking.tripId && <button onClick={() => onLinkTrip(booking.id)} className="cursor-pointer inline-flex items-center justify-center rounded-md p-2 sm:p-1.5 min-w-11 min-h-11 sm:min-w-0 sm:min-h-0 text-slate-300 transition-all duration-200 hover:bg-amber-50 hover:text-amber-500 focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:outline-none" title="Link to trip" aria-label="Link to trip"><Link2 className="size-4" /></button>}
+              <button onClick={startEdit} className="inline-flex size-8 cursor-pointer items-center justify-center rounded-[7px] text-tm-ghost hover:bg-tm-fill hover:text-tm-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tm-accent/40" title="Edit booking" aria-label="Edit booking"><Pencil className="size-4" /></button>
+              {!booking.tripId && <button onClick={() => onLinkTrip(booking.id)} className="inline-flex size-8 cursor-pointer items-center justify-center rounded-[7px] text-tm-ghost hover:bg-tm-fill hover:text-tm-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tm-accent/40" title="Link to trip" aria-label="Link to trip"><Link2 className="size-4" /></button>}
               <button
                 onClick={handleCancelClick}
                 disabled={isCancelling}
-                className={`cursor-pointer inline-flex items-center justify-center rounded-md p-2 sm:p-1.5 min-w-11 min-h-11 sm:min-w-0 sm:min-h-0 text-slate-300 transition-all duration-200 focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 ${isCancelled ? 'hover:bg-emerald-50 hover:text-emerald-600' : 'hover:bg-orange-50 hover:text-orange-500'}`}
+                className={`inline-flex size-8 cursor-pointer items-center justify-center rounded-[7px] text-tm-ghost focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tm-accent/40 disabled:cursor-not-allowed disabled:opacity-50 ${isCancelled ? 'hover:bg-tm-done-bg hover:text-tm-done-text' : 'hover:bg-tm-fill hover:text-tm-muted'}`}
                 title={isCancelled ? 'Reactivate booking' : 'Mark as cancelled'}
                 aria-label={isCancelled ? 'Reactivate booking' : 'Mark as cancelled'}
               >
@@ -351,7 +374,7 @@ function BookingCard({
                   </AnimatePresence>
                 )}
               </button>
-              <button onClick={() => onDelete(booking.id)} className="cursor-pointer inline-flex items-center justify-center rounded-md p-2 sm:p-1.5 min-w-11 min-h-11 sm:min-w-0 sm:min-h-0 text-slate-300 transition-all duration-200 hover:bg-red-50 hover:text-red-500 focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:outline-none" title="Delete booking" aria-label="Delete booking"><Trash2 className="size-4" /></button>
+              <button onClick={() => onDelete(booking.id)} className="inline-flex size-8 cursor-pointer items-center justify-center rounded-[7px] text-tm-ghost hover:bg-tm-danger-bg hover:text-tm-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tm-accent/40" title="Delete booking" aria-label="Delete booking"><Trash2 className="size-4" /></button>
             </>
           )}
           {editing && (
@@ -480,17 +503,22 @@ function BookingCard({
         </form>
       ) : (
         <>
-          {booking.trip && (
-            <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">
-              <MapPin className="size-3" />{booking.trip.title}
-            </div>
-          )}
-          {!booking.tripId && (
-            <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-500">
-              Standalone booking
-            </div>
-          )}
           <BookingCardView booking={booking} />
+
+          {/* Footer: which trip this belongs to, and what it earns. */}
+          <div className="mt-3.5 flex flex-wrap items-center justify-between gap-2 border-t border-tm-divider pt-3">
+            <span className="flex min-w-0 items-center gap-1.5 text-[12px] text-tm-subtle">
+              <MapPin className="size-3 shrink-0 text-tm-faint" aria-hidden="true" />
+              <span className="truncate">{booking.trip ? booking.trip.title : 'Standalone booking'}</span>
+            </span>
+            {(booking.commissionAmount || booking.commissionRate) && (
+              <TMChip tone={booking.commissionPaid ? 'success' : 'pending'}>
+                {booking.commissionAmount ? `$${booking.commissionAmount.toFixed(2)}` : `${booking.commissionRate}%`}
+                {' · '}
+                {booking.commissionPaid ? 'paid' : 'pending'} commission
+              </TMChip>
+            )}
+          </div>
         </>
       )}
     </motion.div>
@@ -816,107 +844,78 @@ export default function BookingsPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6" role="status" aria-label="Loading bookings">
-        {/* Title row: heading + action buttons */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-2">
-            <h1 className="text-2xl font-bold text-slate-800">Bookings</h1>
-            <div className="h-3 w-44 rounded bg-slate-200/60 animate-pulse" />
-          </div>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-9 w-full sm:w-32 rounded-md bg-slate-200/70 animate-pulse" />
-            ))}
-          </div>
+      <TMPageShell width={1120}>
+        <TMScreenHeader title="Bookings" />
+        <div className="pt-5 md:pt-7" role="status" aria-label="Loading bookings">
+          <TMCardGridSkeleton count={6} columns={3} />
+          <span className="sr-only">Loading bookings\u2026</span>
         </div>
-
-        {/* Search + filter bar */}
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <div className="h-9 flex-1 rounded-md bg-slate-200/70 animate-pulse" />
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-9 w-full sm:w-44 rounded-md bg-slate-200/60 animate-pulse" />
-          ))}
-        </div>
-
-        {/* Booking cards */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="rounded-lg border border-slate-100 bg-white p-4 shadow-sm">
-              <div className="mb-3 flex items-center gap-2.5">
-                <div className="size-9 shrink-0 rounded-xl bg-slate-200/70 animate-pulse" />
-                <div className="space-y-1.5">
-                  <div className="h-4 w-28 rounded bg-slate-200/80 animate-pulse" />
-                  <div className="h-4 w-16 rounded-full bg-slate-200/60 animate-pulse" />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <div className="h-3.5 w-3/4 rounded bg-slate-200/60 animate-pulse" />
-                <div className="h-3.5 w-2/3 rounded bg-slate-200/50 animate-pulse" />
-                <div className="h-3.5 w-1/3 rounded bg-slate-200/50 animate-pulse" />
-              </div>
-            </div>
-          ))}
-        </div>
-        <span className="sr-only">Loading bookings…</span>
-      </div>
+      </TMPageShell>
     );
   }
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center py-24 text-center">
-        <div className="relative mb-6">
-          <div className="size-20 rounded-full bg-red-50 flex items-center justify-center">
-            <AlertCircle className="size-10 text-red-400" />
-          </div>
-          <div className="absolute -bottom-1 -right-1 size-7 rounded-full bg-red-100 flex items-center justify-center">
-            <RefreshCw className="size-3.5 text-red-400" />
-          </div>
+      <TMPageShell width={1120}>
+        <TMScreenHeader title="Bookings" />
+        <div className="tm-card mt-6">
+          <TMErrorState
+            title="Couldn't load your bookings"
+            description="Something went wrong on our end. Your data is safe — nothing was lost."
+            onRetry={fetchBookings}
+          />
         </div>
-        <h2 className="text-xl font-semibold text-slate-900">Failed to load bookings</h2>
-        <p className="mt-2 text-sm text-slate-500 max-w-sm">
-          Something went wrong. Check your connection and try again.
-        </p>
-        <Button
-          onClick={fetchBookings}
-          className="mt-6 bg-slate-900 hover:bg-slate-800 text-white shadow-sm"
-        >
-          <RefreshCw className="mr-2 size-4" />
-          Try again
-        </Button>
-      </div>
+      </TMPageShell>
     );
   }
 
+  // Counts shown on the type pills, so the filter row doubles as a breakdown
+  // of what you actually have.
+  const typeCounts: Record<string, number> = { ALL: bookings.length };
+  for (const b of bookings) typeCounts[b.type] = (typeCounts[b.type] ?? 0) + 1;
+  const tripCount = new Set(bookings.map((b) => b.tripId).filter(Boolean)).size;
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800">Bookings</h1>
-          {bookings.length > 0 && (
-            <p className="text-xs text-slate-500">
-              💰 ${totalCommissionThisMonth.toFixed(2)} earned this month
-            </p>
-          )}
-        </div>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <Button
-            variant="outline"
-            onClick={() => { setSelectMode(!selectMode); setSelectedIds(new Set()); }}
-            className="w-full sm:w-auto"
-          >
-            <CheckSquare className="mr-2 size-4" />
-            {selectMode ? 'Cancel' : 'Select'}
-          </Button>
-          <Button
-            onClick={() => setShowForm(true)}
-            className="w-full sm:w-auto bg-amber-500 hover:bg-amber-600 text-white"
-          >
-            <Plus className="mr-2 size-4" />
-            New Booking
-          </Button>
-        </div>
-      </div>
+    <TMPageShell width={1120}>
+      <TMScreenHeader
+        title={
+          <span className="flex flex-wrap items-center gap-2.5">
+            Bookings
+            {totalCommissionThisMonth > 0 && (
+              <TMChip tone="success">${totalCommissionThisMonth.toFixed(2)} commission this month</TMChip>
+            )}
+          </span>
+        }
+        subtitle={
+          bookings.length > 0
+            ? `${bookings.length} ${bookings.length === 1 ? 'booking' : 'bookings'}${
+                tripCount ? ` across ${tripCount} ${tripCount === 1 ? 'trip' : 'trips'}` : ''
+              }`
+            : undefined
+        }
+        actions={
+          <>
+            <button
+              type="button"
+              className="tm-btn tm-btn-secondary"
+              onClick={() => { setSelectMode(!selectMode); setSelectedIds(new Set()); }}
+            >
+              {selectMode ? 'Cancel' : 'Select'}
+            </button>
+            <button type="button" className="tm-btn tm-btn-primary" onClick={() => setShowForm(true)}>
+              New Booking
+            </button>
+          </>
+        }
+        mobileAction={
+          <button type="button" className="tm-btn tm-btn-primary h-[34px] px-[13px]" onClick={() => setShowForm(true)}>
+            <Plus className="size-3.5" aria-hidden="true" />
+            New
+          </button>
+        }
+      />
+
+      <div className="pt-5 md:pt-7" />
 
       {showForm && (
         <motion.form
@@ -1208,105 +1207,98 @@ export default function BookingsPage() {
         </motion.form>
       )}
 
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-          <Input
-            placeholder="Search by provider, location, or confirmation..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            aria-label="Search bookings"
-            className="pl-9"
-          />
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="relative min-w-[240px] flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-tm-subtle" aria-hidden="true" />
+            <input
+              placeholder="Search bookings"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              aria-label="Search bookings"
+              className="tm-input pl-[34px]"
+            />
+          </div>
+          <Select value={linkFilter} onValueChange={setLinkFilter}>
+            <SelectTrigger className="tm-input h-9 w-full sm:w-[168px]" aria-label="Filter by link status">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All bookings</SelectItem>
+              <SelectItem value="LINKED">Linked to trip</SelectItem>
+              <SelectItem value="STANDALONE">Standalone</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="tm-input h-9 w-full sm:w-[168px]" aria-label="Filter by status">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ACTIVE">Active only</SelectItem>
+              <SelectItem value="CANCELLED">Cancelled only</SelectItem>
+              <SelectItem value="ALL">All statuses</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-        <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="w-full sm:w-44" aria-label="Filter by type">
-            <SelectValue placeholder="Type" />
-          </SelectTrigger>
-          <SelectContent>
-            {BOOKING_TYPES.map((t) => (
-              <SelectItem key={t} value={t}>
-                {t === 'ALL' ? 'All Types' : typeConfig[t as BookingType]?.label || t}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={linkFilter} onValueChange={setLinkFilter}>
-          <SelectTrigger className="w-full sm:w-44" aria-label="Filter by link status">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">All Bookings</SelectItem>
-            <SelectItem value="LINKED">Linked to Trip</SelectItem>
-            <SelectItem value="STANDALONE">Standalone</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full sm:w-44" aria-label="Filter by status">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ACTIVE">Active only</SelectItem>
-            <SelectItem value="CANCELLED">Cancelled only</SelectItem>
-            <SelectItem value="ALL">All bookings</SelectItem>
-          </SelectContent>
-        </Select>
+
+        {/* Type pills carry their counts. On a phone they scroll sideways
+            rather than wrapping into three rows of chrome. */}
+        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:flex-wrap md:px-0">
+          {BOOKING_TYPES.map((t) => (
+            <button
+              key={t}
+              type="button"
+              data-selected={typeFilter === t}
+              onClick={() => setTypeFilter(t)}
+              className="tm-pill"
+            >
+              {t === 'ALL' ? 'All' : typeConfig[t as BookingType]?.label || t}
+              <span className="tm-nums opacity-60">{typeCounts[t] ?? 0}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
-      {bookings.length > 0 && (
-        <p className="text-sm text-slate-500">
-          Showing {filtered.length} of {bookings.length} bookings
-        </p>
-      )}
-
-      {filtered.length === 0 ? (
-        <TMEmptyState
-          title={bookings.length === 0 ? 'No bookings yet' : 'No matching bookings'}
-          description={
-            bookings.length === 0
-              ? 'Create your first booking to track flights, hotels, and car rentals.'
-              : 'Try adjusting your search or filters.'
-          }
-          icon={Plane}
-        />
-      ) : (
-        <motion.div
-          className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
-          initial="hidden"
-          animate="visible"
-          variants={{
-            hidden: {},
-            visible: { transition: { staggerChildren: 0.05 } },
-          }}
-        >
-          <AnimatePresence mode="popLayout">
+      <div className="pt-5">
+        {filtered.length === 0 ? (
+          <div className="tm-card">
+            {bookings.length === 0 ? (
+              <TMEmptyState
+                title="No bookings yet"
+                description="Add flights, hotels, cars, and trains — commissions are tracked automatically."
+                actionLabel="New Booking"
+                onAction={() => setShowForm(true)}
+                icon={Plane}
+              />
+            ) : (
+              <TMFilteredEmpty
+                noun="bookings"
+                query={search}
+                filterLabel={typeFilter === 'ALL' ? undefined : typeConfig[typeFilter as BookingType]?.label}
+                onClear={() => { setSearch(''); setTypeFilter('ALL'); setLinkFilter('ALL'); setStatusFilter('ACTIVE'); }}
+              />
+            )}
+          </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {filtered.map((booking, i) => (
-              <motion.div
+              <BookingCard
                 key={booking.id}
-                layout
-                variants={{
-                  hidden: { opacity: 0, y: 10 },
-                  visible: { opacity: 1, y: 0 },
-                }}
-                exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
-              >
-                <BookingCard
-                  booking={booking}
-                  onDelete={setDeleteTarget}
-                  onLinkTrip={setLinkTarget}
-                  onSaved={fetchBookings}
-                  onCancel={handleCancel}
-                  index={i}
-                  selectMode={selectMode}
-                  selected={selectedIds.has(booking.id)}
-                  onToggleSelect={toggleSelect}
-                  timezones={timezones}
-                />
-              </motion.div>
+                booking={booking}
+                onDelete={setDeleteTarget}
+                onLinkTrip={setLinkTarget}
+                onSaved={fetchBookings}
+                onCancel={handleCancel}
+                index={i}
+                selectMode={selectMode}
+                selected={selectedIds.has(booking.id)}
+                onToggleSelect={toggleSelect}
+                timezones={timezones}
+              />
             ))}
-          </AnimatePresence>
-        </motion.div>
-      )}
+          </div>
+        )}
+      </div>
 
       {selectMode && selectedIds.size > 0 && (
         <div className="fixed bottom-0 left-0 right-0 md:left-64 z-40 bg-white border-t shadow-lg p-3 flex flex-wrap items-center gap-3">
@@ -1386,6 +1378,6 @@ export default function BookingsPage() {
           </motion.div>
         </div>
       )}
-    </div>
+    </TMPageShell>
   );
 }

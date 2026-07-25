@@ -3,20 +3,22 @@ import { detailHref } from '@/lib/travelmanager/detail-routes';
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { motion, useReducedMotion } from 'framer-motion';
-import { MapPin, Calendar, DollarSign, Users, Building2, ChevronRight, Pencil, X, Trash2, Loader2, Briefcase, HeartHandshake } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { CalendarDays, Users, Building2, ChevronRight, Pencil, X, Trash2, Loader2, Briefcase, HeartHandshake } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TMStatusBadge } from '@/components/travelmanager/TMStatusBadge';
+import { TMCodeTile, TMChip } from '@/components/travelmanager/TMPrimitives';
 import { DatePicker } from '@/components/travelmanager/DatePicker';
 import { useTMToast } from '@/components/travelmanager/TMToast';
 import { TMDeleteDialog } from '@/components/travelmanager/TMDeleteDialog';
+import { statusPalette, tripCode } from '@/lib/travelmanager/design';
 import { formatDate, formatDateDisplay } from '@/lib/date-utils';
 
 interface TripCardProps {
+  /** Marks this as the next departing trip — inverts the code tile. */
+  isNext?: boolean;
   trip: {
     id: string;
     title: string;
@@ -47,20 +49,12 @@ function formatBudget(budget: number): string {
   return `$${budget.toLocaleString()}`;
 }
 
-const statusBorderColors: Record<string, string> = {
-  DRAFT: 'border-l-slate-400',
-  PLANNED: 'border-l-blue-500',
-  IN_PROGRESS: 'border-l-amber-500',
-  COMPLETED: 'border-l-emerald-500',
-  CANCELLED: 'border-l-red-500',
-};
-
 function extractDate(d: string | null | undefined): string {
   if (!d) return '';
   return d.split('T')[0] || '';
 }
 
-export function TripCard({ trip, onSaved, onDeleted }: TripCardProps) {
+export function TripCard({ trip, onSaved, onDeleted, isNext = false }: TripCardProps) {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -75,13 +69,13 @@ export function TripCard({ trip, onSaved, onDeleted }: TripCardProps) {
     budget: trip.budget != null ? String(trip.budget) : '',
   });
   const { showToast } = useTMToast();
-  const reducedMotion = useReducedMotion();
 
   const days = trip.startDate && trip.endDate ? getDurationDays(trip.startDate, trip.endDate) : null;
   const vendorCount = trip._count?.vendors ?? trip.vendors?.length ?? 0;
   const clientCount = trip._count?.clients ?? trip.clients?.length ?? 0;
   const friendCount = trip._count?.friends ?? trip.friends?.length ?? 0;
-  const borderColor = statusBorderColors[trip.status] ?? 'border-l-slate-400';
+  const palette = statusPalette(trip.status);
+  const code = tripCode(trip.destination, trip.title);
 
   const startEdit = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -138,10 +132,13 @@ export function TripCard({ trip, onSaved, onDeleted }: TripCardProps) {
   if (editing) {
     return (
       <>
-        <div className={`overflow-hidden rounded-[15px] border border-amber-300 ring-1 ring-amber-200 border-l-[3px] ${borderColor} bg-white p-[18px]`}>
+        <div
+          className="tm-card overflow-hidden p-[18px]"
+          style={{ borderColor: 'var(--color-tm-accent)', boxShadow: '0 0 0 3px rgba(245,158,11,0.12)' }}
+        >
           <form onSubmit={handleSave} className="space-y-3">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-slate-700">Edit Trip</p>
+              <p className="text-[13px] font-medium text-tm-body">Edit Trip</p>
               <button type="button" onClick={() => setEditing(false)} className="rounded-md p-2.5 sm:p-2 min-w-11 min-h-11 sm:min-w-0 sm:min-h-0 inline-flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-600 focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:outline-none" aria-label="Cancel editing"><X className="size-4" /></button>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
@@ -175,8 +172,8 @@ export function TripCard({ trip, onSaved, onDeleted }: TripCardProps) {
               </div>
             </div>
             <div className="flex gap-2">
-              <Button type="submit" size="sm" disabled={saving} className="h-10 text-sm sm:h-7 sm:text-xs bg-amber-500 hover:bg-amber-600">{saving ? <><Loader2 className="size-3.5 animate-spin" />Saving...</> : 'Save'}</Button>
-              <Button type="button" size="sm" variant="outline" onClick={() => setEditing(false)} className="h-10 text-sm sm:h-7 sm:text-xs">Cancel</Button>
+              <Button type="submit" size="sm" disabled={saving} className="tm-btn tm-btn-primary h-9">{saving ? <><Loader2 className="size-3.5 animate-spin" />Saving…</> : 'Save'}</Button>
+              <Button type="button" size="sm" variant="outline" onClick={() => setEditing(false)} className="tm-btn tm-btn-secondary h-9">Cancel</Button>
             </div>
           </form>
         </div>
@@ -185,80 +182,120 @@ export function TripCard({ trip, onSaved, onDeleted }: TripCardProps) {
     );
   }
 
+  const dateLine = trip.startDate && trip.endDate
+    ? `${formatDateDisplay(trip.startDate)} – ${formatDate(trip.endDate)}`
+    : 'Dates not set';
+
+  const rowActions = (
+    <>
+      <button
+        type="button"
+        onClick={startEdit}
+        className="inline-flex size-8 items-center justify-center rounded-[7px] text-tm-ghost hover:bg-tm-fill hover:text-tm-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tm-accent/40"
+        title="Edit trip"
+        aria-label="Edit trip"
+      >
+        <Pencil className="size-3.5" />
+      </button>
+      <button
+        type="button"
+        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteOpen(true); }}
+        className="inline-flex size-8 items-center justify-center rounded-[7px] text-tm-ghost hover:bg-tm-danger-bg hover:text-tm-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tm-accent/40"
+        title="Delete trip"
+        aria-label="Delete trip"
+      >
+        <Trash2 className="size-3.5" />
+      </button>
+    </>
+  );
+
   return (
     <>
-      <Link href={detailHref('trips', trip.id)} className="block outline-none group">
-        <motion.div
-          tabIndex={-1}
-          whileHover={reducedMotion ? undefined : { y: -3, transition: { duration: 0.2, ease: 'easeOut' } }}
-          whileTap={reducedMotion ? undefined : { scale: 0.98, transition: { duration: 0.1 } }}
-        >
-          <div className={`relative cursor-pointer overflow-hidden rounded-[15px] border border-[#eef2f6] border-l-[3px] ${borderColor} bg-white p-[18px] shadow-card transition-all duration-200 group-hover:shadow-[0_12px_28px_-8px_rgba(15,23,42,0.16)] group-hover:border-slate-200 group-focus-visible:ring-2 group-focus-visible:ring-amber-500 group-focus-visible:ring-offset-2`}>
-            <div className="flex items-start justify-between gap-3">
-              <h3 className="text-[15px] font-semibold text-slate-800 leading-[1.3] line-clamp-2 min-w-0 flex-1">{trip.title}</h3>
-              <div className="flex items-center gap-1 shrink-0">
-                <button
-                  type="button"
-                  onClick={startEdit}
-                  className="rounded-md p-2.5 sm:p-2 min-w-11 min-h-11 sm:min-w-0 sm:min-h-0 inline-flex items-center justify-center text-slate-400 transition-all duration-200 hover:bg-amber-50 hover:text-amber-500 focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:outline-none"
-                  title="Edit trip"
-                  aria-label="Edit trip"
-                >
-                  <Pencil className="size-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteOpen(true); }}
-                  className="rounded-md p-2.5 sm:p-2 min-w-11 min-h-11 sm:min-w-0 sm:min-h-0 inline-flex items-center justify-center text-slate-400 transition-all duration-200 hover:bg-red-50 hover:text-red-500 focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:outline-none"
-                  title="Delete trip"
-                  aria-label="Delete trip"
-                >
-                  <Trash2 className="size-4" />
-                </button>
-                <TMStatusBadge status={trip.status} />
-              </div>
-            </div>
+      <Link
+        href={detailHref('trips', trip.id)}
+        className="tm-card tm-card-interactive group relative block overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-tm-accent focus-visible:ring-offset-2"
+      >
+        {/* Full-height status bar. Three pixels of color is the whole status
+            signal on the card edge; the dot+label repeats it in words. */}
+        <span
+          className="absolute inset-y-0 left-0 w-[3px]"
+          style={{ background: palette.dot }}
+          aria-hidden="true"
+        />
 
-            {trip.destination && (
-              <div className="mt-2.5 flex items-center gap-1.5 text-[13px] text-slate-500 min-w-0">
-                <MapPin className="size-3.5 shrink-0 text-slate-400" />
-                <span className="truncate">{trip.destination}</span>
-              </div>
-            )}
-
-            {trip.startDate && trip.endDate ? (
-              <div className="mt-1.5 flex items-center gap-1.5 text-[13px] text-slate-500">
-                <Calendar className="size-3.5 shrink-0 text-slate-400" />
-                <span>{formatDateDisplay(trip.startDate)} &ndash; {formatDate(trip.endDate)}</span>
-                {days && (
-                  <span className="ml-1 inline-flex items-center rounded-[6px] bg-slate-100 px-[7px] py-0.5 text-[11px] font-semibold text-slate-500">{days}d</span>
-                )}
-              </div>
-            ) : (
-              <div className="mt-1.5 flex items-center gap-1.5 text-[13px] text-slate-400 italic">
-                <Calendar className="size-3.5 shrink-0" /><span>Dates not set</span>
-              </div>
-            )}
-
-            {(vendorCount > 0 || clientCount > 0 || friendCount > 0 || trip.tripType === 'WORK') && (
-              <div className="mt-3 flex items-center gap-1.5 flex-wrap">
-                {trip.tripType === 'WORK' && <Badge variant="secondary" className="text-[11px] gap-1 bg-sky-50 text-sky-700 ring-1 ring-inset ring-sky-100 border-0 px-2 py-0.5"><Briefcase className="size-3" />Work</Badge>}
-                {friendCount > 0 && <Badge variant="secondary" className="text-[11px] gap-1 bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200 border-0 px-2 py-0.5"><HeartHandshake className="size-3" />{friendCount} {friendCount === 1 ? 'friend' : 'friends'}</Badge>}
-                {vendorCount > 0 && <Badge variant="secondary" className="text-[11px] gap-1 bg-slate-50 text-slate-500 ring-1 ring-inset ring-[#eef2f6] border-0 px-2 py-0.5"><Building2 className="size-3" />{vendorCount} {vendorCount === 1 ? 'vendor' : 'vendors'}</Badge>}
-                {clientCount > 0 && <Badge variant="secondary" className="text-[11px] gap-1 bg-slate-50 text-slate-500 ring-1 ring-inset ring-[#eef2f6] border-0 px-2 py-0.5"><Users className="size-3" />{clientCount} {clientCount === 1 ? 'client' : 'clients'}</Badge>}
-              </div>
-            )}
-
-            <div className="mt-3.5 flex items-center justify-between border-t border-slate-100 pt-[13px]">
-              {trip.budget != null ? (
-                <span className="flex items-center gap-1.5 text-sm font-semibold text-slate-700"><DollarSign className="size-3.5 text-emerald-500" />{formatBudget(trip.budget)}</span>
-              ) : (
-                <span className="text-xs text-slate-400">No budget set</span>
-              )}
-              <ChevronRight className="size-4 text-slate-300 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-slate-400" />
-            </div>
+        {/* Mobile: one row — tile, name + dates, then status over budget. */}
+        <div className="flex items-center gap-3 px-4 py-3.5 md:hidden">
+          <TMCodeTile code={code} size={38} highlight={isNext} />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[14px] font-semibold text-tm-ink">{trip.title}</p>
+            <p className="mt-0.5 truncate text-[12px] text-tm-subtle tm-nums">{dateLine}</p>
           </div>
-        </motion.div>
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            <TMStatusBadge status={trip.status} />
+            <span className="text-[12px] font-semibold text-tm-ink tm-nums">
+              {trip.budget != null ? formatBudget(trip.budget) : ''}
+            </span>
+          </div>
+        </div>
+
+        {/* Desktop: the full card. */}
+        <div className="hidden px-[18px] pb-3.5 pt-[18px] md:block">
+          <div className="flex items-start gap-3">
+            <TMCodeTile code={code} size={38} highlight={isNext} />
+            <div className="min-w-0 flex-1">
+              <h3 className="truncate text-[14px] font-semibold tracking-[-0.01em] text-tm-ink">{trip.title}</h3>
+              <p className="mt-0.5 truncate text-[12px] text-tm-subtle">{trip.destination || '—'}</p>
+            </div>
+            <TMStatusBadge status={trip.status} className="shrink-0 pt-0.5" />
+          </div>
+
+          <div className="mt-3.5 flex items-center gap-1.5 text-[12px] text-tm-muted">
+            <CalendarDays className="size-[13px] shrink-0 text-tm-faint" aria-hidden="true" />
+            <span className="truncate tm-nums">{dateLine}</span>
+            {days && (
+              <span className="ml-0.5 shrink-0 rounded-[5px] bg-tm-fill px-1.5 py-0.5 font-mono text-[10px] font-semibold text-tm-label">
+                {days}d
+              </span>
+            )}
+          </div>
+
+          {(vendorCount > 0 || clientCount > 0 || friendCount > 0 || trip.tripType === 'WORK') && (
+            <div className="mt-3 flex flex-wrap items-center gap-1.5">
+              {trip.tripType === 'WORK' && <TMChip icon={Briefcase}>Work</TMChip>}
+              {friendCount > 0 && (
+                <TMChip tone="outline" icon={HeartHandshake}>
+                  {friendCount} {friendCount === 1 ? 'friend' : 'friends'}
+                </TMChip>
+              )}
+              {vendorCount > 0 && (
+                <TMChip tone="outline" icon={Building2}>
+                  {vendorCount} {vendorCount === 1 ? 'vendor' : 'vendors'}
+                </TMChip>
+              )}
+              {clientCount > 0 && (
+                <TMChip tone="outline" icon={Users}>
+                  {clientCount} {clientCount === 1 ? 'client' : 'clients'}
+                </TMChip>
+              )}
+            </div>
+          )}
+
+          <div className="mt-3.5 flex items-center justify-between gap-2 border-t border-tm-divider pt-3">
+            {trip.budget != null ? (
+              <span className="text-[13px] font-semibold text-tm-ink tm-nums">{formatBudget(trip.budget)}</span>
+            ) : (
+              <span className="text-[13px] text-tm-faint">No budget set</span>
+            )}
+            <span className="flex items-center gap-0.5">
+              {/* Row actions stay hidden until hover so the card's resting
+                  state is data only — but focus reveals them for keyboards. */}
+              <span className="flex opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                {rowActions}
+              </span>
+              <ChevronRight className="size-[15px] shrink-0 text-tm-ghost" aria-hidden="true" />
+            </span>
+          </div>
+        </div>
       </Link>
       <TMDeleteDialog open={deleteOpen} onClose={() => setDeleteOpen(false)} onConfirm={handleDelete} title="Delete Trip" description="Are you sure? This will delete all itinerary items, bookings, expenses, and other trip data." isDeleting={deleting} />
     </>

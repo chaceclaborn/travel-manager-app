@@ -319,7 +319,10 @@ export async function getDashboardStats(userId: string) {
 export async function getUpcomingTrips(userId: string, limit = 5) {
   return prisma.trip.findMany({
     where: { userId, startDate: { gte: new Date() }, status: { in: ['PLANNED', 'IN_PROGRESS'] } },
-    include: tripInclude,
+    // Checklists come along here (and only here) because the dashboard hero
+    // shows "Checklist · 6 of 9" for the next trip. Loading them for every
+    // trip list would be waste; loading them lazily would make the hero pop in.
+    include: { ...tripInclude, checklists: true },
     orderBy: { startDate: 'asc' },
     take: limit,
   });

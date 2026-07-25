@@ -3,10 +3,7 @@
 import { Suspense, useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Search, AlertCircle, RefreshCw, SlidersHorizontal, X } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+import { Plus, Search, SlidersHorizontal, X, MapPin } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -15,7 +12,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { TripCard } from '@/components/travelmanager/TripCard';
-import { TMEmptyState } from '@/components/travelmanager/TMEmptyState';
+import {
+  TMEmptyState,
+  TMFilteredEmpty,
+  TMErrorState,
+  TMCardGridSkeleton,
+} from '@/components/travelmanager/TMEmptyState';
+import { TMPageShell, TMScreenHeader } from '@/components/travelmanager/TMPageShell';
 import { TMDeleteDialog } from '@/components/travelmanager/TMDeleteDialog';
 import { useTMToast } from '@/components/travelmanager/TMToast';
 
@@ -54,42 +57,6 @@ const STATUS_FILTERS = [
   { value: 'COMPLETED', label: 'Completed' },
   { value: 'CANCELLED', label: 'Cancelled' },
 ];
-
-function SkeletonCard({ index }: { index: number }) {
-  return (
-    <div
-      className="relative h-[210px] animate-pulse overflow-hidden rounded-[15px] border border-[#eef2f6] border-l-[3px] border-l-slate-200 bg-white p-[18px] shadow-card"
-      style={{ animationDelay: `${index * 100}ms` }}
-    >
-      {/* Title + badge */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="h-5 w-3/5 rounded-md bg-slate-200" />
-        <div className="h-6 w-20 rounded-full bg-slate-100" />
-      </div>
-      {/* Destination */}
-      <div className="mt-3 flex items-center gap-1.5">
-        <div className="size-3.5 rounded bg-slate-100" />
-        <div className="h-3.5 w-2/5 rounded bg-slate-100" />
-      </div>
-      {/* Date */}
-      <div className="mt-2 flex items-center gap-1.5">
-        <div className="size-3.5 rounded bg-slate-100" />
-        <div className="h-3.5 w-3/5 rounded bg-slate-100" />
-        <div className="h-5 w-8 rounded-md bg-slate-50" />
-      </div>
-      {/* Vendor/client badges */}
-      <div className="mt-3 flex items-center gap-1.5">
-        <div className="h-5 w-16 rounded-full bg-slate-50" />
-        <div className="h-5 w-14 rounded-full bg-slate-50" />
-      </div>
-      {/* Footer divider + budget */}
-      <div className="mt-3 border-t border-slate-50 pt-3 flex items-center justify-between">
-        <div className="h-4 w-16 rounded bg-slate-100" />
-        <div className="size-4 rounded bg-slate-50" />
-      </div>
-    </div>
-  );
-}
 
 export default function TripsPage() {
   return (
@@ -286,290 +253,223 @@ function TripsPageContent() {
     return result;
   }, [trips, search, statusFilter, typeFilter, sortBy]);
 
-  const hasActiveFilters = search.length > 0 || statusFilter !== 'ALL' || typeFilter !== 'ALL';
-
   const clearFilters = () => {
     setSearch('');
     setStatusFilter('ALL');
     setTypeFilter('ALL');
   };
 
+  const upcomingCount = trips.filter(
+    (t) => t.startDate && new Date(t.startDate) >= new Date() && (t.status === 'PLANNED' || t.status === 'IN_PROGRESS'),
+  ).length;
+
+  // The nearest upcoming trip gets the inverted code tile — one anchor in the
+  // grid, so the eye has somewhere to land first.
+  const nextTripId = filtered.find(
+    (t) => t.startDate && new Date(t.startDate) >= new Date() && t.status !== 'COMPLETED' && t.status !== 'CANCELLED',
+  )?.id;
+
   return (
-    <div className="space-y-6">
-      {/* Page header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-[26px] font-bold tracking-[-0.02em] text-slate-900">Trips</h1>
-          {!loading && trips.length > 0 && (
-            <p className="mt-1.5 text-sm text-slate-500">
-              {filtered.length === trips.length ? (
-                <>{trips.length} {trips.length === 1 ? 'trip' : 'trips'}</>
-              ) : (
-                <>
-                  <span className="font-semibold text-slate-700">{filtered.length}</span> of {trips.length} {trips.length === 1 ? 'trip' : 'trips'}
-                </>
-              )}
-            </p>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          {trips.length > 0 && (
-            <Button
-              variant="outline"
-              className="h-10 rounded-[11px] text-[13px] font-semibold border-slate-200 hover:border-slate-300"
-              onClick={() => {
-                setSelectMode((m) => !m);
-                setSelectedIds(new Set());
-              }}
-            >
-              {selectMode ? 'Cancel' : 'Select'}
-            </Button>
-          )}
-          <Button asChild className="h-10 rounded-[11px] px-[18px] text-[13px] font-semibold text-white bg-gradient-to-br from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 shadow-[0_4px_14px_-4px_rgba(245,158,11,0.55)] motion-safe:hover:-translate-y-px transition-transform">
-            <Link href="/trips/new">
-              <Plus className="mr-1.5 size-4" />
+    <TMPageShell width={1120}>
+      <TMScreenHeader
+        title="Trips"
+        subtitle={
+          loading
+            ? undefined
+            : filtered.length === trips.length
+              ? `${trips.length} ${trips.length === 1 ? 'trip' : 'trips'}${upcomingCount ? ` · ${upcomingCount} upcoming` : ''}`
+              : `${filtered.length} of ${trips.length} ${trips.length === 1 ? 'trip' : 'trips'}`
+        }
+        actions={
+          <>
+            {trips.length > 0 && (
+              <button
+                type="button"
+                className="tm-btn tm-btn-secondary"
+                onClick={() => {
+                  setSelectMode((m) => !m);
+                  setSelectedIds(new Set());
+                }}
+              >
+                {selectMode ? 'Cancel' : 'Select'}
+              </button>
+            )}
+            <Link href="/trips/new" className="tm-btn tm-btn-primary">
               New Trip
             </Link>
-          </Button>
-        </div>
-      </div>
+          </>
+        }
+        mobileAction={
+          <Link href="/trips/new" className="tm-btn tm-btn-primary h-[34px] px-[13px]">
+            <Plus className="size-3.5" aria-hidden="true" />
+            New
+          </Link>
+        }
+      />
 
-      {/* Search and filters */}
-      <div className="space-y-3">
-        <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap">
-          <div className="relative flex-1 min-w-[220px]">
-            <Search className="absolute left-[13px] top-1/2 size-4 -translate-y-1/2 text-slate-400 pointer-events-none" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by trip name or destination..."
-              aria-label="Search trips"
-              className="pl-[38px] pr-11 sm:pr-9 h-[42px] rounded-[11px] bg-white border-slate-200 shadow-card placeholder:text-slate-400 focus-visible:ring-amber-500/15 focus-visible:!border-amber-400"
-            />
-            {search && (
-              <button
-                onClick={() => setSearch('')}
-                className="absolute right-0 top-0 h-full w-11 sm:w-9 inline-flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
-                aria-label="Clear search"
-              >
-                <X className="size-4" />
-              </button>
-            )}
-          </div>
-          <div className="flex gap-2 flex-wrap sm:flex-nowrap">
-            <div className="flex h-[42px] items-center rounded-[11px] border border-slate-200 bg-white p-1 shadow-card" role="radiogroup" aria-label="Filter by trip type">
-              {TYPE_FILTERS.map(({ value, label }) => {
-                const active = typeFilter === value;
-                return (
-                  <button
-                    key={value}
-                    type="button"
-                    role="radio"
-                    aria-checked={active}
-                    onClick={() => setTypeFilter(value)}
-                    className={`h-full rounded-md px-3.5 text-[13px] font-semibold transition-colors cursor-pointer ${
-                      active
-                        ? 'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200'
-                        : 'text-slate-500 hover:text-slate-700 active:text-slate-700'
-                    }`}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-44 h-[42px] rounded-[11px] bg-white border-slate-200 shadow-card" aria-label="Filter by status">
-                <div className="flex items-center gap-2">
-                  <SlidersHorizontal className="size-3.5 text-slate-400" />
-                  <SelectValue />
-                </div>
-              </SelectTrigger>
-              <SelectContent>
-                {STATUS_FILTERS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-full sm:w-44 h-[42px] rounded-[11px] bg-white border-slate-200 shadow-card" aria-label="Sort trips">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="date-nearest">Date (Nearest)</SelectItem>
-                <SelectItem value="date-farthest">Date (Farthest)</SelectItem>
-                <SelectItem value="name-az">Name (A-Z)</SelectItem>
-                <SelectItem value="name-za">Name (Z-A)</SelectItem>
-                <SelectItem value="status">Status</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {/* Active filter pills */}
-        {hasActiveFilters && (
-          <motion.div
-            initial={{ opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex items-center gap-2 flex-wrap"
-          >
-            {typeFilter !== 'ALL' && (
-              <button
-                onClick={() => setTypeFilter('ALL')}
-                className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-200 hover:bg-amber-100 transition-colors cursor-pointer"
-              >
-                {TYPE_FILTERS.find((f) => f.value === typeFilter)?.label} trips
-                <X className="size-3" />
-              </button>
-            )}
-            {statusFilter !== 'ALL' && (
-              <button
-                onClick={() => setStatusFilter('ALL')}
-                className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-200 hover:bg-amber-100 transition-colors cursor-pointer"
-              >
-                {STATUS_FILTERS.find((f) => f.value === statusFilter)?.label}
-                <X className="size-3" />
-              </button>
-            )}
-            {search && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600 ring-1 ring-inset ring-slate-200">
-                &ldquo;{search}&rdquo;
-              </span>
-            )}
+      {/* Filter row: search, type segments, status, sort. Stays mounted even
+          when the result set is empty — that's how the user sees *why*. */}
+      <div className="flex flex-col gap-3 pt-4 md:flex-row md:flex-wrap md:items-center md:pt-6">
+        <div className="relative min-w-[240px] flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-tm-subtle" aria-hidden="true" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search trips"
+            aria-label="Search trips"
+            className="tm-input pl-[34px] pr-9"
+          />
+          {search && (
             <button
-              onClick={clearFilters}
-              className="text-xs text-slate-500 hover:text-slate-700 transition-colors cursor-pointer underline underline-offset-2"
+              onClick={() => setSearch('')}
+              className="absolute right-0 top-0 inline-flex h-full w-9 items-center justify-center text-tm-subtle hover:text-tm-body"
+              aria-label="Clear search"
             >
-              Clear all
+              <X className="size-3.5" />
             </button>
-          </motion.div>
-        )}
+          )}
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <div className="tm-seg" role="radiogroup" aria-label="Filter by trip type">
+            {TYPE_FILTERS.map(({ value, label }) => (
+              <button
+                key={value}
+                type="button"
+                role="radio"
+                aria-checked={typeFilter === value}
+                data-selected={typeFilter === value}
+                onClick={() => setTypeFilter(value)}
+                className="tm-seg-item"
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="tm-input h-9 w-full sm:w-[168px]" aria-label="Filter by status">
+              <div className="flex items-center gap-2">
+                <SlidersHorizontal className="size-3.5 text-tm-subtle" />
+                <SelectValue />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              {STATUS_FILTERS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger className="tm-input h-9 w-full sm:w-[168px]" aria-label="Sort trips">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="date-nearest">Date · Nearest</SelectItem>
+              <SelectItem value="date-farthest">Date · Farthest</SelectItem>
+              <SelectItem value="name-az">Name · A–Z</SelectItem>
+              <SelectItem value="name-za">Name · Z–A</SelectItem>
+              <SelectItem value="status">Status</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Content area */}
-      {loading ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {[0, 1, 2, 3].map((i) => (
-            <SkeletonCard key={i} index={i} />
-          ))}
-        </div>
-      ) : error ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-red-100 bg-red-50/50 py-16 text-center">
-          <AlertCircle className="mb-4 size-10 text-red-400" />
-          <h3 className="text-lg font-semibold text-slate-900">Failed to load trips</h3>
-          <p className="mt-1 text-sm text-slate-500">{error}</p>
-          <Button onClick={fetchTrips} variant="outline" className="mt-4">
-            <RefreshCw className="mr-2 size-4" />
-            Try again
-          </Button>
-        </div>
-      ) : filtered.length === 0 ? (
-        trips.length === 0 ? (
-          <TMEmptyState
-            title="No trips yet"
-            description="Create your first trip to get started."
-            actionLabel="New Trip"
-            actionHref="/trips/new"
-          />
-        ) : (
-          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 py-16 px-5 text-center">
-            <Search className="mb-4 size-10 text-slate-300" />
-            <h3 className="text-[17px] font-semibold text-slate-900">No matching trips</h3>
-            <p className="mt-1.5 text-[13px] text-slate-400">
-              No trips match your current search or filters.
-            </p>
-            <Button onClick={clearFilters} variant="outline" size="sm" className="mt-4">
-              Clear filters
-            </Button>
+      <div className="pt-5">
+        {loading ? (
+          <TMCardGridSkeleton count={6} columns={3} />
+        ) : error ? (
+          <div className="tm-card">
+            <TMErrorState
+              title="Couldn't load your trips"
+              description={`${error}. Your data is safe — nothing was lost.`}
+              onRetry={fetchTrips}
+            />
           </div>
-        )
-      ) : (
-        <motion.div
-          className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
-          initial="hidden"
-          animate="visible"
-          variants={{
-            hidden: {},
-            visible: { transition: { staggerChildren: 0.07 } },
-          }}
-        >
-          <AnimatePresence mode="popLayout">
+        ) : filtered.length === 0 ? (
+          <div className="tm-card">
+            {trips.length === 0 ? (
+              <TMEmptyState
+                title="Plan your first trip"
+                description="Trips hold your itinerary, bookings, budget, and the people travelling with you."
+                actionLabel="New Trip"
+                actionHref="/trips/new"
+                icon={MapPin}
+              />
+            ) : (
+              <TMFilteredEmpty
+                noun="trips"
+                query={search}
+                filterLabel={STATUS_FILTERS.find((f) => f.value === statusFilter)?.label}
+                onClear={clearFilters}
+              />
+            )}
+          </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {filtered.map((trip) => {
               const isSelected = selectedIds.has(trip.id);
               return (
-                <motion.div
+                <div
                   key={trip.id}
-                  layout
-                  variants={{
-                    hidden: { opacity: 0, y: 20, scale: 0.97 },
-                    visible: {
-                      opacity: 1,
-                      y: 0,
-                      scale: 1,
-                      transition: { duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] },
-                    },
+                  className={`relative rounded-[14px] ${selectMode && isSelected ? 'ring-2 ring-tm-accent ring-offset-2' : ''}`}
+                  onClick={(e) => {
+                    if (selectMode) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      toggleSelected(trip.id, !isSelected);
+                    }
                   }}
-                  exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
                 >
-                  <div
-                    className={`relative rounded-xl transition-all ${
-                      selectMode && isSelected ? 'ring-2 ring-amber-500 ring-offset-2' : ''
-                    }`}
-                    onClick={(e) => {
-                      if (selectMode) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        toggleSelected(trip.id, !isSelected);
-                      }
-                    }}
-                  >
-                    {selectMode && (
-                      <label
-                        className="absolute top-2 left-2 z-10 flex items-center justify-center rounded bg-white/95 p-1.5 shadow-sm ring-1 ring-slate-200 cursor-pointer"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <input
-                          type="checkbox"
-                          className="size-4 cursor-pointer accent-amber-500"
-                          checked={isSelected}
-                          onChange={(e) => toggleSelected(trip.id, e.target.checked)}
-                          aria-label={`Select ${trip.title}`}
-                        />
-                      </label>
-                    )}
-                    <div className={selectMode ? 'pointer-events-none' : ''}>
-                      <TripCard trip={trip} onSaved={fetchTrips} onDeleted={fetchTrips} />
-                    </div>
+                  {selectMode && (
+                    <label
+                      className="absolute left-2 top-2 z-10 flex cursor-pointer items-center justify-center rounded bg-white/95 p-1.5 shadow-sm ring-1 ring-tm-line"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <input
+                        type="checkbox"
+                        className="size-4 cursor-pointer accent-[#0F172A]"
+                        checked={isSelected}
+                        onChange={(e) => toggleSelected(trip.id, e.target.checked)}
+                        aria-label={`Select ${trip.title}`}
+                      />
+                    </label>
+                  )}
+                  <div className={selectMode ? 'pointer-events-none' : ''}>
+                    <TripCard
+                      trip={trip}
+                      isNext={trip.id === nextTripId}
+                      onSaved={fetchTrips}
+                      onDeleted={fetchTrips}
+                    />
                   </div>
-                </motion.div>
+                </div>
               );
             })}
-          </AnimatePresence>
-        </motion.div>
-      )}
+          </div>
+        )}
+      </div>
 
       {selectMode && selectedIds.size > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 md:left-64 z-40 border-t border-slate-200 bg-white px-3 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-lg">
-          <div className="mx-auto flex max-w-6xl items-center gap-3 flex-wrap">
-            <span className="font-semibold text-slate-800">
-              {selectedIds.size} selected
-            </span>
-            <Button variant="outline" size="sm" className="h-10 sm:h-8" onClick={() => setSelectedIds(new Set())}>
+        <div
+          className="tm-tabbar fixed inset-x-0 bottom-0 z-40 md:left-[248px]"
+          style={{ padding: '12px 16px calc(12px + var(--safe-area-bottom))' }}
+        >
+          <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3">
+            <span className="text-[13px] font-semibold text-tm-ink">{selectedIds.size} selected</span>
+            <button type="button" className="tm-btn tm-btn-secondary" onClick={() => setSelectedIds(new Set())}>
               Clear
-            </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              className="h-10 sm:h-8"
-              onClick={() => setBulkDeleteOpen(true)}
-            >
+            </button>
+            <button type="button" className="tm-btn tm-btn-danger" onClick={() => setBulkDeleteOpen(true)}>
               Delete
-            </Button>
-            <Button variant="outline" size="sm" className="h-10 sm:h-8" onClick={handleBulkExportCsv}>
+            </button>
+            <button type="button" className="tm-btn tm-btn-secondary" onClick={handleBulkExportCsv}>
               Export CSV
-            </Button>
+            </button>
           </div>
         </div>
       )}
@@ -582,6 +482,6 @@ function TripsPageContent() {
         description="This action cannot be undone. All itinerary items, vendor/client links, and expenses for these trips will also be removed."
         isDeleting={isBulkDeleting}
       />
-    </div>
+    </TMPageShell>
   );
 }
