@@ -83,7 +83,7 @@ const sections: Section[] = [
     icon: Plug,
     title: '5. Third-Party Services',
     paragraphs: [
-      'Travel Manager integrates with third-party services (weather and currency-rate APIs, etc.) when you choose to enable them. Your use of those services is also governed by their terms. We are not responsible for outages or changes to third-party services.',
+      'Travel Manager integrates with third-party services (weather and mapping APIs, etc.) when you choose to enable them. Your use of those services is also governed by their terms. We are not responsible for outages or changes to third-party services.',
     ],
   },
   {

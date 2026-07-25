@@ -112,7 +112,6 @@ const sections: Section[] = [
       'Vercel — web hosting (processor).',
       'Apple Push Notification Service — push delivery, if you enable it.',
       'Open-Meteo — weather forecasts. We send only the latitude and longitude of the trip destination. No user identity is transmitted.',
-      'Frankfurter — currency exchange rates. We send only currency codes.',
       'OpenStreetMap Nominatim — place search / geocoding. We send the place text you type when searching for a destination or address.',
       'OSRM (Open Source Routing Machine) — driving distances and routes. We send only trip waypoint coordinates.',
       'AeroDataBox (via RapidAPI) — flight lookups, if you use flight search. We send the flight number and date you enter.',

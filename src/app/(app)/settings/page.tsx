@@ -1,11 +1,13 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { Shield, Download, FileText, Trash2, Loader2, Monitor, MapPin, X, Mail, Wrench, PanelLeft, Smartphone, RotateCcw, AtSign, BarChart3, GripVertical } from 'lucide-react';
+import { Shield, Download, FileText, Trash2, Loader2, Monitor, MapPin, X, Mail, PanelLeft, Smartphone, RotateCcw, AtSign, BarChart3, GripVertical } from 'lucide-react';
 import { useNavPreferences, TOGGLEABLE_NAV_ITEMS, TABBABLE_NAV_ITEMS, MOBILE_TAB_SLOTS } from '@/lib/travelmanager/useNavPreferences';
 import { TMReorderList } from '@/components/travelmanager/TMReorderList';
+import { TMInfoHint } from '@/components/travelmanager/TMInfoHint';
 import { useGeocodingSearch, formatGeoName } from '@/lib/travelmanager/useGeocodingSearch';
 import type { GeoResult } from '@/lib/travelmanager/useGeocodingSearch';
 import { Input } from '@/components/ui/input';
@@ -20,7 +22,6 @@ import {
 } from '@/components/ui/dialog';
 import { TMPageShell, TMScreenHeader } from '@/components/travelmanager/TMPageShell';
 import { useTMToast } from '@/components/travelmanager/TMToast';
-import { CurrencyConverter } from '@/components/travelmanager/CurrencyConverter';
 import { NotificationsSettingCard } from '@/components/travelmanager/NotificationsSettingCard';
 import { KeyboardShortcutsCard } from '@/components/travelmanager/KeyboardShortcutsCard';
 import { ANALYTICS_OPTOUT_KEY } from '@/components/travelmanager/ClickTracker';
@@ -567,7 +568,11 @@ export default function SettingsPage() {
           </button>
         </div>
         <p className="mb-3 text-[12px] leading-snug text-tm-subtle md:mb-4 md:text-[13px]">
-          Up to {MOBILE_TAB_SLOTS}, drag to reorder. Home and More are fixed; the rest live under More.
+          Up to {MOBILE_TAB_SLOTS}, drag to reorder.{' '}
+          <TMInfoHint label="bottom tabs">
+            Home and More are always on the bar. Anything you leave off is still reachable under
+            More, so this only changes what is one tap away. Saved on this device.
+          </TMInfoHint>
         </p>
 
         {/* On the bar, in order — drag a row to rearrange. */}
@@ -653,7 +658,11 @@ export default function SettingsPage() {
           )}
         </div>
         <p className="text-xs text-slate-500 mb-4">
-          Hidden sections stay reachable by search and keyboard shortcut.
+          Choose what appears in the sidebar.{' '}
+          <TMInfoHint label="sidebar sections">
+            Hidden sections stay reachable by search and by their keyboard shortcut. Saved on this
+            device, so each computer can differ.
+          </TMInfoHint>
         </p>
         <div className="divide-y divide-slate-100">
           {TOGGLEABLE_NAV_ITEMS.map(({ key, label, icon: Icon, description }) => {
@@ -690,18 +699,6 @@ export default function SettingsPage() {
       {/* Notifications */}
       <NotificationsSettingCard />
 
-      {/* Tools */}
-      <motion.div variants={item}>
-        <div className="mb-3 flex items-center gap-2 px-1">
-          <Wrench className="size-[18px] text-amber-600" />
-          <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">Tools</h2>
-        </div>
-        <p className="mb-3 px-1 text-xs text-slate-500">
-          Handy utilities for trip planning.
-        </p>
-        <CurrencyConverter />
-      </motion.div>
-
       {/* Privacy */}
       <motion.div variants={item} className="tm-card px-4 py-4 md:px-6 md:py-[22px]">
         <div className="flex items-center gap-2 mb-4">
@@ -709,12 +706,20 @@ export default function SettingsPage() {
           <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">Privacy</h2>
         </div>
         <div className="flex items-start justify-between gap-4 rounded-xl border border-slate-100 p-4">
-          <div>
-            <p className="text-sm font-medium text-slate-800">Usage analytics</p>
-            <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
-              First-party only: which features you click and pages you visit, used to fix bugs and
-              improve the app. Never sold or shared with anyone. Turn this off to stop all analytics
-              on this device.
+          <div className="min-w-0">
+            <p className="flex items-center gap-1.5 text-[13px] font-medium text-tm-ink">
+              Usage analytics
+              <TMInfoHint label="usage analytics">
+                First-party only — which features you click and pages you visit, used to fix bugs
+                and improve the app. Never sold or shared. Turning this off stops all analytics on
+                this device.
+              </TMInfoHint>
+            </p>
+            <p className="mt-0.5 text-[12px] text-tm-subtle">
+              Helps improve the app. Never sold.{' '}
+              <Link href="/privacy" className="font-medium text-tm-accent-text hover:text-tm-accent-text-hover">
+                Privacy policy
+              </Link>
             </p>
           </div>
           <button
