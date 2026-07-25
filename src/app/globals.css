@@ -479,6 +479,15 @@
   }
 }
 
+/* Navy mobile tab bar — the phone's counterpart to the desktop sidebar, so the
+   app's chrome reads as one dark frame on both form factors. */
+@utility tm-tabbar-dark {
+  background: rgba(11, 18, 32, 0.94);
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
 /* Mobile bottom tab bar surface (and the detail-screen action footer). */
 @utility tm-tabbar {
   background: rgba(255, 255, 255, 0.92);
@@ -587,6 +596,14 @@
 .tm-pin-next { background: var(--color-tm-accent); color: var(--color-tm-nav); }
 .tm-pin-past { background: #94A3B8; }
 .tm-pin-sm { height: 22px; min-width: 22px; font-size: 9px; }
+
+/* WKWebView rubber-band: a `position: sticky` header is dragged (and visually
+   stretched by the translucent backdrop) when the scroller bounces past its
+   top. Containing the overscroll on the scroll container stops the bounce from
+   reaching the header at all. */
+@supports (-webkit-touch-callout: none) {
+  main { overscroll-behavior-y: contain; }
+}
 
 /* iOS safe area support — accounts for notch / Dynamic Island and home indicator.
    Requires `viewport-fit=cover` in the viewport meta (set in src/app/layout.tsx). */

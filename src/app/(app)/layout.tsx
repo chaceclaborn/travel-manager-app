@@ -316,7 +316,10 @@ export default function TravelManagerLayout({
           {/* Main Content */}
           <main
             id="main-content"
-            className="min-w-0 flex-1 overflow-y-auto overflow-x-clip md:ml-[248px] md:overflow-y-visible"
+            // `overscroll-contain` is what stops the sticky header stretching
+            // when you swipe down hard: without it WKWebView rubber-bands the
+            // whole scroller and drags the pinned header with it.
+            className="min-w-0 flex-1 overflow-y-auto overscroll-contain overflow-x-clip md:ml-[248px] md:overflow-y-visible"
             // Clears the tab bar exactly: 6px top padding + 48px item +
             // max(8px, inset) bottom. Matching the bar's own math instead of
             // guessing keeps the last row reachable without leaving a gap.

@@ -90,15 +90,23 @@ export async function nativeOAuthSignIn(
       } catch {
         // No previous session to clear — fine.
       }
-      // A 30s guard so a wedged native flow surfaces an error instead of a
+      // A guard so a wedged native flow surfaces an error instead of a
       // forever-pending promise (see build-6/7 postmortem: dead buttons).
+      //
+      // This was 30s, which was wrong: the timer covers the WHOLE flow,
+      // including however long the person spends in Google's sheet. Reaching
+      // for a password manager, typing a password, or completing 2FA passes
+      // 30s routinely, so a perfectly good sign-in was reported as a failure —
+      // reproduced on the simulator 2026-07-25. The guard only needs to be
+      // shorter than "user gave up", not shorter than "user is still typing".
+      const SIGN_IN_TIMEOUT_MS = 5 * 60 * 1000;
       const res = (await Promise.race([
         SocialLogin.login({
           provider: 'google',
           options: { nonce: hashed, scopes: ['email', 'profile'] },
         }),
         new Promise<never>((_, rej) =>
-          setTimeout(() => rej(new Error('Google sign-in timed out. Please try again.')), 30000)
+          setTimeout(() => rej(new Error('Google sign-in timed out. Please try again.')), SIGN_IN_TIMEOUT_MS)
         ),
       ])) as Awaited<ReturnType<typeof SocialLogin.login>>;
       idToken = (res.result as { idToken?: string })?.idToken;

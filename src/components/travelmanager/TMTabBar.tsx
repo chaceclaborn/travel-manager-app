@@ -35,7 +35,7 @@ export function TMTabBar() {
 
   return (
     <nav
-      className="tm-tabbar fixed inset-x-0 bottom-0 z-40 flex md:hidden"
+      className="tm-tabbar-dark fixed inset-x-0 bottom-0 z-40 flex md:hidden"
       style={{ padding: '6px 8px max(8px, var(--safe-area-bottom))' }}
       aria-label="Primary"
     >
@@ -55,12 +55,12 @@ export function TMTabBar() {
             className="flex min-h-[48px] flex-1 flex-col items-center justify-center gap-[3px] rounded-[10px]"
           >
             <Icon
-              className={`size-5 ${isActive ? 'text-tm-accent-text' : 'text-tm-nav-text'}`}
+              className={`size-5 ${isActive ? 'text-tm-accent-hover' : 'text-tm-nav-icon'}`}
               strokeWidth={isActive ? 2.2 : 2}
               aria-hidden="true"
             />
             <span
-              className={`text-[10px] ${isActive ? 'font-semibold text-tm-accent-text' : 'font-medium text-tm-nav-text'}`}
+              className={`text-[10px] ${isActive ? 'font-semibold text-white' : 'font-medium text-tm-nav-text'}`}
             >
               {label}
             </span>
