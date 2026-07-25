@@ -209,6 +209,18 @@ export function useNavPreferences() {
     setTabKeysState(next);
   }, []);
 
+  /** Move a tab one position left (-1) or right (+1) along the bar. */
+  const moveTabKey = useCallback((key: string, direction: -1 | 1) => {
+    const current = readTabKeys();
+    const from = current.indexOf(key);
+    const to = from + direction;
+    if (from === -1 || to < 0 || to >= current.length) return;
+    const next = [...current];
+    [next[from], next[to]] = [next[to], next[from]];
+    writeTabKeys(next);
+    setTabKeysState(next);
+  }, []);
+
   const resetTabs = useCallback(() => {
     writeTabKeys(DEFAULT_TAB_KEYS);
     setTabKeysState(DEFAULT_TAB_KEYS);
@@ -221,6 +233,6 @@ export function useNavPreferences() {
 
   return {
     hidden, isHidden, setHidden, reset, hydrated, visibleItems,
-    tabKeys, tabItems, setTabKey, resetTabs,
+    tabKeys, tabItems, setTabKey, moveTabKey, resetTabs,
   };
 }
