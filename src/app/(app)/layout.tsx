@@ -319,7 +319,11 @@ export default function TravelManagerLayout({
             // `overscroll-contain` is what stops the sticky header stretching
             // when you swipe down hard: without it WKWebView rubber-bands the
             // whole scroller and drags the pinned header with it.
-            className="min-w-0 flex-1 overflow-y-auto overscroll-contain overflow-x-clip md:ml-[248px] md:overflow-y-visible"
+            // `min-h-0` is load-bearing: a flex child will not shrink below its
+            // content height without it, so `overflow-y-auto` never engages —
+            // the element just grows and the shell's `overflow-hidden` clips
+            // it, leaving a page that cannot scroll at all.
+            className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain overflow-x-clip md:ml-[248px] md:min-h-full md:overflow-y-visible"
             // Clears the tab bar exactly: 6px top padding + 48px item +
             // max(8px, inset) bottom. Matching the bar's own math instead of
             // guessing keeps the last row reachable without leaving a gap.
