@@ -904,11 +904,26 @@ export default function BookingsPage() {
     );
   }
 
-  // Counts shown on the type pills, so the filter row doubles as a breakdown
-  // of what you actually have.
-  const typeCounts: Record<string, number> = { ALL: bookings.length };
-  for (const b of bookings) typeCounts[b.type] = (typeCounts[b.type] ?? 0) + 1;
-  const tripCount = new Set(bookings.map((b) => b.tripId).filter(Boolean)).size;
+  // Counts shown on the type pills. These must be computed from the rows that
+  // every OTHER filter already admits — otherwise a pill reads "All 2" while
+  // the list shows one, because the default "Active only" status filter is
+  // hiding a cancelled booking the count still includes.
+  const visibleBeforeType = bookings.filter((b) => {
+    const matchesSearch =
+      !search ||
+      b.provider.toLowerCase().includes(search.toLowerCase()) ||
+      (b.location && b.location.toLowerCase().includes(search.toLowerCase())) ||
+      (b.confirmationNum && b.confirmationNum.toLowerCase().includes(search.toLowerCase()));
+    const matchesLink =
+      linkFilter === 'ALL' ||
+      (linkFilter === 'LINKED' && b.tripId) ||
+      (linkFilter === 'STANDALONE' && !b.tripId);
+    const matchesStatus = statusFilter === 'ALL' || b.status === statusFilter;
+    return matchesSearch && matchesLink && matchesStatus;
+  });
+  const typeCounts: Record<string, number> = { ALL: visibleBeforeType.length };
+  for (const b of visibleBeforeType) typeCounts[b.type] = (typeCounts[b.type] ?? 0) + 1;
+  const tripCount = new Set(visibleBeforeType.map((b) => b.tripId).filter(Boolean)).size;
 
   return (
     <TMPageShell width={1120}>
@@ -923,8 +938,12 @@ export default function BookingsPage() {
         }
         subtitle={
           bookings.length > 0
-            ? `${bookings.length} ${bookings.length === 1 ? 'booking' : 'bookings'}${
+            ? `${visibleBeforeType.length} ${visibleBeforeType.length === 1 ? 'booking' : 'bookings'}${
                 tripCount ? ` across ${tripCount} ${tripCount === 1 ? 'trip' : 'trips'}` : ''
+              }${
+                bookings.length > visibleBeforeType.length
+                  ? ` · ${bookings.length - visibleBeforeType.length} hidden by filters`
+                  : ''
               }`
             : undefined
         }
