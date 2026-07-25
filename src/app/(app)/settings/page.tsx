@@ -367,12 +367,12 @@ export default function SettingsPage() {
         variants={container}
         initial="hidden"
         animate="show"
-        className="flex flex-col gap-[18px] pt-5 md:pt-7"
+        className="flex flex-col gap-3 pt-4 md:gap-[18px] md:pt-7"
       >
 
       {/* Account Info */}
-      <motion.div variants={item} className="tm-card px-6 py-[22px]">
-        <h2 className="mb-4 text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">Account Information</h2>
+      <motion.div variants={item} className="tm-card px-4 py-2.5 md:py-4 md:px-6 md:py-[22px]">
+        <h2 className="mb-3 text-[15px] font-semibold tracking-[-0.01em] text-tm-ink md:mb-4">Account Information</h2>
         <div className="flex items-center gap-4">
           {avatarUrl && !avatarError ? (
             <Image
@@ -384,7 +384,7 @@ export default function SettingsPage() {
               onError={() => setAvatarError(true)}
             />
           ) : (
-            <div className="size-[60px] rounded-full bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-xl font-bold text-white shrink-0 shadow-[0_6px_16px_-4px_rgba(245,158,11,0.5)]">
+            <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-amber-600 text-[15px] font-semibold text-white shadow-[0_4px_12px_-4px_rgba(245,158,11,0.5)] md:size-[60px] md:text-xl">
               {initials}
             </div>
           )}
@@ -404,7 +404,7 @@ export default function SettingsPage() {
       </motion.div>
 
       {/* Username */}
-      <motion.div variants={item} className="tm-card px-6 py-[22px]">
+      <motion.div variants={item} className="tm-card px-4 py-2.5 md:py-4 md:px-6 md:py-[22px]">
         <div className="flex items-center gap-2 mb-4">
           <AtSign className="size-[18px] text-amber-600" />
           <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">Username</h2>
@@ -482,7 +482,7 @@ export default function SettingsPage() {
       </motion.div>
 
       {/* Home Location */}
-      <motion.div variants={item} className="tm-card px-6 py-[22px]">
+      <motion.div variants={item} className="tm-card px-4 py-2.5 md:py-4 md:px-6 md:py-[22px]">
         <div className="flex items-center gap-2 mb-4">
           <MapPin className="size-[18px] text-amber-600" />
           <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">Home Location</h2>
@@ -552,7 +552,7 @@ export default function SettingsPage() {
 
       {/* Bottom tabs: phones only. Desktop has no tab bar, so this control
           would configure something the user cannot see. */}
-      <motion.div variants={item} className="tm-card px-6 py-[22px] md:hidden">
+      <motion.div variants={item} className="tm-card px-4 py-2.5 md:py-4 md:px-6 md:py-[22px] md:hidden">
         <div className="mb-1 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <Smartphone className="size-[18px] text-amber-600" />
@@ -567,7 +567,7 @@ export default function SettingsPage() {
             Reset
           </button>
         </div>
-        <p className="mb-4 text-[13px] text-tm-subtle">
+        <p className="mb-3 text-[12px] leading-snug text-tm-subtle md:mb-4 md:text-[13px]">
           Choose up to {MOBILE_TAB_SLOTS} destinations for the phone&apos;s bottom bar and drag
           them into the order you want. Home and More are always there; anything you leave
           off is still available under More.
@@ -638,8 +638,8 @@ export default function SettingsPage() {
 
       {/* Sidebar: desktop only, for the same reason in reverse — a phone never
           renders the sidebar, so tuning it there configures nothing. */}
-      <motion.div variants={item} className="hidden tm-card px-6 py-[22px] md:block">
-        <div className="flex items-center justify-between gap-2 mb-1">
+      <motion.div variants={item} className="hidden tm-card px-4 py-2.5 md:py-4 md:px-6 md:py-[22px] md:block">
+        <div className="mb-1 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <PanelLeft className="size-[18px] text-amber-600" />
             <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">Sidebar</h2>
@@ -706,7 +706,7 @@ export default function SettingsPage() {
       </motion.div>
 
       {/* Privacy */}
-      <motion.div variants={item} className="tm-card px-6 py-[22px]">
+      <motion.div variants={item} className="tm-card px-4 py-2.5 md:py-4 md:px-6 md:py-[22px]">
         <div className="flex items-center gap-2 mb-4">
           <BarChart3 className="size-[18px] text-amber-600" />
           <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">Privacy</h2>
@@ -748,7 +748,7 @@ export default function SettingsPage() {
       </motion.div>
 
       {/* Security */}
-      <motion.div variants={item} className="tm-card px-6 py-[22px]">
+      <motion.div variants={item} className="tm-card px-4 py-2.5 md:py-4 md:px-6 md:py-[22px]">
         <div className="flex items-center gap-2 mb-4">
           <Shield className="size-[18px] text-amber-600" />
           <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">Security</h2>
@@ -759,7 +759,7 @@ export default function SettingsPage() {
             <Loader2 className="size-5 animate-spin text-slate-400" />
           </div>
         ) : sessions.length === 0 ? (
-          <p className="text-sm text-slate-400 py-4">No sign-in history available</p>
+          <p className="text-sm text-slate-400 py-2.5 md:py-4">No sign-in history available</p>
         ) : (
           <div className="overflow-x-auto -mx-6 px-6">
             <table className="w-full text-sm">
@@ -802,7 +802,7 @@ export default function SettingsPage() {
       </motion.div>
 
       {/* Data Management */}
-      <motion.div variants={item} className="tm-card px-6 py-[22px]">
+      <motion.div variants={item} className="tm-card px-4 py-2.5 md:py-4 md:px-6 md:py-[22px]">
         <div className="flex items-center gap-2 mb-4">
           <Download className="size-[18px] text-amber-600" />
           <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">Data Management</h2>
@@ -862,7 +862,7 @@ export default function SettingsPage() {
       </motion.div>
 
       {/* About & Legal */}
-      <motion.div variants={item} className="tm-card px-6 py-[22px]">
+      <motion.div variants={item} className="tm-card px-4 py-2.5 md:py-4 md:px-6 md:py-[22px]">
         <div className="flex items-center gap-2 mb-4">
           <Shield className="size-[18px] text-amber-600" />
           <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">About &amp; Legal</h2>
@@ -910,7 +910,7 @@ export default function SettingsPage() {
           <Trash2 className="size-[18px] text-red-600" />
           <h2 className="text-base font-semibold text-red-600">Danger Zone</h2>
         </div>
-        <p className="text-sm text-slate-500 mb-4">
+        <p className="mb-3 text-[12px] leading-snug text-tm-subtle md:mb-4 md:text-[13px]">
           Permanently delete your account and all associated data. This action cannot be undone.
         </p>
         <Button
