@@ -223,19 +223,32 @@ export function TripCard({ trip, onSaved, onDeleted, isNext = false }: TripCardP
           aria-hidden="true"
         />
 
-        {/* Mobile: one row — tile, name + dates, then status over budget. */}
-        <div className="flex items-center gap-3 px-3.5 py-3 md:hidden">
-          <TMCodeTile code={code} size={38} highlight={isNext} />
+        {/* Mobile: two lines, not three.
+            The status and budget used to sit in their own right-hand column,
+            which forced the title into a narrow gutter and pushed long names
+            onto extra lines. Folding them into a single meta line under the
+            title lets the title use the full width AND makes the row shorter —
+            roughly 70px instead of 100. */}
+        <div className="flex items-center gap-2.5 px-3 py-2.5 md:hidden">
+          <TMCodeTile code={code} size={34} highlight={isNext} />
           <div className="min-w-0 flex-1">
-            <p className="line-clamp-2 text-[14px] font-semibold leading-snug text-tm-ink">{trip.title}</p>
-            <p className="mt-0.5 truncate text-[12px] text-tm-subtle tm-nums">{dateLine}</p>
+            <p className="line-clamp-2 text-[14px] font-semibold leading-[1.25] text-tm-ink">{trip.title}</p>
+            <p className="mt-1 flex items-center gap-1.5 truncate text-[12px] text-tm-subtle tm-nums">
+              <span
+                className="size-[6px] shrink-0 rounded-full"
+                style={{ background: palette.dot }}
+                aria-label={palette.label}
+              />
+              {dateLine}
+              {trip.budget != null && (
+                <>
+                  <span aria-hidden="true">·</span>
+                  <span className="font-medium text-tm-body">{formatBudget(trip.budget)}</span>
+                </>
+              )}
+            </p>
           </div>
-          <div className="flex shrink-0 flex-col items-end gap-1">
-            <TMStatusBadge status={trip.status} />
-            <span className="text-[12px] font-semibold text-tm-ink tm-nums">
-              {trip.budget != null ? formatBudget(trip.budget) : ''}
-            </span>
-          </div>
+          <ChevronRight className="size-4 shrink-0 text-tm-ghost" aria-hidden="true" />
         </div>
 
         {/* Desktop: the full card. */}
