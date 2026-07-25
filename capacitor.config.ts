@@ -16,7 +16,12 @@ const config: CapacitorConfig = {
     // cleartext: true,
   },
   ios: {
-    contentInset: 'always',
+    // 'never', not 'always'. With 'always' WKWebView insets the content by the
+    // safe area itself, and the app ALSO pads by env(safe-area-inset-top) —
+    // so the inset was counted twice and left ~60pt of dead space above every
+    // screen title. The CSS owns safe-area handling (viewport-fit=cover is set
+    // in src/app/layout.tsx), so the web view must not also do it.
+    contentInset: 'never',
   },
   plugins: {
     // Enable Capacitor's native HTTP layer. This is REQUIRED for the app's

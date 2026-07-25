@@ -30,7 +30,7 @@ export interface TMStat {
   href?: string;
 }
 
-function Cell({ stat }: { stat: TMStat }) {
+function Cell({ stat, className: extra = '' }: { stat: TMStat; className?: string }) {
   const inner = (
     <>
       <p className="tm-label-upper truncate">{stat.label}</p>
@@ -56,7 +56,7 @@ function Cell({ stat }: { stat: TMStat }) {
   // border. That draws correct internal dividers at any wrap count, which a
   // "border-right except the last" rule cannot do once cells wrap to a
   // second line.
-  const className = 'block min-w-0 border-l border-t border-tm-hairline px-6 py-5';
+  const className = `block min-w-0 border-l border-t border-tm-hairline px-6 py-5 ${extra}`;
 
   if (stat.href) {
     return (
@@ -70,14 +70,37 @@ function Cell({ stat }: { stat: TMStat }) {
 
 export function TMStatStrip({ stats, className = '' }: { stats: TMStat[]; className?: string }) {
   if (stats.length === 0) return null;
+
+  // A cell count that doesn't fill the last row leaves an empty slot, and an
+  // empty slot draws no border — so the cell beside it loses its underline and
+  // runs into the row below (5 stats at 2-up: "Vendors" ran into "Meetings").
+  // Stretching the final cell across the remainder closes the rule and reads
+  // as deliberate rather than as a gap.
+  const spanAt = (cols: number) => (stats.length % cols === 0 ? 1 : cols - ((stats.length - 1) % cols));
+  const span2 = spanAt(2);
+  const span3 = spanAt(3);
+  const lastCellClass = [
+    span2 === 2 ? 'col-span-2' : '',
+    // Reset at each breakpoint before re-applying, or the smaller screen's
+    // span leaks upward into the 3-up and n-up layouts.
+    span3 === 1 ? 'sm:col-span-1' : span3 === 2 ? 'sm:col-span-2' : 'sm:col-span-3',
+    'lg:col-span-1',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
     <div className={`tm-card overflow-hidden ${className}`}>
       {/* The strip is one card with internal rules, not a gapped grid — so it
           collapses by rewrapping cells, never by breaking into loose boxes.
           2-up on phones, 3-up on tablets, one row per cell on desktop. */}
       <div className="tm-strip -ml-px -mt-px" style={{ ['--tm-cells' as string]: stats.length }}>
-        {stats.map((stat) => (
-          <Cell key={stat.label} stat={stat} />
+        {stats.map((stat, i) => (
+          <Cell
+            key={stat.label}
+            stat={stat}
+            className={i === stats.length - 1 ? lastCellClass : ''}
+          />
         ))}
       </div>
     </div>
