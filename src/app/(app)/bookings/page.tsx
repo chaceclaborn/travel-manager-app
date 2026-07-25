@@ -223,6 +223,12 @@ function BookingCard({
   const editTypeIcon = BOOKING_TYPE_ICON[form.type as BookingType];
   const palette = bookingTypePalette(booking.type);
   const editPalette = bookingTypePalette(form.type);
+  // One line that stands in for the desktop fact grid on a phone.
+  const mobileSummary = booking.type === 'FLIGHT' || booking.type === 'TRAIN' || booking.type === 'BUS'
+    ? [booking.location, booking.endLocation].filter(Boolean).join(' → ')
+    : booking.startDateTime
+      ? `${formatDate(booking.startDateTime)}${booking.endDateTime ? ` – ${formatDate(booking.endDateTime)}` : ''}`
+      : booking.location || '';
   const { showEndLocation, showSeat, dateOnly } = getBookingFormHelpers(form.type as BookingType);
   const { showToast } = useTMToast();
 
@@ -292,7 +298,7 @@ function BookingCard({
       animate="visible"
       layout
       whileTap={{ scale: 0.98 }}
-      className={`tm-card group relative min-w-0 p-[18px] ${
+      className={`tm-card group relative min-w-0 p-3 md:p-[18px] ${
         editing
           ? '!border-tm-accent shadow-[0_0_0_3px_rgba(245,158,11,0.12)]'
           : selected
@@ -313,7 +319,36 @@ function BookingCard({
           />
         </label>
       )}
-      <div className={`mb-3.5 flex items-start justify-between gap-2 ${selectMode && !editing ? 'pl-8' : ''}`}>
+      {/* Mobile: one compact row. Everything the desktop card spreads over
+          ~215px — provider, type, dates, trip, confirmation — folded into two
+          lines, matching the Trips list. */}
+      {!editing && (
+        <Link
+          href={detailHref('bookings', booking.id)}
+          className={`flex items-center gap-2.5 md:hidden ${selectMode ? 'pl-8' : ''}`}
+        >
+          <TMIconTile icon={typeIcon} size={34} bg={palette.bg} fg={palette.fg} />
+          <span className="min-w-0 flex-1">
+            <span
+              className={`block truncate text-[14px] font-semibold ${
+                isCancelled ? 'text-tm-muted line-through' : 'text-tm-ink'
+              }`}
+            >
+              {booking.provider}
+            </span>
+            <span className="mt-0.5 block truncate text-[12px] text-tm-subtle tm-nums">
+              {config.label}
+              {mobileSummary && ` · ${mobileSummary}`}
+              {booking.trip && ` · ${booking.trip.title}`}
+            </span>
+          </span>
+          {booking.confirmationNum && (
+            <TMMonoChip className="shrink-0 !px-1.5 !text-[10px]">{booking.confirmationNum}</TMMonoChip>
+          )}
+        </Link>
+      )}
+
+      <div className={`mb-3.5 hidden items-start justify-between gap-2 md:flex ${selectMode && !editing ? 'pl-8' : ''} ${editing ? '!flex' : ''}`}>
         {editing ? (
           <div className="flex items-center gap-2.5">
             <TMIconTile icon={editTypeIcon} size={38} bg={editPalette.bg} fg={editPalette.fg} />
@@ -502,7 +537,7 @@ function BookingCard({
           </div>
         </form>
       ) : (
-        <>
+        <div className="hidden md:block">
           <BookingCardView booking={booking} />
 
           {/* Footer: which trip this belongs to, and what it earns. */}
@@ -519,7 +554,7 @@ function BookingCard({
               </TMChip>
             )}
           </div>
-        </>
+        </div>
       )}
     </motion.div>
   );
@@ -1220,7 +1255,7 @@ export default function BookingsPage() {
             />
           </div>
           <Select value={linkFilter} onValueChange={setLinkFilter}>
-            <SelectTrigger className="tm-input h-9 w-full sm:w-[168px]" aria-label="Filter by link status">
+            <SelectTrigger className="tm-input hidden h-9 w-full md:flex sm:w-[168px]" aria-label="Filter by link status">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -1230,7 +1265,7 @@ export default function BookingsPage() {
             </SelectContent>
           </Select>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="tm-input h-9 w-full sm:w-[168px]" aria-label="Filter by status">
+            <SelectTrigger className="tm-input hidden h-9 w-full md:flex sm:w-[168px]" aria-label="Filter by status">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -1259,7 +1294,7 @@ export default function BookingsPage() {
         </div>
       </div>
 
-      <div className="pt-5">
+      <div className="pt-4 md:pt-5">
         {filtered.length === 0 ? (
           <div className="tm-card">
             {bookings.length === 0 ? (
@@ -1280,7 +1315,7 @@ export default function BookingsPage() {
             )}
           </div>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-2 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
             {filtered.map((booking, i) => (
               <BookingCard
                 key={booking.id}
