@@ -29,6 +29,7 @@ interface DashboardData {
     totalVendors: number;
     totalClients: number;
     totalMeetings: number;
+    totalBookings: number;
     pendingCommissions: number;
   };
   upcoming: TripWithRelations[];
@@ -331,7 +332,7 @@ export default function TravelManagerDashboard() {
   }
 
   const stats = data?.stats ?? {
-    totalTrips: 0, upcomingTrips: 0, totalVendors: 0, totalClients: 0, totalMeetings: 0, pendingCommissions: 0,
+    totalTrips: 0, upcomingTrips: 0, totalVendors: 0, totalClients: 0, totalMeetings: 0, totalBookings: 0, pendingCommissions: 0,
   };
   const upcoming = data?.upcoming ?? [];
   const recent = data?.recent ?? [];
@@ -342,6 +343,18 @@ export default function TravelManagerDashboard() {
   const greeting =
     (hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening') + (firstName ? `, ${firstName}` : '');
   const dateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+
+  // The starter templates are a first-run affordance, so they're gated on the
+  // whole workspace being empty — not just on the trip count. Someone who has
+  // built up clients and vendors but happens to have no trips right now (they
+  // finished them, or deleted them) is not a new user, and pitching them
+  // "Tokyo Client Summit" as a sample reads as the app forgetting who they are.
+  const isFirstRun =
+    stats.totalTrips === 0 &&
+    stats.totalClients === 0 &&
+    stats.totalVendors === 0 &&
+    stats.totalMeetings === 0 &&
+    stats.totalBookings === 0;
 
   // Deltas are only shown where a real figure backs them — an invented
   // "+3 this quarter" would be worse than a blank line.
@@ -401,8 +414,8 @@ export default function TravelManagerDashboard() {
       />
 
       <div className="flex flex-col gap-5 pt-5 md:gap-6 md:pt-7">
-        {/* First run: starter templates instead of five empty panels. */}
-        {stats.totalTrips === 0 && (
+        {/* First run only: starter templates instead of five empty panels. */}
+        {isFirstRun && (
           <section className="tm-card p-5 md:p-6">
             <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">Get started with a template</h2>
             <p className="mt-1 text-[13px] text-tm-subtle">
