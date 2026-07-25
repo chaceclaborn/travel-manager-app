@@ -362,7 +362,7 @@ export default function SettingsPage() {
 
   return (
     <TMPageShell width={760}>
-      <TMScreenHeader title="Settings" subtitle="Manage your account, data, and preferences" />
+      <TMScreenHeader title="Settings" />
 
       <motion.div
         variants={container}
@@ -407,7 +407,7 @@ export default function SettingsPage() {
       {/* Username */}
       <motion.div variants={item} className="tm-card px-4 py-4 md:px-6 md:py-[22px]">
         <div className="flex items-center gap-2 mb-4">
-          <AtSign className="size-[18px] text-amber-600" />
+          <AtSign className="size-[18px] text-tm-muted" />
           <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">Username</h2>
         </div>
         <p className="text-xs text-slate-500 mb-3">
@@ -484,7 +484,7 @@ export default function SettingsPage() {
       {/* Home Location */}
       <motion.div variants={item} className="tm-card px-4 py-4 md:px-6 md:py-[22px]">
         <div className="flex items-center gap-2 mb-4">
-          <MapPin className="size-[18px] text-amber-600" />
+          <MapPin className="size-[18px] text-tm-muted" />
           <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">Home Location</h2>
         </div>
         <p className="text-xs text-slate-500 mb-3">
@@ -543,11 +543,6 @@ export default function SettingsPage() {
             </div>
           )}
         </div>
-        {userInfo?.homeCity && (
-          <p className="text-xs text-emerald-600 mt-2">
-            Home set to: {userInfo.homeCity}
-          </p>
-        )}
       </motion.div>
 
       {/* Bottom tabs: phones only. Desktop has no tab bar, so this control
@@ -555,7 +550,7 @@ export default function SettingsPage() {
       <motion.div variants={item} className="tm-card px-4 py-4 md:px-6 md:py-[22px] md:hidden">
         <div className="mb-1 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <Smartphone className="size-[18px] text-amber-600" />
+            <Smartphone className="size-[18px] text-tm-muted" />
             <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">Bottom tabs</h2>
           </div>
           <button
@@ -582,18 +577,27 @@ export default function SettingsPage() {
             .map((k) => TABBABLE_NAV_ITEMS.find((i) => i.key === k))
             .filter((i): i is (typeof TABBABLE_NAV_ITEMS)[number] => !!i)}
           onReorder={setTabOrder}
-          renderItem={(navItem) => {
+          renderItem={(navItem, { handleProps }) => {
             const Icon = navItem.icon;
             return (
               <div className="flex w-full items-center gap-3 px-1">
-                <GripVertical className="size-4 shrink-0 text-tm-ghost" aria-hidden="true" />
+                {/* Only this grip starts a drag — the rest of the row stays
+                    tappable and the page still scrolls over the list. */}
+                <span
+                  {...handleProps}
+                  role="button"
+                  tabIndex={-1}
+                  aria-label={`Reorder ${navItem.label}`}
+                  className="-my-2 flex h-11 w-6 shrink-0 items-center justify-center text-tm-ghost hover:text-tm-muted"
+                >
+                  <GripVertical className="size-4" aria-hidden="true" />
+                </span>
                 <span className="flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-tm-fill">
                   <Icon className="size-[17px] text-tm-label" />
                 </span>
                 <p className="min-w-0 flex-1 truncate text-[13px] font-medium text-tm-ink">{navItem.label}</p>
                 <button
                   type="button"
-                  onPointerDown={(e) => e.stopPropagation()}
                   onClick={() => { setTabKey(navItem.key, false); showToast(`${navItem.label} moved to More`); }}
                   disabled={tabKeys.length <= 1}
                   aria-label={`Remove ${navItem.label} from the bar`}
@@ -643,7 +647,7 @@ export default function SettingsPage() {
       <motion.div variants={item} className="hidden tm-card px-4 py-4 md:px-6 md:py-[22px] md:block">
         <div className="mb-1 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <PanelLeft className="size-[18px] text-amber-600" />
+            <PanelLeft className="size-[18px] text-tm-muted" />
             <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">Sidebar</h2>
           </div>
           {hiddenCount > 0 && (
@@ -702,7 +706,7 @@ export default function SettingsPage() {
       {/* Privacy */}
       <motion.div variants={item} className="tm-card px-4 py-4 md:px-6 md:py-[22px]">
         <div className="flex items-center gap-2 mb-4">
-          <BarChart3 className="size-[18px] text-amber-600" />
+          <BarChart3 className="size-[18px] text-tm-muted" />
           <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">Privacy</h2>
         </div>
         <div className="flex items-start justify-between gap-4 rounded-xl border border-slate-100 p-4">
@@ -752,7 +756,7 @@ export default function SettingsPage() {
       {/* Security */}
       <motion.div variants={item} className="tm-card px-4 py-4 md:px-6 md:py-[22px]">
         <div className="flex items-center gap-2 mb-4">
-          <Shield className="size-[18px] text-amber-600" />
+          <Shield className="size-[18px] text-tm-muted" />
           <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">Security</h2>
         </div>
         <h3 className="text-sm font-medium text-slate-700 mb-3">Recent Sign-ins</h3>
@@ -806,7 +810,7 @@ export default function SettingsPage() {
       {/* Data Management */}
       <motion.div variants={item} className="tm-card px-4 py-4 md:px-6 md:py-[22px]">
         <div className="flex items-center gap-2 mb-4">
-          <Download className="size-[18px] text-amber-600" />
+          <Download className="size-[18px] text-tm-muted" />
           <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">Data Management</h2>
         </div>
 
@@ -866,7 +870,7 @@ export default function SettingsPage() {
       {/* About & Legal */}
       <motion.div variants={item} className="tm-card px-4 py-4 md:px-6 md:py-[22px]">
         <div className="flex items-center gap-2 mb-4">
-          <Shield className="size-[18px] text-amber-600" />
+          <Shield className="size-[18px] text-tm-muted" />
           <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">About &amp; Legal</h2>
         </div>
         <p className="text-xs text-slate-500 mb-4">
