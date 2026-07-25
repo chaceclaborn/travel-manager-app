@@ -182,7 +182,7 @@ export function VendorCard({ vendor, onSaved, onDeleted, variant = 'card' }: Ven
 
   return (
     <>
-      <div className="tm-card tm-card-interactive group p-[18px]">
+      <div className="tm-card tm-card-interactive group min-w-0 p-[18px]">
         <div className="flex items-start gap-3">
           <TMLetterTile label={vendor.name} size={38} />
           <Link href={detailHref('vendors', vendor.id)} className="min-w-0 flex-1">

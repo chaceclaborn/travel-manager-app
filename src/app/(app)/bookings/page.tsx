@@ -292,7 +292,7 @@ function BookingCard({
       animate="visible"
       layout
       whileTap={{ scale: 0.98 }}
-      className={`tm-card group relative p-[18px] ${
+      className={`tm-card group relative min-w-0 p-[18px] ${
         editing
           ? '!border-tm-accent shadow-[0_0_0_3px_rgba(245,158,11,0.12)]'
           : selected

@@ -213,7 +213,7 @@ export function TripCard({ trip, onSaved, onDeleted, isNext = false }: TripCardP
     <>
       <Link
         href={detailHref('trips', trip.id)}
-        className="tm-card tm-card-interactive group relative block h-full overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-tm-accent focus-visible:ring-offset-2"
+        className="tm-card tm-card-interactive group relative block h-full min-w-0 overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-tm-accent focus-visible:ring-offset-2"
       >
         {/* Full-height status bar. Three pixels of color is the whole status
             signal on the card edge; the dot+label repeats it in words. */}
@@ -227,7 +227,7 @@ export function TripCard({ trip, onSaved, onDeleted, isNext = false }: TripCardP
         <div className="flex items-center gap-3 px-4 py-3.5 md:hidden">
           <TMCodeTile code={code} size={38} highlight={isNext} />
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[14px] font-semibold text-tm-ink">{trip.title}</p>
+            <p className="line-clamp-2 text-[14px] font-semibold leading-snug text-tm-ink">{trip.title}</p>
             <p className="mt-0.5 truncate text-[12px] text-tm-subtle tm-nums">{dateLine}</p>
           </div>
           <div className="flex shrink-0 flex-col items-end gap-1">
@@ -243,7 +243,7 @@ export function TripCard({ trip, onSaved, onDeleted, isNext = false }: TripCardP
           <div className="flex items-start gap-3">
             <TMCodeTile code={code} size={38} highlight={isNext} />
             <div className="min-w-0 flex-1">
-              <h3 className="truncate text-[14px] font-semibold tracking-[-0.01em] text-tm-ink">{trip.title}</h3>
+              <h3 className="line-clamp-2 text-[14px] font-semibold leading-snug tracking-[-0.01em] text-tm-ink">{trip.title}</h3>
               <p className="mt-0.5 truncate text-[12px] text-tm-subtle">{trip.destination || '—'}</p>
             </div>
             <TMStatusBadge status={trip.status} className="shrink-0 pt-0.5" />

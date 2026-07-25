@@ -101,7 +101,7 @@ export function FriendCard({ friend, onSaved, onDeleted, index = 0 }: FriendCard
 
   return (
     <>
-      <div className="tm-card tm-card-interactive group p-[18px]">
+      <div className="tm-card tm-card-interactive group min-w-0 p-[18px]">
         <div className="flex items-start gap-3">
           <TMAvatar name={friend.name} email={friend.email} index={index} size={40} />
           <div className="min-w-0 flex-1">

@@ -416,7 +416,7 @@ function TripsPageContent() {
               return (
                 <div
                   key={trip.id}
-                  className={`relative rounded-[14px] ${selectMode && isSelected ? 'ring-2 ring-tm-accent ring-offset-2' : ''}`}
+                  className={`relative min-w-0 rounded-[14px] ${selectMode && isSelected ? 'ring-2 ring-tm-accent ring-offset-2' : ''}`}
                   onClick={(e) => {
                     if (selectMode) {
                       e.preventDefault();

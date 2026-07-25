@@ -173,7 +173,7 @@ export function ClientCard({ client, onSaved, onDeleted, index = 0, variant = 'c
 
   return (
     <>
-      <div className="tm-card tm-card-interactive group p-[18px]">
+      <div className="tm-card tm-card-interactive group min-w-0 p-[18px]">
         <div className="flex items-start gap-3">
           <Link href={detailHref('clients', client.id)} className="flex min-w-0 flex-1 items-center gap-3">
             <TMAvatar name={client.name} email={client.email} index={index} size={40} />
