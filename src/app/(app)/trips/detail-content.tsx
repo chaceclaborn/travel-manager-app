@@ -769,11 +769,11 @@ export default function TripDetailContent({ id }: { id: string }) {
 
               {/* Right: Edit + Share visible, everything else in the ⋯ menu */}
               <div className="flex items-center gap-2 shrink-0">
-                <Button variant="outline" size="sm" className="tm-btn tm-btn-secondary" onClick={() => setEditing(true)}>
+                <Button variant="outline" size="sm" className="tm-btn tm-btn-secondary h-8 md:h-9" onClick={() => setEditing(true)}>
                   <Pencil className="size-3.5" />
                   Edit
                 </Button>
-                <Button variant="outline" size="sm" className="tm-btn tm-btn-secondary" onClick={() => setShareOpen(true)}>
+                <Button variant="outline" size="sm" className="tm-btn tm-btn-secondary h-8 md:h-9" onClick={() => setShareOpen(true)}>
                   <Share2 className="size-3.5" />
                   Share
                 </Button>
@@ -857,7 +857,12 @@ export default function TripDetailContent({ id }: { id: string }) {
             {!isCancelled && (
               <div className="mt-4 border-t border-tm-divider pt-3.5 md:mt-5 md:pt-5">
                 <div className="mb-2 flex items-center justify-between">
-                  <span className="tm-label-micro">Trip progress</span>
+                  <span className="tm-label-micro">
+                    Trip progress
+                    <span className="ml-1.5 font-semibold text-tm-accent-text md:hidden">
+                      {statusLabels[trip.status] ?? ''}
+                    </span>
+                  </span>
                   {daysInfo && trip.status === 'IN_PROGRESS' && daysInfo.remaining > 0 && (
                     <span className="text-[11px] text-tm-faint">
                       {daysInfo.remaining} day{daysInfo.remaining !== 1 ? 's' : ''} remaining
@@ -881,7 +886,7 @@ export default function TripDetailContent({ id }: { id: string }) {
                     style={{ width: `${tripProgress}%`, background: 'linear-gradient(to right, #FBBF24, #F59E0B)' }}
                   />
                 </div>
-                <div className="mt-2 flex justify-between">
+                <div className="mt-2 hidden justify-between md:flex">
                   {statusOrder.map((st, i) => {
                     const passed = statusOrder.indexOf(trip.status) >= i;
                     const current = trip.status === st;
@@ -923,8 +928,8 @@ export default function TripDetailContent({ id }: { id: string }) {
           variants={staggerItem}
           transition={{ duration: 0.4, delay: 0.05 }}
         >
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="tm-label-micro">Trip overview</h2>
+          <div className="mb-0 flex items-center justify-between md:mb-3">
+            <h2 className="tm-label-micro hidden md:block">Trip overview</h2>
           </div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <TripWeatherWidget
