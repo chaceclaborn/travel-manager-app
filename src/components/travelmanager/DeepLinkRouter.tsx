@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { isNativePlatform } from '@/lib/mobile-auth';
 
 /**
@@ -22,7 +22,6 @@ import { isNativePlatform } from '@/lib/mobile-auth';
 export function DeepLinkRouter() {
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
 
   // Record where the user actually is, so a rebuild can put them back on the
   // exact screen — not just the right tab. Capacitor Preferences writes to the
@@ -36,8 +35,10 @@ export function DeepLinkRouter() {
   // where I was" is guesswork.
   useEffect(() => {
     if (!isNativePlatform()) return;
-    const qs = searchParams.toString();
-    const route = qs ? `${pathname}?${qs}` : pathname;
+    // Read the query straight off the location rather than useSearchParams():
+    // that hook forces a Suspense boundary in a static export, and wrapping
+    // this component in one stopped the effect running at all.
+    const route = `${pathname}${window.location.search}`;
     (async () => {
       try {
         const { Preferences } = await import('@capacitor/preferences');
@@ -46,7 +47,7 @@ export function DeepLinkRouter() {
         // Recording the route is a dev convenience; never let it break nav.
       }
     })();
-  }, [pathname, searchParams]);
+  }, [pathname]);
 
   useEffect(() => {
     if (!isNativePlatform()) return;
