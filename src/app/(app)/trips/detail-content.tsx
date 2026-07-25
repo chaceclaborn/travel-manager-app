@@ -86,7 +86,7 @@ import { TripJournal } from '@/components/travelmanager/TripJournal';
 import { TripPhotos } from '@/components/travelmanager/TripPhotos';
 import { useTMToast } from '@/components/travelmanager/TMToast';
 import { useDeleteEntity } from '@/lib/travelmanager/useDeleteEntity';
-import { formatDateLong as formatDate, toDateTimeInputValue } from '@/lib/date-utils';
+import { formatDateShort, toDateTimeInputValue } from '@/lib/date-utils';
 import { nativeShare } from '@/lib/native/share';
 import { isNativePlatform } from '@/lib/mobile-auth';
 import { WEB_ORIGIN } from '@/lib/travelmanager/native-fetch';
@@ -656,7 +656,7 @@ export default function TripDetailContent({ id }: { id: string }) {
       />
 
       <motion.div
-        className="space-y-6 pt-4 md:pt-6"
+        className="space-y-4 pt-3 md:space-y-6 md:pt-6"
         variants={staggerChildren}
         initial="initial"
         animate="animate"
@@ -685,27 +685,29 @@ export default function TripDetailContent({ id }: { id: string }) {
             key="trip-header"
             variants={staggerItem}
             transition={{ duration: 0.4 }}
-            className="tm-card px-5 py-5 md:px-7 md:py-6"
+            className="tm-card px-4 py-4 md:px-7 md:py-6"
           >
             <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
               {/* Left: Trip info */}
-              <div className="flex min-w-0 flex-1 items-start gap-4">
+              <div className="flex min-w-0 flex-1 items-start gap-3 md:gap-4">
                 {/* A dark code tile anchors the record the same way it anchors
                     the row this page was reached from. */}
-                <TMCodeTile code={tripCode(trip.destination, trip.title)} size={48} highlight />
+                <TMCodeTile code={tripCode(trip.destination, trip.title)} size={40} highlight className="md:!size-12" />
 
-                <div className="min-w-0 space-y-2.5">
-                  <div className="flex flex-wrap items-center gap-2.5">
-                    <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-tm-ink md:text-[24px]">
+                <div className="min-w-0 space-y-2 md:space-y-2.5">
+                  <div>
+                    <h1 className="line-clamp-2 text-[19px] font-semibold leading-[1.2] tracking-[-0.02em] text-tm-ink md:text-[24px] md:leading-tight">
                       {trip.title}
                     </h1>
-                    <TMStatusBadge status={trip.status} variant="pill" />
-                    <TMChip icon={trip.tripType === 'WORK' ? Briefcase : TreePalm}>
-                      {trip.tripType === 'WORK' ? 'Work' : 'Personal'}
-                    </TMChip>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                      <TMStatusBadge status={trip.status} variant="pill" />
+                      <TMChip icon={trip.tripType === 'WORK' ? Briefcase : TreePalm}>
+                        {trip.tripType === 'WORK' ? 'Work' : 'Personal'}
+                      </TMChip>
+                    </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-x-[18px] gap-y-2 text-[13px] text-tm-muted">
+                  <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1 text-[12px] text-tm-muted md:gap-x-[18px] md:gap-y-2 md:text-[13px]">
                     {trip.destination ? (
                       <span className="flex items-center gap-1.5">
                         <MapPin className="size-3.5 text-tm-faint" aria-hidden="true" />
@@ -720,7 +722,8 @@ export default function TripDetailContent({ id }: { id: string }) {
                     {trip.startDate && trip.endDate ? (
                       <span className="flex items-center gap-1.5 tm-nums">
                         <Calendar className="size-3.5 text-tm-faint" aria-hidden="true" />
-                        {formatDate(trip.startDate)} &ndash; {formatDate(trip.endDate)}
+                        {formatDateShort(trip.startDate)} &ndash; {formatDateShort(trip.endDate)}
+                        {trip.endDate ? `, ${new Date(trip.endDate).getUTCFullYear()}` : ''}
                         <span className="rounded-[5px] bg-tm-fill px-1.5 py-0.5 font-mono text-[10px] font-semibold text-tm-label">
                           {daysInfo?.total}d
                         </span>
@@ -852,7 +855,7 @@ export default function TripDetailContent({ id }: { id: string }) {
 
             {/* Trip progress indicator */}
             {!isCancelled && (
-              <div className="mt-5 border-t border-tm-divider pt-5">
+              <div className="mt-4 border-t border-tm-divider pt-3.5 md:mt-5 md:pt-5">
                 <div className="mb-2 flex items-center justify-between">
                   <span className="tm-label-micro">Trip progress</span>
                   {daysInfo && trip.status === 'IN_PROGRESS' && daysInfo.remaining > 0 && (
