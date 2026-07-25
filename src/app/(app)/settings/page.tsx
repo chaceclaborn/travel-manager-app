@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { Shield, Download, FileText, Trash2, Loader2, Monitor, MapPin, X, Mail, PanelLeft, Smartphone, RotateCcw, AtSign, BarChart3, GripVertical } from 'lucide-react';
+import { Shield, Download, FileText, Trash2, Loader2, Monitor, MapPin, X, Mail, PanelLeft, Smartphone, RotateCcw, AtSign, BarChart3, GripVertical, ChevronRight } from 'lucide-react';
 import { useNavPreferences, TOGGLEABLE_NAV_ITEMS, TABBABLE_NAV_ITEMS, MOBILE_TAB_SLOTS } from '@/lib/travelmanager/useNavPreferences';
 import { TMReorderList } from '@/components/travelmanager/TMReorderList';
 import { TMInfoHint } from '@/components/travelmanager/TMInfoHint';
@@ -873,40 +873,31 @@ export default function SettingsPage() {
           <Shield className="size-[18px] text-tm-muted" />
           <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">About &amp; Legal</h2>
         </div>
-        <p className="text-xs text-slate-500 mb-4">
-
-        </p>
-        <div className="flex flex-col divide-y divide-slate-100 border border-slate-100 rounded-xl overflow-hidden">
-          <a
-            href="/privacy"
-            className="flex items-center justify-between px-4 py-3 text-sm text-slate-700 active:bg-slate-50 hover:bg-slate-50 transition-colors"
-          >
-            <span className="flex items-center gap-2">
-              <Shield className="size-4 text-slate-400" />
-              Privacy Policy
-            </span>
-            <span className="text-slate-300">›</span>
-          </a>
-          <a
-            href="/terms"
-            className="flex items-center justify-between px-4 py-3 text-sm text-slate-700 active:bg-slate-50 hover:bg-slate-50 transition-colors"
-          >
-            <span className="flex items-center gap-2">
-              <FileText className="size-4 text-slate-400" />
-              Terms of Service
-            </span>
-            <span className="text-slate-300">›</span>
-          </a>
-          <a
-            href="/support"
-            className="flex items-center justify-between px-4 py-3 text-sm text-slate-700 active:bg-slate-50 hover:bg-slate-50 transition-colors"
-          >
-            <span className="flex items-center gap-2">
-              <Mail className="size-4 text-slate-400" />
-              Support
-            </span>
-            <span className="text-slate-300">›</span>
-          </a>
+        {/* next/link, never a raw <a>. A plain anchor is a full page load, and
+            Next only rewrites hrefs it renders itself — so `/privacy` shipped
+            without the trailing slash the static export needs, the Capacitor
+            file server 404'd it and fell back to index.html. That renders the
+            dashboard at pathname /privacy, which the (app) layout then treats
+            as a public page and strips the tab bar from: "I tapped Privacy
+            Policy and landed on the home screen with no nav bar." */}
+        <div className="flex flex-col divide-y divide-tm-divider overflow-hidden rounded-xl border border-tm-line">
+          {[
+            { href: '/privacy', label: 'Privacy Policy', icon: Shield },
+            { href: '/terms', label: 'Terms of Service', icon: FileText },
+            { href: '/support', label: 'Support', icon: Mail },
+          ].map(({ href, label, icon: Icon }) => (
+            <Link
+              key={href}
+              href={href}
+              className="flex min-h-[44px] items-center justify-between px-4 py-3 text-[13px] text-tm-body transition-colors hover:bg-tm-wash active:bg-tm-wash"
+            >
+              <span className="flex items-center gap-2.5">
+                <Icon className="size-4 text-tm-ghost" aria-hidden="true" />
+                {label}
+              </span>
+              <ChevronRight className="size-4 text-tm-ghost" aria-hidden="true" />
+            </Link>
+          ))}
         </div>
       </motion.div>
 
