@@ -224,7 +224,7 @@ export function TripCard({ trip, onSaved, onDeleted, isNext = false }: TripCardP
         />
 
         {/* Mobile: one row — tile, name + dates, then status over budget. */}
-        <div className="flex items-center gap-3 px-4 py-3.5 md:hidden">
+        <div className="flex items-center gap-3 px-3.5 py-3 md:hidden">
           <TMCodeTile code={code} size={38} highlight={isNext} />
           <div className="min-w-0 flex-1">
             <p className="line-clamp-2 text-[14px] font-semibold leading-snug text-tm-ink">{trip.title}</p>

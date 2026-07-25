@@ -308,9 +308,14 @@ function TripsPageContent() {
       />
 
       {/* Filter row: search, type segments, status, sort. Stays mounted even
-          when the result set is empty — that's how the user sees *why*. */}
-      <div className="flex flex-col gap-3 pt-4 md:flex-row md:flex-wrap md:items-center md:pt-6">
-        <div className="relative min-w-[240px] flex-1">
+          when the result set is empty — that's how the user sees *why*.
+
+          On a phone the three controls stack to three full-width rows, which
+          spent most of the screen before a single trip appeared. Mobile gets
+          one horizontally scrolling row of pills instead (as the design
+          specifies); the segmented control and dropdowns are desktop-only. */}
+      <div className="flex flex-col gap-2.5 pt-3 md:flex-row md:flex-wrap md:items-center md:gap-3 md:pt-6">
+        <div className="relative min-w-0 flex-1 md:min-w-[240px]">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-tm-subtle" aria-hidden="true" />
           <input
             value={search}
@@ -330,7 +335,7 @@ function TripsPageContent() {
           )}
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="hidden flex-wrap gap-2 md:flex">
           <div className="tm-seg" role="radiogroup" aria-label="Filter by trip type">
             {TYPE_FILTERS.map(({ value, label }) => (
               <button
@@ -376,10 +381,39 @@ function TripsPageContent() {
             </SelectContent>
           </Select>
         </div>
+
+        {/* Mobile: one scrolling row. Type first, then status — the two
+            filters people actually reach for. Sort keeps its default
+            (nearest first), which is the useful one on a phone. */}
+        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-0.5 md:hidden">
+          {TYPE_FILTERS.map(({ value, label }) => (
+            <button
+              key={`t-${value}`}
+              type="button"
+              data-selected={typeFilter === value}
+              onClick={() => setTypeFilter(value)}
+              className="tm-pill shrink-0"
+            >
+              {label}
+            </button>
+          ))}
+          <span className="my-1 w-px shrink-0 bg-tm-divider" aria-hidden="true" />
+          {STATUS_FILTERS.filter((o) => o.value !== 'ALL').map((opt) => (
+            <button
+              key={`s-${opt.value}`}
+              type="button"
+              data-selected={statusFilter === opt.value}
+              onClick={() => setStatusFilter(statusFilter === opt.value ? 'ALL' : opt.value)}
+              className="tm-pill shrink-0"
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Content area */}
-      <div className="pt-5">
+      <div className="pt-4 md:pt-5">
         {loading ? (
           <TMCardGridSkeleton count={6} columns={3} />
         ) : error ? (
@@ -410,7 +444,7 @@ function TripsPageContent() {
             )}
           </div>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-2.5 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
             {filtered.map((trip) => {
               const isSelected = selectedIds.has(trip.id);
               return (
