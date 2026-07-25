@@ -371,7 +371,7 @@ export default function SettingsPage() {
       >
 
       {/* Account Info */}
-      <motion.div variants={item} className="tm-card px-4 py-2.5 md:py-4 md:px-6 md:py-[22px]">
+      <motion.div variants={item} className="tm-card px-4 py-4 md:px-6 md:py-[22px]">
         <h2 className="mb-3 text-[15px] font-semibold tracking-[-0.01em] text-tm-ink md:mb-4">Account Information</h2>
         <div className="flex items-center gap-4">
           {avatarUrl && !avatarError ? (
@@ -404,13 +404,13 @@ export default function SettingsPage() {
       </motion.div>
 
       {/* Username */}
-      <motion.div variants={item} className="tm-card px-4 py-2.5 md:py-4 md:px-6 md:py-[22px]">
+      <motion.div variants={item} className="tm-card px-4 py-4 md:px-6 md:py-[22px]">
         <div className="flex items-center gap-2 mb-4">
           <AtSign className="size-[18px] text-amber-600" />
           <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">Username</h2>
         </div>
         <p className="text-xs text-slate-500 mb-3">
-          Your unique @handle lets friends find and add you.
+          Friends find you by this handle.
           {currentUsername && (
             <>
               {' '}Currently{' '}
@@ -457,8 +457,7 @@ export default function SettingsPage() {
           <div className="flex-1">
             <p className="text-sm font-medium text-slate-800">Show me in friend search</p>
             <p className="mt-0.5 text-xs text-slate-500">
-              When on, others can find you by searching your @handle. When off, you stay out of
-              search results — friends can still add you if they know your exact username.
+              Off means you only appear to people who know your exact handle.
             </p>
           </div>
           <button
@@ -482,13 +481,13 @@ export default function SettingsPage() {
       </motion.div>
 
       {/* Home Location */}
-      <motion.div variants={item} className="tm-card px-4 py-2.5 md:py-4 md:px-6 md:py-[22px]">
+      <motion.div variants={item} className="tm-card px-4 py-4 md:px-6 md:py-[22px]">
         <div className="flex items-center gap-2 mb-4">
           <MapPin className="size-[18px] text-amber-600" />
           <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">Home Location</h2>
         </div>
         <p className="text-xs text-slate-500 mb-3">
-          Set your home city to calculate round-trip distances on the map.
+          Used for round-trip distances.
         </p>
         <div className="relative" ref={homeContainerRef}>
           <div className="flex items-center gap-2">
@@ -552,7 +551,7 @@ export default function SettingsPage() {
 
       {/* Bottom tabs: phones only. Desktop has no tab bar, so this control
           would configure something the user cannot see. */}
-      <motion.div variants={item} className="tm-card px-4 py-2.5 md:py-4 md:px-6 md:py-[22px] md:hidden">
+      <motion.div variants={item} className="tm-card px-4 py-4 md:px-6 md:py-[22px] md:hidden">
         <div className="mb-1 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <Smartphone className="size-[18px] text-amber-600" />
@@ -568,9 +567,7 @@ export default function SettingsPage() {
           </button>
         </div>
         <p className="mb-3 text-[12px] leading-snug text-tm-subtle md:mb-4 md:text-[13px]">
-          Choose up to {MOBILE_TAB_SLOTS} destinations for the phone&apos;s bottom bar and drag
-          them into the order you want. Home and More are always there; anything you leave
-          off is still available under More.
+          Up to {MOBILE_TAB_SLOTS}, drag to reorder. Home and More are fixed; the rest live under More.
         </p>
 
         {/* On the bar, in order — drag a row to rearrange. */}
@@ -638,7 +635,7 @@ export default function SettingsPage() {
 
       {/* Sidebar: desktop only, for the same reason in reverse — a phone never
           renders the sidebar, so tuning it there configures nothing. */}
-      <motion.div variants={item} className="hidden tm-card px-4 py-2.5 md:py-4 md:px-6 md:py-[22px] md:block">
+      <motion.div variants={item} className="hidden tm-card px-4 py-4 md:px-6 md:py-[22px] md:block">
         <div className="mb-1 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <PanelLeft className="size-[18px] text-amber-600" />
@@ -656,7 +653,7 @@ export default function SettingsPage() {
           )}
         </div>
         <p className="text-xs text-slate-500 mb-4">
-          Choose which sections appear in your sidebar. Turn off anything you don&apos;t use to keep it tidy — this is saved on this device, and hidden sections stay reachable by search or keyboard shortcut.
+          Hidden sections stay reachable by search and keyboard shortcut.
         </p>
         <div className="divide-y divide-slate-100">
           {TOGGLEABLE_NAV_ITEMS.map(({ key, label, icon: Icon, description }) => {
@@ -706,7 +703,7 @@ export default function SettingsPage() {
       </motion.div>
 
       {/* Privacy */}
-      <motion.div variants={item} className="tm-card px-4 py-2.5 md:py-4 md:px-6 md:py-[22px]">
+      <motion.div variants={item} className="tm-card px-4 py-4 md:px-6 md:py-[22px]">
         <div className="flex items-center gap-2 mb-4">
           <BarChart3 className="size-[18px] text-amber-600" />
           <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">Privacy</h2>
@@ -748,7 +745,7 @@ export default function SettingsPage() {
       </motion.div>
 
       {/* Security */}
-      <motion.div variants={item} className="tm-card px-4 py-2.5 md:py-4 md:px-6 md:py-[22px]">
+      <motion.div variants={item} className="tm-card px-4 py-4 md:px-6 md:py-[22px]">
         <div className="flex items-center gap-2 mb-4">
           <Shield className="size-[18px] text-amber-600" />
           <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">Security</h2>
@@ -802,7 +799,7 @@ export default function SettingsPage() {
       </motion.div>
 
       {/* Data Management */}
-      <motion.div variants={item} className="tm-card px-4 py-2.5 md:py-4 md:px-6 md:py-[22px]">
+      <motion.div variants={item} className="tm-card px-4 py-4 md:px-6 md:py-[22px]">
         <div className="flex items-center gap-2 mb-4">
           <Download className="size-[18px] text-amber-600" />
           <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">Data Management</h2>
@@ -862,13 +859,13 @@ export default function SettingsPage() {
       </motion.div>
 
       {/* About & Legal */}
-      <motion.div variants={item} className="tm-card px-4 py-2.5 md:py-4 md:px-6 md:py-[22px]">
+      <motion.div variants={item} className="tm-card px-4 py-4 md:px-6 md:py-[22px]">
         <div className="flex items-center gap-2 mb-4">
           <Shield className="size-[18px] text-amber-600" />
           <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">About &amp; Legal</h2>
         </div>
         <p className="text-xs text-slate-500 mb-4">
-          Review how Travel Manager handles your data and the terms of using the app.
+
         </p>
         <div className="flex flex-col divide-y divide-slate-100 border border-slate-100 rounded-xl overflow-hidden">
           <a
@@ -911,7 +908,7 @@ export default function SettingsPage() {
           <h2 className="text-base font-semibold text-red-600">Danger Zone</h2>
         </div>
         <p className="mb-3 text-[12px] leading-snug text-tm-subtle md:mb-4 md:text-[13px]">
-          Permanently delete your account and all associated data. This action cannot be undone.
+          Deletes your account and all data. Cannot be undone.
         </p>
         <Button
           variant="destructive"
