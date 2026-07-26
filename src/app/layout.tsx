@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { DeepLinkRouter } from "@/components/travelmanager/DeepLinkRouter";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -63,6 +64,14 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen`} suppressHydrationWarning>
+        {/* Mounted at the ROOT, not inside (app). It used to live in the (app)
+            layout, which meant deep links were dead on every page outside that
+            group — privacy, terms, support, tour. Two travelmanager://settings/
+            calls did nothing while the app sat on the Privacy page, and a push
+            notification tapped from there went nowhere. Those pages became
+            somewhere users actually land once the legal links started working,
+            so the handler has to outlive the route group. */}
+        <DeepLinkRouter />
         {children}
       </body>
     </html>

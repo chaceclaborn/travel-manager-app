@@ -7,7 +7,6 @@ import Image from 'next/image';
 import { Search, ChevronRight, Bell } from 'lucide-react';
 import { TMSidebar } from '@/components/travelmanager/TMSidebar';
 import { TMTabBar } from '@/components/travelmanager/TMTabBar';
-import { DeepLinkRouter } from '@/components/travelmanager/DeepLinkRouter';
 import { TMToastProvider } from '@/components/travelmanager/TMToast';
 import { TMCommandPalette } from '@/components/travelmanager/TMCommandPalette';
 import { TMUserMenu } from '@/components/travelmanager/TMUserMenu';
@@ -279,7 +278,6 @@ export default function TravelManagerLayout({
         {/* PushRegister must live inside TMToastProvider because it calls
             useTMToast() to surface foreground pushes as in-app toasts. The
             opt-in card primes the user before the OS permission dialog. */}
-        <DeepLinkRouter />
         <PushRegister />
         <AppUpdateGate />
         <NotificationOptInCard />
