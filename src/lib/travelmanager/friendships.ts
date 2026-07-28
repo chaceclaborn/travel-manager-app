@@ -1,5 +1,6 @@
 import prisma from '@/lib/prisma';
 import { normalizeUsername } from './username';
+import { sendPushToUser } from '@/lib/push/dispatch';
 import type { FriendConnection, PublicUserSummary } from './types';
 
 // Errors carry an HTTP status the API routes translate directly. Anything that
@@ -19,6 +20,93 @@ const publicUserSelect = {
   name: true,
   avatarUrl: true,
 } as const;
+
+/** What to call someone in a contact row or a notification. */
+function displayName(u: { name: string | null; username: string | null }): string {
+  return u.name?.trim() || (u.username ? `@${u.username}` : 'Someone');
+}
+
+/**
+ * Turn an accepted connection into a usable contact on BOTH sides.
+ *
+ * Without this an accepted Friendship was inert — it drew a row in the
+ * Connections list and nothing else in the app ever read it, so "we're
+ * connected" didn't let you do anything. Creating a linked Friend puts the
+ * person straight into the trip companion picker.
+ *
+ * Idempotent, and never clobbers an existing contact: if you already had a
+ * hand-typed "Raeha" we link that row rather than creating a duplicate. Uses
+ * the unique (userId, linkedUserId) index to stay safe under concurrent
+ * accepts — the reverse-direction accept race is real, since both people can
+ * tap Accept at once.
+ */
+async function linkContact(ownerId: string, otherId: string): Promise<void> {
+  const other = await prisma.user.findUnique({
+    where: { id: otherId },
+    select: { id: true, name: true, username: true, email: true },
+  });
+  if (!other) return;
+
+  const already = await prisma.friend.findFirst({
+    where: { userId: ownerId, linkedUserId: otherId },
+    select: { id: true },
+  });
+  if (already) return;
+
+  // Adopt a matching unlinked contact instead of duplicating it.
+  const byEmail = other.email
+    ? await prisma.friend.findFirst({
+        where: { userId: ownerId, linkedUserId: null, email: other.email },
+        select: { id: true },
+      })
+    : null;
+
+  try {
+    if (byEmail) {
+      await prisma.friend.update({
+        where: { id: byEmail.id },
+        data: { linkedUserId: otherId },
+      });
+      return;
+    }
+    await prisma.friend.create({
+      data: {
+        userId: ownerId,
+        name: displayName(other),
+        email: other.email ?? null,
+        linkedUserId: otherId,
+      },
+    });
+  } catch {
+    // Unique violation → the other side of a simultaneous accept won. Fine.
+  }
+}
+
+/**
+ * Everything that should happen when two accounts become connected: contacts
+ * on both sides, and a push to whoever wasn't the one tapping Accept.
+ *
+ * Never throws. This runs alongside the mutation that already succeeded, and a
+ * failed contact link or a dead APNs token must not turn an accepted friend
+ * request into a 500.
+ */
+async function onFriendshipAccepted(accepterId: string, otherId: string): Promise<void> {
+  try {
+    await Promise.all([linkContact(accepterId, otherId), linkContact(otherId, accepterId)]);
+    const accepter = await prisma.user.findUnique({
+      where: { id: accepterId },
+      select: { name: true, username: true },
+    });
+    if (!accepter) return;
+    await sendPushToUser(otherId, {
+      title: 'Friend request accepted',
+      body: `${displayName(accepter)} accepted your friend request.`,
+      url: '/friends',
+    });
+  } catch (err) {
+    console.error('[friendships] post-accept side effects failed:', err instanceof Error ? err.message : err);
+  }
+}
 
 /**
  * Case-insensitive username search, excluding the current user. Returns up to
@@ -112,6 +200,9 @@ export async function sendFriendRequest(userId: string, username: string): Promi
         where: { id: existing.id },
         data: { status: 'ACCEPTED' },
       });
+      // Adding someone who had already asked you IS an accept — same side
+      // effects as tapping Accept in the Connections list.
+      await onFriendshipAccepted(userId, addressee.id);
       return;
     }
     throw new FriendshipError('A connection already exists', 409);
@@ -124,6 +215,19 @@ export async function sendFriendRequest(userId: string, username: string): Promi
       status: 'PENDING',
     },
   });
+
+  const requester = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { name: true, username: true },
+  });
+  if (requester) {
+    // Fire-and-forget: a push failure must not fail the request itself.
+    await sendPushToUser(addressee.id, {
+      title: 'New friend request',
+      body: `${displayName(requester)} wants to connect with you.`,
+      url: '/friends',
+    }).catch(() => {});
+  }
 }
 
 /**
@@ -147,6 +251,7 @@ export async function respondToRequest(
       where: { id: friendshipId },
       data: { status: 'ACCEPTED' },
     });
+    await onFriendshipAccepted(userId, row.requesterId);
     return;
   }
 

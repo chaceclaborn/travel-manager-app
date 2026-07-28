@@ -35,6 +35,9 @@ model User {
   vendors     Vendor[]
   clients     Client[]
   friends     Friend[]
+  // Contacts other people hold that point back at this account (see
+  // Friend.linkedUserId). Needed only to satisfy the relation.
+  linkedAsFriend         Friend[]     @relation("FriendLinkedUser")
   sentFriendRequests     Friendship[] @relation("FriendshipRequester")
   receivedFriendRequests Friendship[] @relation("FriendshipAddressee")
   attachments TripAttachment[]
