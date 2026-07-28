@@ -17,6 +17,7 @@ import { PushRegister } from '@/components/travelmanager/PushRegister';
 import { NotificationOptInCard } from '@/components/travelmanager/NotificationOptInCard';
 import { OfflineIndicator } from '@/components/travelmanager/OfflineIndicator';
 import { useAuth } from '@/lib/travelmanager/useAuth';
+import { useIsAdmin } from '@/lib/travelmanager/useIsAdmin';
 import { KEYBIND_DEFS, useKeybinds } from '@/lib/travelmanager/keybinds';
 import { AppUpdateGate } from '@/components/travelmanager/AppUpdateGate';
 import { installNativeApiFetchPatch } from '@/lib/travelmanager/native-fetch';
@@ -47,8 +48,7 @@ export default function TravelManagerLayout({
   }, []);
   const [modKey, setModKey] = useState('⌘');
   const { binds: keybinds } = useKeybinds();
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isAdminChecked, setIsAdminChecked] = useState(false);
+  const { isAdmin, checked: isAdminChecked } = useIsAdmin();
   const pathname = usePathname();
   const router = useRouter();
   const { user, loading, signOut } = useAuth();
@@ -103,19 +103,9 @@ export default function TravelManagerLayout({
   }, []);
 
   useEffect(() => {
-    // No user → no admin check needed; the sidebar renders `isAdminChecked &&
-    // isAdmin`, which is false either way, and signed-out users are redirected.
+    // The admin check itself now lives in useIsAdmin(), so the mobile More
+    // screen can ask the same question — see the note there.
     if (!user) return;
-    fetch('/api/auth/is-admin')
-      .then((r) => r.json())
-      .then((data) => {
-        setIsAdmin(data.isAdmin === true);
-        setIsAdminChecked(true);
-      })
-      .catch(() => {
-        setIsAdmin(false);
-        setIsAdminChecked(true);
-      });
 
     if (!sessionStorage.getItem('tm-daily-visit')) {
       sessionStorage.setItem('tm-daily-visit', '1');

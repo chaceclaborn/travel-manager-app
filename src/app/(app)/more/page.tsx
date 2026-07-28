@@ -2,8 +2,9 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { Settings, MessageSquarePlus, LogOut, ChevronRight, LifeBuoy } from 'lucide-react';
+import { Settings, MessageSquarePlus, LogOut, ChevronRight, LifeBuoy, ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/lib/travelmanager/useAuth';
+import { useIsAdmin } from '@/lib/travelmanager/useIsAdmin';
 import { useNavPreferences, TABBABLE_NAV_ITEMS } from '@/lib/travelmanager/useNavPreferences';
 import { TMAvatar } from '@/components/travelmanager/TMPrimitives';
 import { TMPageShell, TMScreenHeader } from '@/components/travelmanager/TMPageShell';
@@ -25,9 +26,21 @@ const ACCOUNT_LINKS = [
 export default function MorePage() {
   const { user, signOut } = useAuth();
   const { tabKeys } = useNavPreferences();
+  // Admin has no home on a phone otherwise: it is deliberately absent from
+  // TABBABLE_NAV_ITEMS (it should never occupy one of the three tab slots), and
+  // the only other place it appears is the desktop sidebar, which is
+  // `hidden md:flex`. Without this row it is unreachable on mobile entirely.
+  const { isAdmin, checked: adminChecked } = useIsAdmin();
   // Anything eligible for the bar that isn't currently on it.
   const offBar = TABBABLE_NAV_ITEMS.filter((i) => !tabKeys.includes(i.key));
   const fullName = user?.user_metadata?.full_name || 'Your account';
+
+  const accountLinks = [
+    ...ACCOUNT_LINKS,
+    ...(adminChecked && isAdmin
+      ? [{ href: '/admin', label: 'Admin', sub: 'Usage, feedback, and diagnostics', icon: ShieldCheck }]
+      : []),
+  ];
 
   return (
     <TMPageShell width={760}>
@@ -77,7 +90,7 @@ export default function MorePage() {
         <section>
           <h2 className="tm-label-upper mb-2 px-1">Account</h2>
           <div className="tm-card overflow-hidden">
-            {ACCOUNT_LINKS.map((item, i) => (
+            {accountLinks.map((item, i) => (
               <Link
                 key={item.href}
                 href={item.href}

@@ -1,5 +1,6 @@
 import { requireAuth } from './auth';
 import { NextResponse } from 'next/server';
+import prisma from '@/lib/prisma';
 
 export async function requireAdmin() {
   const { user, response } = await requireAuth();
