@@ -294,11 +294,24 @@ model Friend {
   email  String?
   phone  String?
   notes  String?
+  // Set when this contact came from an accepted account-to-account Friendship,
+  // pointing at the connected account. Nullable because most Friends are just
+  // private contacts typed in by hand and have no account behind them.
+  //
+  // This is what makes a connection mean something: accepting a request
+  // creates one of these on BOTH sides, so the person immediately shows up in
+  // the trip companion picker instead of the connection being a dead row in a
+  // list. SetNull rather than Cascade on purpose — if the other account is
+  // deleted you keep your contact, it just stops being linked.
+  linkedUserId   String?
+  linkedUser     User?    @relation("FriendLinkedUser", fields: [linkedUserId], references: [id], onDelete: SetNull)
   trips          TripFriend[]
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
+  @@unique([userId, linkedUserId])
   @@index([userId])
+  @@index([linkedUserId])
 }
 
 model TripFriend {

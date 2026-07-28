@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAdmin } from '@/lib/travelmanager/admin';
+import { requireAdmin, internalUserIds } from '@/lib/travelmanager/admin';
 import { rateLimit } from '@/lib/rate-limit';
 import prisma from '@/lib/prisma';
 
@@ -27,6 +27,14 @@ export async function GET(request: NextRequest) {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
+    // Our own accounts (owner logins + Apple's review account) skew every
+    // number on this page, so every query below excludes them.
+    const excludedIds = await internalUserIds();
+    const notInternal = excludedIds.length
+      ? { userId: { notIn: excludedIds } }
+      : {};
+    const notInternalUser = excludedIds.length ? { id: { notIn: excludedIds } } : {};
+
     const [
       totalUsers,
       totalTrips,
@@ -37,24 +45,27 @@ export async function GET(request: NextRequest) {
       tripStatusGroups,
       attachmentStats,
     ] = await Promise.all([
-      prisma.user.count(),
-      prisma.trip.count(),
-      prisma.booking.count(),
-      prisma.vendor.count(),
-      prisma.client.count(),
+      prisma.user.count({ where: notInternalUser }),
+      prisma.trip.count({ where: notInternal }),
+      prisma.booking.count({ where: notInternal }),
+      prisma.vendor.count({ where: notInternal }),
+      prisma.client.count({ where: notInternal }),
       prisma.auditLog.findMany({
         where: {
           action: { in: ['daily_visit', 'sign_in'] },
           createdAt: { gte: thirtyDaysAgo },
+          ...notInternal,
         },
         select: { createdAt: true, userId: true },
         orderBy: { createdAt: 'asc' },
       }),
       prisma.trip.groupBy({
         by: ['status'],
+        where: notInternal,
         _count: { _all: true },
       }),
       prisma.tripAttachment.aggregate({
+        where: notInternal,
         _sum: { fileSize: true },
         _count: { _all: true },
       }),
@@ -112,6 +123,7 @@ export async function GET(request: NextRequest) {
         totalBookings,
         totalVendors,
         totalClients,
+        excludedAccounts: excludedIds.length,
       },
       signInActivity,
       tripStatusBreakdown,
