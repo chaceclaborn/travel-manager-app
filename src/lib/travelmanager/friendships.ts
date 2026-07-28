@@ -268,4 +268,21 @@ export async function removeFriendship(userId: string, friendshipId: string): Pr
   }
 
   await prisma.friendship.delete({ where: { id: friendshipId } });
+
+  // Unfriending also ends any trip collaboration between the two, in both
+  // directions. This is housekeeping, not the security boundary: what actually
+  // makes revocation safe is requireTripAccess() re-checking the friendship on
+  // every single request, so access dies the instant the row above is deleted
+  // whether or not this cleanup runs. Without it the membership lists would
+  // simply show people who can no longer open the trip.
+  await prisma.tripCollaborator
+    .deleteMany({
+      where: {
+        OR: [
+          { userId: row.requesterId, trip: { userId: row.addresseeId } },
+          { userId: row.addresseeId, trip: { userId: row.requesterId } },
+        ],
+      },
+    })
+    .catch(() => {});
 }
