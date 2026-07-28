@@ -88,6 +88,7 @@ import { useTMToast } from '@/components/travelmanager/TMToast';
 import { useDeleteEntity } from '@/lib/travelmanager/useDeleteEntity';
 import { formatDateShort, toDateTimeInputValue } from '@/lib/date-utils';
 import { nativeShare } from '@/lib/native/share';
+import { downloadAndShare } from '@/lib/native/download';
 import { isNativePlatform } from '@/lib/mobile-auth';
 import { WEB_ORIGIN } from '@/lib/travelmanager/native-fetch';
 import { removePhotosForTrip } from '@/lib/photos/store';
@@ -185,7 +186,41 @@ export default function TripDetailContent({ id }: { id: string }) {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [duplicating, setDuplicating] = useState(false);
+  const [exporting, setExporting] = useState<'ical' | 'report' | null>(null);
   const [activeTab, setActiveTab] = useState('itinerary');
+
+  /**
+   * Export the trip as a calendar file or a PDF. On web this is the same
+   * browser download it always was; on native it round-trips through the share
+   * sheet (see lib/native/download.ts). Guarded so a double-tap can't fire two
+   * generations of the same PDF.
+   */
+  const runExport = useCallback(
+    async (kind: 'ical' | 'report') => {
+      if (exporting) return;
+      setExporting(kind);
+      try {
+        const result = await downloadAndShare({
+          path: `/api/trips/${id}/${kind}`,
+          fallbackFileName: kind === 'ical' ? 'trip.ics' : 'trip-report.pdf',
+          dialogTitle: kind === 'ical' ? 'Add to calendar' : 'Trip report',
+        });
+        if (result === 'unauthorized') {
+          showToast('Your session expired — sign in again to export', 'error');
+        } else if (result === 'failed') {
+          showToast(
+            kind === 'ical' ? 'Could not create the calendar file' : 'Could not create the PDF',
+            'error'
+          );
+        }
+        // 'shared' / 'opened' / 'cancelled' are all silent: the share sheet or
+        // the browser's own download UI is the confirmation.
+      } finally {
+        setExporting(null);
+      }
+    },
+    [exporting, id, showToast]
+  );
 
   const [itinerary, setItinerary] = useState<Array<{
     id: string;
@@ -821,34 +856,43 @@ export default function TripDetailContent({ id }: { id: string }) {
                       <Copy />
                       Duplicate trip
                     </DropdownMenuItem>
-                    {/* The whole Export section is web-only for now:
-                        - window.open of an /api URL is a NAVIGATION, not a
-                          fetch — native-fetch's Bearer rewrite never touches
-                          it. In the Capacitor shell it resolves to
-                          capacitor://localhost/api/... (nothing there), and
-                          the web origin would 401 (no session cookie).
-                        - window.print() is a silent no-op inside WKWebView.
-                        Bring these back on native via apiFetch + native file
-                        sharing / a print plugin. */}
+                    {/* Export works on both platforms now. Web navigates to the
+                        API URL and lets the browser download it; native fetches
+                        the bytes over the Bearer channel and hands them to the
+                        iOS share sheet — see lib/native/download.ts for why
+                        window.open cannot work inside the Capacitor shell.
+                        Print stays web-only: window.print() is a genuine no-op
+                        in WKWebView, and "Print" in the iOS share sheet already
+                        covers it for the exported PDF. */}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel className="text-xs font-medium uppercase tracking-wider text-slate-400">
+                      Export
+                    </DropdownMenuLabel>
+                    <DropdownMenuItem
+                      disabled={exporting !== null}
+                      onSelect={(e) => {
+                        e.preventDefault();
+                        void runExport('ical');
+                      }}
+                    >
+                      <Download />
+                      {exporting === 'ical' ? 'Preparing…' : 'Add to calendar (.ics)'}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      disabled={exporting !== null}
+                      onSelect={(e) => {
+                        e.preventDefault();
+                        void runExport('report');
+                      }}
+                    >
+                      <FileDown />
+                      {exporting === 'report' ? 'Preparing…' : 'PDF report'}
+                    </DropdownMenuItem>
                     {!isNativePlatform() && (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuLabel className="text-xs font-medium uppercase tracking-wider text-slate-400">
-                          Export
-                        </DropdownMenuLabel>
-                        <DropdownMenuItem onClick={() => window.open(`/api/trips/${id}/ical`, '_blank')} /* native-ok: gated by !isNativePlatform() above */>
-                          <Download />
-                          Add to calendar (.ics)
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => window.open(`/api/trips/${id}/report`, '_blank')} /* native-ok: gated by !isNativePlatform() above */>
-                          <FileDown />
-                          PDF report
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => window.print()}>
-                          <Printer />
-                          Print
-                        </DropdownMenuItem>
-                      </>
+                      <DropdownMenuItem onClick={() => window.print()}>
+                        <Printer />
+                        Print
+                      </DropdownMenuItem>
                     )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>

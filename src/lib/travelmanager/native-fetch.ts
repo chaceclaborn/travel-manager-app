@@ -118,12 +118,139 @@ interface NativeHttpRequestOptions {
   // typed `request()` signature only advertises a subset but the native layer
   // accepts the full set (this mirrors Capacitor's own auto-patch behavior).
   dataType?: string;
+  // 'arraybuffer' | 'blob' | 'json' | 'text' | 'document'. Controls how the
+  // NATIVE side serialises the response before it crosses the bridge — see
+  // fetchApiBinary().
+  responseType?: string;
 }
 
 // Module-level guard so the patch installs exactly once, even across Fast
 // Refresh, double-mounts, or repeated imports. Also prevents recursion: we
 // capture the original fetch once and never re-wrap our own wrapper.
 let installed = false;
+
+export interface BinaryApiResponse {
+  ok: boolean;
+  status: number;
+  /** Raw bytes. Empty when the request failed. */
+  bytes: Uint8Array;
+  /** The same bytes base64-encoded — what @capacitor/filesystem wants. */
+  base64: string;
+  contentType: string;
+  /** Parsed from Content-Disposition when the server sent one. */
+  fileName: string | null;
+}
+
+function base64ToBytes(base64: string): Uint8Array {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+  // Chunked to avoid blowing the argument limit on large PDFs.
+  let binary = '';
+  const CHUNK = 0x8000;
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(binary);
+}
+
+function fileNameFromDisposition(disposition: string | null | undefined): string | null {
+  if (!disposition) return null;
+  // filename*=UTF-8''name.pdf wins over filename="name.pdf" per RFC 6266.
+  const extended = /filename\*=(?:UTF-8'')?([^;]+)/i.exec(disposition);
+  if (extended) {
+    try {
+      return decodeURIComponent(extended[1].replace(/^"|"$/g, ''));
+    } catch {
+      /* fall through to the plain form */
+    }
+  }
+  const plain = /filename="?([^";]+)"?/i.exec(disposition);
+  return plain ? plain[1] : null;
+}
+
+/**
+ * Fetch a BINARY response from our own API, on either platform.
+ *
+ * Why this exists rather than a flag on the global fetch patch: the patch
+ * reconstructs a `Response` by handing `nativeResponse.data` — a STRING —
+ * straight to the Response constructor. That is correct for JSON and for text
+ * (.ics), but the native layer decodes an unknown body as UTF-8 text by
+ * default, which mangles every non-text byte in a PDF. The fix is to ask the
+ * native side for base64 up front (`responseType: 'blob'` makes iOS return
+ * `data.base64EncodedString()`), which only makes sense per-call. Keeping it in
+ * a separate function means the ~130 existing fetch call sites keep their exact
+ * current behaviour — this file's header documents six prior native data-layer
+ * bugs, and a global change here is the highest-risk edit in the codebase.
+ *
+ * Note JSON is unaffected either way: the iOS handler checks the response
+ * Content-Type for application/json BEFORE it looks at responseType, so an
+ * error payload still arrives parsed.
+ */
+export async function fetchApiBinary(path: string): Promise<BinaryApiResponse> {
+  const empty = new Uint8Array(0);
+
+  if (!isNativePlatform()) {
+    // Web: ordinary same-origin fetch with cookie auth. No patch involved.
+    const res = await fetch(path);
+    if (!res.ok) {
+      return { ok: false, status: res.status, bytes: empty, base64: '', contentType: '', fileName: null };
+    }
+    const buffer = new Uint8Array(await res.arrayBuffer());
+    return {
+      ok: true,
+      status: res.status,
+      bytes: buffer,
+      base64: bytesToBase64(buffer),
+      contentType: res.headers.get('Content-Type') ?? '',
+      fileName: fileNameFromDisposition(res.headers.get('Content-Disposition')),
+    };
+  }
+
+  const url = API_ORIGIN + path;
+  const headers: Record<string, string> = {};
+  const token = await getStoredToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const appVersion = await getAppVersionHeader();
+  if (appVersion) headers['X-App-Version'] = appVersion;
+
+  const response = (await CapacitorHttp.request({
+    url,
+    method: 'GET',
+    headers,
+    responseType: 'blob',
+  } as unknown as Parameters<typeof CapacitorHttp.request>[0])) as unknown as NativeHttpResponse;
+
+  const contentType =
+    response.headers['Content-Type'] ?? response.headers['content-type'] ?? '';
+  const disposition =
+    response.headers['Content-Disposition'] ?? response.headers['content-disposition'];
+
+  if (response.status < 200 || response.status >= 300) {
+    return { ok: false, status: response.status, bytes: empty, base64: '', contentType, fileName: null };
+  }
+
+  // With responseType 'blob' iOS returns base64 — EXCEPT when the response is
+  // JSON, which it parses to an object before this branch is reached. A JSON
+  // body here means the server returned an error shape, not a file.
+  if (typeof response.data !== 'string') {
+    return { ok: false, status: response.status, bytes: empty, base64: '', contentType, fileName: null };
+  }
+
+  const base64 = response.data;
+  return {
+    ok: true,
+    status: response.status,
+    bytes: base64ToBytes(base64),
+    base64,
+    contentType,
+    fileName: fileNameFromDisposition(disposition),
+  };
+}
 
 
 /**
