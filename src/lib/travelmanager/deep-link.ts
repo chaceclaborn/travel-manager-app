@@ -32,7 +32,20 @@ const APP_LINK_HOSTS = new Set(['travels-manager.com', 'www.travels-manager.com'
  * app (which has no /auth/callback route — it is stripped from the static
  * export) would break Google and Apple sign-in for every user.
  */
-const NEVER_HANDLE = [/^\/api(\/|$)/, /^\/auth(\/|$)/, /^\/tour(\/|$)/];
+const NEVER_HANDLE = [
+  /^\/api(\/|$)/,
+  /^\/auth(\/|$)/,
+  // Bare prefix, not `(\/|$)` — this mirrors the AASA's `/tour*` (no slash
+  // before the star), which claims /tour and anything beginning with it. The
+  // slash-delimited entries above mirror `/api/*` and `/auth/*`, which is why
+  // a path like /authors is still routed normally.
+  /^\/tour/,
+  // The public share page exists only as page.web.tsx, so the mobile build's
+  // pageExtensions drops it and there is no /share route in the static export.
+  // Routing a shared link into the app would hard-404 and bounce the recipient
+  // to the dashboard — the exact failure the route firewall exists to prevent.
+  /^\/share(\/|$)/,
+];
 
 /** Pure core — platform passed explicitly so tests don't need to mock Capacitor. */
 export function toInAppPathFor(isNative: boolean, url: string): string | null {

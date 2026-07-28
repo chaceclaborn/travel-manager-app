@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { toInAppPathFor } from './deep-link';
+import { getMobileRoutes, targetResolves, DYN } from '../../../scripts/mobile-routes-lib.mjs';
 
 // Universal Links regression suite. The failure this guards against is subtle:
 // a shared trip link that opens the app but strands the user on the dashboard,
@@ -50,10 +51,11 @@ describe('toInAppPathFor — universal links', () => {
     expect(toInAppPathFor(true, 'https://WWW.Travels-Manager.com/trips')).toBe('/trips');
   });
 
-  it('passes a share link through unchanged', () => {
-    expect(toInAppPathFor(true, 'https://www.travels-manager.com/share/tok123')).toBe(
-      '/share/tok123'
-    );
+  it('refuses share links — /share has no route in the static export', () => {
+    // The share page ships only as page.web.tsx. Opening it in the app would
+    // hard-404 and dump the recipient on the dashboard, so it must stay in
+    // the browser, where it renders properly for people without the app.
+    expect(toInAppPathFor(true, 'https://www.travels-manager.com/share/tok123')).toBeNull();
   });
 
   it('keeps the query string and hash', () => {
@@ -87,6 +89,7 @@ describe('toInAppPathFor — paths the app must never swallow', () => {
     'https://www.travels-manager.com/auth',
     'https://www.travels-manager.com/api/trips',
     'https://www.travels-manager.com/tour?confirmed=1',
+    'https://www.travels-manager.com/share/abc123',
   ])('refuses %s', (url) => {
     expect(toInAppPathFor(true, url)).toBeNull();
   });
@@ -124,7 +127,7 @@ describe('the AASA file matches these rules', () => {
     );
   });
 
-  it.each(['/api/*', '/auth/*', '/tour*'])('excludes %s', (pattern) => {
+  it.each(['/api/*', '/auth/*', '/tour*', '/share/*'])('excludes %s', (pattern) => {
     const match = aasa.applinks.details[0].components.find(
       (c: Record<string, unknown>) => c['/'] === pattern
     );
@@ -132,10 +135,48 @@ describe('the AASA file matches these rules', () => {
     expect(match.exclude, `${pattern} must be excluded`).toBe(true);
   });
 
-  it('claims the share path so a shared trip opens the app', () => {
-    const patterns = aasa.applinks.details[0].components.map(
-      (c: Record<string, unknown>) => c['/']
-    );
-    expect(patterns).toContain('/share/*');
+  // The mechanical guard: a path the AASA hands to the app that has no route in
+  // the static export opens the app onto a 404, Capacitor falls back to
+  // index.html, and the user lands on the dashboard. This is how /share/* got
+  // through review, so assert it structurally rather than by inspection.
+  it('claims no path that is missing from the mobile static export', () => {
+    const routes = getMobileRoutes(path.join(process.cwd(), 'src', 'app'));
+    const claimed = aasa.applinks.details[0].components
+      .filter((c: Record<string, unknown>) => c.exclude !== true)
+      .map((c: Record<string, unknown>) => String(c['/']));
+
+    const unroutable = claimed.filter((pattern: string) => {
+      // '/trips/*' -> probe '/trips/<id>'; '/map*' -> probe '/map'.
+      const probe = pattern.endsWith('/*')
+        ? `${pattern.slice(0, -2)}/${DYN}`
+        : pattern.replace(/\*$/, '');
+      return !targetResolves(probe, routes) && !targetResolves(pattern.replace(/\/?\*$/, ''), routes);
+    });
+
+    expect(
+      unroutable,
+      `These AASA patterns open the iOS app onto routes that do not exist in the ` +
+        `static export. Either exclude them or ship a static route.\n  ${unroutable.join('\n  ')}`
+    ).toEqual([]);
+  });
+
+  it('every excluded pattern is also refused by the code', () => {
+    const excluded = aasa.applinks.details[0].components
+      .filter((c: Record<string, unknown>) => c.exclude === true)
+      .map((c: Record<string, unknown>) => String(c['/']));
+
+    for (const pattern of excluded) {
+      // '/auth/*' claims /auth/<anything>; '/tour*' is a BARE prefix and also
+      // claims /tourfoo. Probe whichever shape the pattern actually describes.
+      const probes = pattern.endsWith('/*')
+        ? [pattern.slice(0, -2), `${pattern.slice(0, -2)}/probe`]
+        : [pattern.replace(/\*$/, ''), pattern.replace(/\*$/, 'probe')];
+      for (const p of probes) {
+        expect(
+          toInAppPathFor(true, `https://www.travels-manager.com${p}`),
+          `${pattern} is excluded in the AASA but ${p} is not refused by NEVER_HANDLE`
+        ).toBeNull();
+      }
+    }
   });
 });

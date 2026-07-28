@@ -19,7 +19,11 @@
             "exclude": true,
             "comment": "Marketing and the email-confirmation landing page belong in the browser, where someone without the app can still read them."
           },
-          { "/": "/share/*", "comment": "A shared trip opens in the app when the recipient has it." },
+          {
+            "/": "/share/*",
+            "exclude": true,
+            "comment": "The public share page ships ONLY as page.web.tsx, so it does not exist in the iOS static export. Claiming it would open the app onto a route with no index.html, Capacitor would fall back to index.html, and the recipient would land on the dashboard with no way to read the trip. It also belongs in the browser: most people opening a share link do not have the app."
+          },
           { "/": "/trips/*" },
           { "/": "/bookings/*" },
           { "/": "/clients/*" },
