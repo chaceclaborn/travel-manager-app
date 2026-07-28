@@ -5,6 +5,91 @@ import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { setStoredToken, clearStoredToken, isNativePlatform } from '@/lib/mobile-auth';
 import type { User } from '@supabase/supabase-js';
 
+/**
+ * Did the SERVER tell us this token is no good? Only 401/403 count. Everything
+ * else — status 0 (offline / DNS / TLS), 5xx, timeouts — means "we don't know",
+ * and must never sign anyone out.
+ */
+export function isDefinitivelyInvalid(error: unknown): boolean {
+  const status = (error as { status?: number } | null | undefined)?.status;
+  return status === 401 || status === 403;
+}
+
+/**
+ * Is there a credential on this device, even if we couldn't use it?
+ *
+ * The subtle half is `sessionError`. getSession() is not purely local: within
+ * 90s of expiry auth-js refreshes the token over the network first. Offline
+ * that fails and getSession returns { session: null, error } WITHOUT clearing
+ * storage and WITHOUT emitting SIGNED_OUT. So a null session plus an error
+ * means "signed in but unreachable", while a null session with no error means
+ * genuinely signed out. Conflating the two is what sent an offline traveller
+ * to the marketing page.
+ */
+export function hasStoredCredential(cachedUser: unknown, sessionError: unknown): boolean {
+  return Boolean(cachedUser) || Boolean(sessionError);
+}
+
+/**
+ * Last-resort read of the persisted Supabase session, straight out of storage.
+ *
+ * Only used when getSession() reported an error, which means a credential
+ * exists but could not be refreshed (see init()). Without this the app renders
+ * nothing at all offline once the access token has aged past ~1 hour: we
+ * correctly decline to redirect, but `user` is null and the layout returns null.
+ *
+ * Deliberately tolerant — every failure path returns null rather than throwing,
+ * because this runs on the cold-launch critical path. It reads both shapes the
+ * two clients use: localStorage on native (supabase-js) and the possibly-chunked,
+ * possibly base64-prefixed cookie on web (@supabase/ssr).
+ */
+function readPersistedUser(): User | null {
+  try {
+    if (typeof window === 'undefined') return null;
+    const projectUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (!projectUrl) return null;
+    const ref = new URL(projectUrl).hostname.split('.')[0];
+    const key = `sb-${ref}-auth-token`;
+
+    let raw: string | null = null;
+    try {
+      raw = window.localStorage.getItem(key);
+    } catch {
+      /* localStorage can throw in private mode — fall through to cookies */
+    }
+
+    if (!raw && typeof document !== 'undefined') {
+      const jar = document.cookie ? document.cookie.split('; ') : [];
+      const readCookie = (name: string): string | null => {
+        const hit = jar.find((c) => c.startsWith(`${name}=`));
+        return hit ? decodeURIComponent(hit.slice(name.length + 1)) : null;
+      };
+      // @supabase/ssr splits values over ~3KB into `<key>.0`, `<key>.1`, …
+      const whole = readCookie(key);
+      if (whole) {
+        raw = whole;
+      } else {
+        const chunks: string[] = [];
+        for (let i = 0; ; i++) {
+          const chunk = readCookie(`${key}.${i}`);
+          if (chunk === null) break;
+          chunks.push(chunk);
+        }
+        raw = chunks.length > 0 ? chunks.join('') : null;
+      }
+    }
+
+    if (!raw) return null;
+    if (raw.startsWith('base64-')) raw = atob(raw.slice('base64-'.length));
+
+    const parsed = JSON.parse(raw);
+    const candidate = parsed?.user ?? parsed?.currentSession?.user ?? parsed?.session?.user;
+    return candidate && typeof candidate.id === 'string' ? (candidate as User) : null;
+  } catch {
+    return null;
+  }
+}
+
 export function useAuth() {
   const supabase = createSupabaseBrowserClient();
   const [user, setUser] = useState<User | null>(null);
@@ -39,12 +124,30 @@ export function useAuth() {
      * before any data is returned, so a stale local session buys nothing.
      */
     async function init() {
-      // Declared outside the try so the catch below can tell "we have a stored
-      // session to fall back on" from "we have nothing".
-      let cached: User | null = null;
+      // Declared outside the try so the catch below can tell "there is a stored
+      // credential to fall back on" from "we have nothing".
+      let credentialExists = false;
       try {
-        const { data: sessionData } = await supabase.auth.getSession();
-        cached = sessionData?.session?.user ?? null;
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        let cached = sessionData?.session?.user ?? null;
+
+        // getSession() is NOT purely local. If the access token is within 90s
+        // of expiring, auth-js refreshes it first — a NETWORK call. Offline
+        // that fails with AuthRetryableFetchError and getSession returns
+        // { session: null, error }, while deliberately LEAVING the session in
+        // storage and emitting no SIGNED_OUT. Since access tokens live ~1 hour,
+        // any offline launch after the app has been closed that long lands here.
+        //
+        // So "no session returned" does NOT mean "not signed in" — the error is
+        // the discriminator. A genuinely signed-out client returns
+        // { session: null, error: null }; an unrefreshable stored session
+        // returns { session: null, error: <retryable> }.
+        credentialExists = hasStoredCredential(cached, sessionError);
+
+        // Recover the identity straight from storage so the app can render
+        // offline instead of showing an empty shell.
+        if (!cached && sessionError) cached = readPersistedUser();
+
         if (cached) {
           setUser(cached);
           setLoading(false);
@@ -52,30 +155,24 @@ export function useAuth() {
 
         const { data, error } = await supabase.auth.getUser();
         if (error) {
-          // Distinguish "the server rejected this token" from "we couldn't
-          // reach the server". Supabase surfaces the former with an HTTP
-          // status; offline failures arrive as a fetch TypeError with none.
-          const status = (error as { status?: number }).status;
-          const definitivelyInvalid = status === 401 || status === 403;
-          if (definitivelyInvalid || !cached) {
-            // No stored session to fall back on means there is nothing to
-            // restore even if this failure was only the network — the user
-            // genuinely has no credential, so send them to the tour rather
-            // than leaving them on a blank screen forever.
+          if (isDefinitivelyInvalid(error) || !credentialExists) {
+            // Either the server rejected the token, or there is no stored
+            // credential at all — nothing to restore even if this failure was
+            // only the network. Send them to the tour rather than leaving a
+            // blank screen forever.
             setUser(null);
             setAuthKnownBad(true);
           }
-          // Otherwise (offline, DNS, 5xx, timeout WITH a stored session) leave
-          // the cached session in place — we simply don't know yet.
+          // Otherwise (offline, DNS, 5xx, timeout, WITH a credential) keep what
+          // we seeded — we simply don't know yet, and guessing signs people out.
         } else {
           setUser((data as { user: User | null }).user);
           setAuthKnownBad(!(data as { user: User | null }).user);
         }
       } catch {
-        // getSession/getUser threw outright (offline in the native shell does
-        // this). Keep a seeded session; with nothing seeded, fall through to
-        // the tour rather than rendering nothing.
-        if (!cached) setAuthKnownBad(true);
+        // getSession/getUser threw outright. Keep whatever we seeded; with no
+        // credential at all, fall through to the tour rather than render nothing.
+        if (!credentialExists) setAuthKnownBad(true);
       } finally {
         setLoading(false);
       }
@@ -84,13 +181,23 @@ export function useAuth() {
 
     const { data: listener } = supabase.auth.onAuthStateChange(
       (event: string, session: { user: User; access_token?: string } | null) => {
-        setUser(session?.user ?? null);
-        // SIGNED_OUT is definitive — the SDK has cleared the session locally
-        // (explicit sign-out, or a revoked/expired refresh token). Everything
-        // else that carries a session means we are good again. Note this is a
-        // LOCAL signal, so it stays correct offline.
-        if (event === 'SIGNED_OUT') setAuthKnownBad(true);
-        else if (session) setAuthKnownBad(false);
+        // Only SIGNED_OUT clears the user. It is definitive and LOCAL — the SDK
+        // has already dropped the session (explicit sign-out, or a revoked
+        // refresh token) — so it stays correct offline.
+        //
+        // Critically, this must NOT be `setUser(session?.user ?? null)`: when
+        // auth-js cannot refresh an expired token offline it emits
+        // INITIAL_SESSION with a NULL session, which would wipe the identity
+        // init() just recovered from storage and blank the screen. A null
+        // session on any event other than SIGNED_OUT means "unknown", not
+        // "signed out", so leave state untouched.
+        if (event === 'SIGNED_OUT') {
+          setUser(null);
+          setAuthKnownBad(true);
+        } else if (session) {
+          setUser(session.user);
+          setAuthKnownBad(false);
+        }
         // Keep the NATIVE Bearer token fresh. The Supabase JS SDK silently
         // auto-rotates the in-webview access token (roughly hourly). Without
         // re-persisting it, getStoredToken() stays frozen at the original
