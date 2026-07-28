@@ -1,6 +1,8 @@
 import { Capacitor } from '@capacitor/core';
 import { fetchApiBinary } from '@/lib/travelmanager/native-fetch';
 
+const MAX_FILENAME_LENGTH = 120;
+
 export type DownloadResult = 'shared' | 'opened' | 'cancelled' | 'unauthorized' | 'failed';
 
 interface DownloadRequest {
@@ -109,5 +111,16 @@ function sanitizeFileName(name: string): string {
     // A leading dot would make the export a hidden file.
     .replace(/^\.+/, '')
     .trim();
-  return cleaned.length > 0 ? cleaned.slice(0, 120) : 'travel-manager-export';
+
+  if (cleaned.length === 0) return 'travel-manager-export';
+  if (cleaned.length <= MAX_FILENAME_LENGTH) return cleaned;
+
+  // Truncate the STEM, never the extension. A long trip title would otherwise
+  // lose its ".pdf"/".ics" suffix, and iOS decides how to preview and which
+  // apps can receive a shared file from the extension — an extensionless file
+  // lands in the share sheet as an opaque blob with no "Add to Calendar".
+  const dot = cleaned.lastIndexOf('.');
+  const ext = dot > 0 && cleaned.length - dot <= 9 ? cleaned.slice(dot) : '';
+  const stem = ext ? cleaned.slice(0, dot) : cleaned;
+  return stem.slice(0, MAX_FILENAME_LENGTH - ext.length) + ext;
 }

@@ -231,12 +231,27 @@ export async function GET(
     }
 
     const pdfBuffer = Buffer.from(doc.output('arraybuffer'));
-    const filename = `trip-report-${trip.title.toLowerCase().replace(/\s+/g, '-')}.pdf`;
+
+    // Trip titles are free text, so they can contain emoji, CJK, Cyrillic —
+    // anything. HTTP header values are ByteStrings: a single code point above
+    // U+00FF makes the Response constructor throw, which the catch below turns
+    // into a 500. The result was that "PDF report" failed permanently for any
+    // trip called e.g. "Tokyo 2026" in Japanese, with no explanation.
+    //
+    // RFC 6266: send a plain ASCII `filename` for old clients plus a UTF-8
+    // `filename*` carrying the real name. fileNameFromDisposition() in
+    // native-fetch.ts already prefers the starred form and decodes it, so the
+    // share sheet gets the proper title for free.
+    const rawName = `trip-report-${trip.title.trim().replace(/\s+/g, '-')}.pdf`;
+    const asciiName =
+      `trip-report-${trip.title.toLowerCase().replace(/[^a-zA-Z0-9-_]+/g, '-').replace(/^-+|-+$/g, '')}.pdf`
+        .replace(/-+\.pdf$/, '.pdf');
+    const safeAscii = asciiName === 'trip-report-.pdf' ? 'trip-report.pdf' : asciiName;
 
     return new NextResponse(pdfBuffer, {
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="${filename}"`,
+        'Content-Disposition': `attachment; filename="${safeAscii}"; filename*=UTF-8''${encodeURIComponent(rawName)}`,
       },
     });
   } catch (error) {
