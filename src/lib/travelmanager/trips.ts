@@ -93,6 +93,26 @@ function assertMayLinkContacts(
   }
 }
 
+/**
+ * Strip the hydrated contact off an itinerary write echo.
+ *
+ * getTripItinerary already nulls vendor/client for non-owners, but the create
+ * and update paths return the item with those relations included — so the same
+ * data the read redacts was one write away. An EDITOR cannot ATTACH a contact
+ * (assertMayLinkContacts), but the owner may have attached one already, and
+ * editing that item echoed the contact's identity straight back.
+ */
+function stripContactsForNonOwner<T extends Record<string, unknown>>(
+  item: T,
+  access: Pick<TripAccess, 'isOwner'>
+): T {
+  if (access.isOwner) return item;
+  const copy = { ...item };
+  delete copy.vendor;
+  delete copy.client;
+  return copy;
+}
+
 export async function getTrips(userId: string, mode: 'full' | 'minimal' = 'full') {
   const where = await tripScopeWhere(userId);
 
@@ -195,7 +215,7 @@ export async function createTrip(data: CreateTripInput, userId: string) {
 }
 
 export async function updateTrip(id: string, data: UpdateTripInput, userId: string) {
-  await requireTripAccess(id, userId, 'edit');
+  const access = await requireTripAccess(id, userId, 'edit');
   const updateData: Record<string, unknown> = { ...data };
   if (data.startDate) updateData.startDate = new Date(data.startDate);
   if (data.endDate) updateData.endDate = new Date(data.endDate);
@@ -223,11 +243,18 @@ export async function updateTrip(id: string, data: UpdateTripInput, userId: stri
     }
   }
 
-  return prisma.trip.update({
+  const updated = await prisma.trip.update({
     where: { id },
     data: updateData,
     include: tripInclude,
   });
+
+  // The WRITE echo needs redacting exactly as much as the read does. This
+  // returns `include: tripInclude` with no select, so an EDITOR saving the trip
+  // was handed back shareToken — enough to publish a permanent public link to a
+  // trip they do not own — plus the owner's full address book. Guarding
+  // getTripById alone left the same data one PUT away.
+  return redactTripForViewer(updated, access);
 }
 
 export async function deleteTrip(id: string, userId: string) {
@@ -340,7 +367,7 @@ export async function createItineraryItem(data: CreateItineraryItemInput, userId
   assertMayLinkContacts(data, access);
   if (data.vendorId) await verifyVendorOwnership(data.vendorId, userId);
   if (data.clientId) await verifyClientOwnership(data.clientId, userId);
-  return prisma.itineraryItem.create({
+  const created = await prisma.itineraryItem.create({
     data: {
       tripId: data.tripId,
       title: data.title,
@@ -359,6 +386,7 @@ export async function createItineraryItem(data: CreateItineraryItemInput, userId
       client: { select: { id: true, name: true, company: true } },
     },
   });
+  return stripContactsForNonOwner(created, access);
 }
 
 export async function updateItineraryItem(id: string, data: UpdateItineraryItemInput, userId: string) {
@@ -374,7 +402,7 @@ export async function updateItineraryItem(id: string, data: UpdateItineraryItemI
   if (data.endDate) updateData.endDate = new Date(data.endDate);
   if (data.endDate === null) updateData.endDate = null;
 
-  return prisma.itineraryItem.update({
+  const updated = await prisma.itineraryItem.update({
     where: { id },
     data: updateData,
     include: {
@@ -382,6 +410,7 @@ export async function updateItineraryItem(id: string, data: UpdateItineraryItemI
       client: { select: { id: true, name: true, company: true } },
     },
   });
+  return stripContactsForNonOwner(updated, access);
 }
 
 export async function deleteItineraryItem(id: string, userId: string) {

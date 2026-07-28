@@ -252,6 +252,11 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       }
     }
 
+    // Same guard as PUT. A collaborator is served commission columns as null,
+    // so letting an echoed form through here would blank out figures they were
+    // never shown — destroying data they cannot even see, silently.
+    dropCommissionFieldsForNonOwner(sanitized, authorized.access);
+
     if (sanitized.tripId) {
       if (!validateUUID(sanitized.tripId as string)) {
         return NextResponse.json({ error: 'Invalid trip ID' }, { status: 400 });
@@ -263,6 +268,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const booking = await updateBooking(id, sanitized as Parameters<typeof updateBooking>[1], user.id);
     return NextResponse.json(booking);
   } catch (error) {
+    if (error instanceof TripAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('Error updating booking:', error instanceof Error ? error.message : error);
     return NextResponse.json({ error: 'Failed to update booking' }, { status: 500 });
   }

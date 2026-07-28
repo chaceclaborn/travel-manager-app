@@ -75,6 +75,11 @@ describe('trip authorization is centralised', () => {
       'src/app/api/trips/bulk-delete/route.ts':
         'deliberately owner-only via a userId filter — must never widen to collaborators',
       'src/app/api/trips/from-template/route.ts': 'creates a brand-new trip owned by the caller',
+      // Owner-scoped by a where clause rather than the chokepoint, like
+      // trips/bulk-delete. The stricter assertion below pins the exact scope —
+      // do not relax it to a bare userId filter.
+      'src/app/api/bookings/bulk-delete/route.ts':
+        "scoped to the caller's own trips; see the dedicated assertion below",
       // These delegate rather than authorize inline. Each named helper opens
       // with requireTripAccess(tripId, userId, 'owner') — verified, not assumed.
       // Contacts stay owner-only in v1, so 'owner' is the correct capability.
@@ -95,6 +100,10 @@ describe('trip authorization is centralised', () => {
       'itinerary/[id]', 'itinerary/reorder', 'stops/reorder', 'expenses/[id]',
       'expenses/[id]/receipt', 'checklists/[id]', 'notes/[id]', 'attachments/[id]',
       'bookings/[id]',
+      // bookings/bulk-delete shipped unguarded: Booking.userId means AUTHOR
+      // now, so its `{ userId }` filter silently stopped being an ownership
+      // check and let a removed collaborator delete rows off the owner's trip.
+      'bookings/bulk-delete',
     ]
       .map((p) => path.join(API_DIR, p, 'route.ts'))
       .filter((f) => fs.existsSync(f));
@@ -110,6 +119,30 @@ describe('trip authorization is centralised', () => {
         `requireTripAccess(). Either authorize them, or add them to ALLOWLIST\n` +
         `in this test with a written reason.\n${offenders.map((o) => `  ${o}`).join('\n')}`
     ).toEqual([]);
+  });
+
+  it('booking bulk-delete is scoped to the caller\'s OWN trips', () => {
+    // The subtle one. Booking.userId is the author, not the owner, so
+    // `{ userId }` alone would let someone delete bookings they authored on a
+    // trip they have since been removed from. The scope clause is what makes
+    // the filter an ownership check again.
+    const src = read(path.join(API_DIR, 'bookings', 'bulk-delete', 'route.ts'));
+    expect(src).toMatch(/tripId:\s*null/);
+    expect(src).toMatch(/trip:\s*\{\s*userId/);
+  });
+
+  it('write echoes are redacted for non-owners', () => {
+    // Redacting the READ path is not enough — updateTrip returns
+    // `include: tripInclude` with no select, so an EDITOR saving a trip was
+    // handed back shareToken and the owner's address book. Every trip write
+    // that echoes the row must redact it too.
+    const src = read(path.join(LIB_DIR, 'trips.ts'));
+    const updateTrip = src.slice(src.indexOf('export async function updateTrip'));
+    const body = updateTrip.slice(0, updateTrip.indexOf('\nexport '));
+    expect(
+      body,
+      'updateTrip echoes the full trip row; it must pass through redactTripForViewer'
+    ).toMatch(/redactTripForViewer/);
   });
 
   it('bulk-delete still filters by userId', () => {
