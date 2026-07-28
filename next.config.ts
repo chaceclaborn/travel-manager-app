@@ -132,6 +132,24 @@ const nextConfig: NextConfig = {
                 { key: 'Cache-Control', value: 'no-cache, must-revalidate' },
               ],
             },
+            {
+              // Universal Links. Apple's CDN fetches this file to decide which
+              // https:// paths open the iOS app instead of Safari.
+              //
+              // Three things it is fussy about, all of which have burned people:
+              //  - the file has NO .json extension (see public/.well-known/), but
+              //    it MUST still be served as application/json. Next infers the
+              //    type from the extension, so without this header it goes out as
+              //    application/octet-stream and Apple silently ignores it.
+              //  - it must be reachable with no redirect. travels-manager.com
+              //    307s to www, so the entitlement lists BOTH hosts.
+              //  - it must not require authentication.
+              source: '/.well-known/apple-app-site-association',
+              headers: [
+                { key: 'Content-Type', value: 'application/json' },
+                { key: 'Cache-Control', value: 'public, max-age=3600' },
+              ],
+            },
           ];
         },
       }),

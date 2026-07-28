@@ -1,0 +1,33 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["H2FK7C8RK2.com.chaceclaborn.travelmanager"],
+        "components": [
+          {
+            "/": "/api/*",
+            "exclude": true,
+            "comment": "Never hand API traffic to the app. The OAuth callback and every data endpoint must stay in the browser."
+          },
+          {
+            "/": "/auth/*",
+            "exclude": true,
+            "comment": "Sign-in redirects land here. Claiming this path would open the app mid-flow and break Google and Apple sign-in for every user."
+          },
+          {
+            "/": "/tour*",
+            "exclude": true,
+            "comment": "Marketing and the email-confirmation landing page belong in the browser, where someone without the app can still read them."
+          },
+          { "/": "/share/*", "comment": "A shared trip opens in the app when the recipient has it." },
+          { "/": "/trips/*" },
+          { "/": "/bookings/*" },
+          { "/": "/clients/*" },
+          { "/": "/vendors/*" },
+          { "/": "/meetings*" },
+          { "/": "/map*" }
+        ]
+      }
+    ]
+  }
+}

@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { isNativePlatform } from '@/lib/mobile-auth';
+import { toInAppPath } from '@/lib/travelmanager/deep-link';
 
 /**
  * Routes `travelmanager://<path>` deep links to the in-app router.
@@ -56,12 +57,8 @@ export function DeepLinkRouter() {
     (async () => {
       const { App } = await import('@capacitor/app');
       const handle = await App.addListener('appUrlOpen', ({ url }) => {
-        // travelmanager://trips        -> /trips
-        // travelmanager://trips/detail?id=abc -> /trips/detail?id=abc
-        const rest = url.replace(/^travelmanager:\/\//i, '');
-        if (rest === url) return; // not our scheme (e.g. the Google callback)
-        const path = `/${rest.replace(/^\/+/, '')}`;
-        router.push(path);
+        const path = toInAppPath(url);
+        if (path) router.push(path);
       });
       remove = () => handle.remove();
     })();
