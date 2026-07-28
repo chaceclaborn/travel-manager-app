@@ -11,6 +11,7 @@ interface FeatureClick {
 interface EventsData {
   featureClicks: FeatureClick[];
   frustrationCount: number;
+  sessions?: { ios: number; web: number };
 }
 
 export function UsageInsights() {
@@ -38,6 +39,8 @@ export function UsageInsights() {
 
   const top5 = data?.featureClicks.slice(0, 5) ?? [];
   const maxCount = top5.length > 0 ? Math.max(...top5.map((f) => f.count)) : 0;
+  const sessions = data?.sessions ?? { ios: 0, web: 0 };
+  const totalSessions = sessions.ios + sessions.web;
 
   return (
     <div className="bg-white rounded-xl shadow-sm p-5 ring-1 ring-slate-100">
@@ -50,7 +53,7 @@ export function UsageInsights() {
         <div className="flex items-center justify-center py-8">
           <Loader2 className="size-5 animate-spin text-slate-400" />
         </div>
-      ) : !data || top5.length === 0 ? (
+      ) : !data || (top5.length === 0 && totalSessions === 0) ? (
         <p className="text-sm text-slate-500 py-4">
           Tracking active &mdash; interact with the app to see data
         </p>
@@ -73,10 +76,23 @@ export function UsageInsights() {
             </div>
           ))}
 
-          {data.frustrationCount > 0 && (
-            <p className="text-xs text-slate-400 pt-2 border-t border-slate-100">
-              {data.frustrationCount} whitespace click{data.frustrationCount !== 1 ? 's' : ''} this month
-            </p>
+          {(totalSessions > 0 || data.frustrationCount > 0) && (
+            <div className="space-y-1 pt-2 border-t border-slate-100">
+              {totalSessions > 0 && (
+                <p className="text-xs text-slate-400">
+                  {totalSessions} session{totalSessions !== 1 ? 's' : ''} this month
+                  {' — '}
+                  {Math.round((sessions.ios / totalSessions) * 100)}% iPhone app,{' '}
+                  {Math.round((sessions.web / totalSessions) * 100)}% web
+                </p>
+              )}
+              {data.frustrationCount > 0 && (
+                <p className="text-xs text-slate-400">
+                  {data.frustrationCount} rage click{data.frustrationCount !== 1 ? 's' : ''} this month
+                  {' — '}repeated taps on the same spot
+                </p>
+              )}
+            </div>
           )}
         </div>
       )}

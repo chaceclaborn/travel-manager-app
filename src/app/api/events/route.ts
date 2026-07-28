@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     if (!user) return response;
 
     const body = await request.json();
-    const events: { type: string; label: string; page: string }[] = body?.events;
+    const events: { type: string; label: string; page: string; platform?: string }[] = body?.events;
 
     if (!Array.isArray(events) || events.length === 0) {
       return NextResponse.json({ error: 'events array is required' }, { status: 400 });
@@ -29,6 +29,11 @@ export async function POST(request: NextRequest) {
         type: sanitizeString(String(e.type || '')).slice(0, 50),
         label: sanitizeString(String(e.label || '')).slice(0, 100),
         page: sanitizeString(String(e.page || '')).slice(0, 200),
+        // Closed set rather than free text: this column exists to be grouped on,
+        // and a typo'd or spoofed value would silently split the counts it is
+        // meant to produce. Anything unrecognised falls back to the column
+        // default instead of being stored.
+        platform: e.platform === 'ios' ? 'ios' : 'web',
       })),
     });
 
@@ -55,30 +60,45 @@ export async function GET(request: NextRequest) {
       createdAt: { gte: thirtyDaysAgo },
     };
 
-    const [featureClicksRaw, frustrationCountRaw, frustrationPagesRaw] = await Promise.all([
-      prisma.clickEvent.groupBy({
-        by: ['label'],
-        where: { ...where, type: 'feature' },
-        _count: { label: true },
-        orderBy: { _count: { label: 'desc' } },
-        take: 20,
-      }),
-      prisma.clickEvent.count({
-        where: { ...where, type: 'frustration' },
-      }),
-      prisma.clickEvent.groupBy({
-        by: ['page'],
-        where: { ...where, type: 'frustration' },
-        _count: { page: true },
-        orderBy: { _count: { page: 'desc' } },
-        take: 10,
-      }),
-    ]);
+    const [featureClicksRaw, frustrationCountRaw, frustrationPagesRaw, sessionsByPlatformRaw] =
+      await Promise.all([
+        prisma.clickEvent.groupBy({
+          by: ['label'],
+          where: { ...where, type: 'feature' },
+          _count: { label: true },
+          orderBy: { _count: { label: 'desc' } },
+          take: 20,
+        }),
+        prisma.clickEvent.count({
+          where: { ...where, type: 'frustration' },
+        }),
+        prisma.clickEvent.groupBy({
+          by: ['page'],
+          where: { ...where, type: 'frustration' },
+          _count: { page: true },
+          orderBy: { _count: { page: 'desc' } },
+          take: 10,
+        }),
+        // The native-vs-web split. Counted from 'session' rows, not clicks, so a
+        // single heavy session can't outweigh many light ones.
+        prisma.clickEvent.groupBy({
+          by: ['platform'],
+          where: { ...where, type: 'session' },
+          _count: { platform: true },
+        }),
+      ]);
+
+    const sessions = { ios: 0, web: 0 };
+    for (const row of sessionsByPlatformRaw) {
+      if (row.platform === 'ios') sessions.ios = row._count.platform;
+      else sessions.web = row._count.platform;
+    }
 
     return NextResponse.json({
       featureClicks: featureClicksRaw.map((g) => ({ label: g.label, count: g._count.label })),
       frustrationCount: frustrationCountRaw,
       frustrationPages: frustrationPagesRaw.map((g) => ({ page: g.page, count: g._count.page })),
+      sessions,
     });
   } catch (error) {
     console.error('Error fetching click events:', error instanceof Error ? error.message : error);

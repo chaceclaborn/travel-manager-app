@@ -500,10 +500,16 @@ model ClickEvent {
   type      String
   label     String
   page      String
+  // "ios" | "web". Which shell the event came from. Defaults to "web" so the
+  // ~3k rows recorded before this column existed keep a sane value — they
+  // predate the native client having any meaningful install base, so "web" is
+  // the honest reading rather than a guess.
+  platform  String   @default("web")
   createdAt DateTime @default(now())
 
   @@index([userId, type])
   @@index([userId, createdAt])
+  @@index([platform, createdAt])
 }
 
 // ─── Push Notifications ───
