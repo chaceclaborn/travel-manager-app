@@ -33,6 +33,8 @@ interface TripCardProps {
     clients?: unknown[];
     friends?: unknown[];
     _count?: { vendors: number; clients: number; friends?: number };
+    /** Absent means owned — the API only stamps this once sharing is involved. */
+    viewerRole?: 'OWNER' | 'EDITOR' | 'VIEWER';
   };
   onSaved?: () => void;
   onDeleted?: () => void;
@@ -186,7 +188,12 @@ export function TripCard({ trip, onSaved, onDeleted, isNext = false }: TripCardP
     ? `${formatDateDisplay(trip.startDate)} – ${formatDate(trip.endDate)}`
     : 'Dates not set';
 
-  const rowActions = (
+  // Inline edit and delete act on the whole trip, so they belong to its owner.
+  // Server-side these already 403; hiding them keeps a collaborator from being
+  // offered an action that cannot work.
+  const isOwner = (trip.viewerRole ?? 'OWNER') === 'OWNER';
+
+  const rowActions = isOwner ? (
     <>
       <button
         type="button"
@@ -207,7 +214,7 @@ export function TripCard({ trip, onSaved, onDeleted, isNext = false }: TripCardP
         <Trash2 className="size-3.5" />
       </button>
     </>
-  );
+  ) : null;
 
   return (
     <>
@@ -272,8 +279,12 @@ export function TripCard({ trip, onSaved, onDeleted, isNext = false }: TripCardP
             )}
           </div>
 
-          {(vendorCount > 0 || clientCount > 0 || friendCount > 0 || trip.tripType === 'WORK') && (
+          {(vendorCount > 0 || clientCount > 0 || friendCount > 0 || trip.tripType === 'WORK' || !isOwner) && (
             <div className="mb-3.5 mt-3 flex flex-wrap items-center gap-1.5">
+              {/* Says whose trip this is at a glance — otherwise a shared trip
+                  is indistinguishable from your own until you open it and
+                  notice the missing Edit button. */}
+              {!isOwner && <TMChip icon={Users}>Shared with you</TMChip>}
               {trip.tripType === 'WORK' && <TMChip icon={Briefcase}>Work</TMChip>}
               {friendCount > 0 && (
                 <TMChip tone="outline" icon={HeartHandshake}>

@@ -84,6 +84,7 @@ import { TripBookings } from '@/components/travelmanager/TripBookings';
 import { TripChecklist } from '@/components/travelmanager/TripChecklist';
 import { TripJournal } from '@/components/travelmanager/TripJournal';
 import { TripPhotos } from '@/components/travelmanager/TripPhotos';
+import { TripCollaborators } from '@/components/travelmanager/TripCollaborators';
 import { useTMToast } from '@/components/travelmanager/TMToast';
 import { useDeleteEntity } from '@/lib/travelmanager/useDeleteEntity';
 import { formatDateShort, toDateTimeInputValue } from '@/lib/date-utils';
@@ -166,6 +167,8 @@ interface TripDetail {
   shareEnabled?: boolean | null;
   shareToken?: string | null;
   shareExpiresAt?: string | null;
+  /** Stamped by the API. Absent on older payloads, which are always the owner's. */
+  viewerRole?: 'OWNER' | 'EDITOR' | 'VIEWER';
 }
 
 export default function TripDetailContent({ id }: { id: string }) {
@@ -186,6 +189,15 @@ export default function TripDetailContent({ id }: { id: string }) {
   const [saving, setSaving] = useState(false);
   const [duplicating, setDuplicating] = useState(false);
   const [activeTab, setActiveTab] = useState('itinerary');
+
+  // What this viewer may do. The server decides and stamps viewerRole onto the
+  // trip payload; these are only used to hide affordances that would 403 anyway.
+  // Defaulting an absent role to OWNER is deliberate — the API omits it for
+  // payloads that were already owner-only, and treating "unknown" as read-only
+  // would break every existing trip screen on a stale cache.
+  const viewerRole = trip?.viewerRole ?? 'OWNER';
+  const isOwner = viewerRole === 'OWNER';
+  const canEdit = viewerRole !== 'VIEWER';
 
   const [itinerary, setItinerary] = useState<Array<{
     id: string;
@@ -347,12 +359,14 @@ export default function TripDetailContent({ id }: { id: string }) {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
-      if (params.get('edit') === 'true' && !loading && trip) {
+      // canEdit guard: a link carrying ?edit=true must not drop a read-only
+      // collaborator straight into an edit form they cannot save.
+      if (params.get('edit') === 'true' && !loading && trip && canEdit) {
         setEditing(true);
         window.history.replaceState({}, '', detailHref('trips', id));
       }
     }
-  }, [loading, trip, id]);
+  }, [loading, trip, id, canEdit]);
 
   const handleUpdate = async (data: Record<string, unknown>) => {
     setSaving(true);
@@ -656,9 +670,11 @@ export default function TripDetailContent({ id }: { id: string }) {
         href="/trips"
         section="Trips"
         action={
-          <button type="button" onClick={() => setEditing(true)} className="tm-btn-icon size-8" aria-label="Edit trip">
-            <Pencil className="size-4" />
-          </button>
+          canEdit ? (
+            <button type="button" onClick={() => setEditing(true)} className="tm-btn-icon size-8" aria-label="Edit trip">
+              <Pencil className="size-4" />
+            </button>
+          ) : undefined
         }
       />
 
@@ -776,14 +792,20 @@ export default function TripDetailContent({ id }: { id: string }) {
 
               {/* Right: Edit + Share visible, everything else in the ⋯ menu */}
               <div className="mt-3 flex shrink-0 items-center gap-2 md:mt-0">
-                <Button variant="outline" size="sm" className="tm-btn tm-btn-secondary h-8 md:h-9" onClick={() => setEditing(true)}>
-                  <Pencil className="size-3.5" />
-                  Edit
-                </Button>
-                <Button variant="outline" size="sm" className="tm-btn tm-btn-secondary h-8 md:h-9" onClick={() => setShareOpen(true)}>
-                  <Share2 className="size-3.5" />
-                  Share
-                </Button>
+                {canEdit && (
+                  <Button variant="outline" size="sm" className="tm-btn tm-btn-secondary h-8 md:h-9" onClick={() => setEditing(true)}>
+                    <Pencil className="size-3.5" />
+                    Edit
+                  </Button>
+                )}
+                {/* Publishing a public link is an owner act — enableTripShare
+                    rotates the token, silently revoking the owner's existing one. */}
+                {isOwner && (
+                  <Button variant="outline" size="sm" className="tm-btn tm-btn-secondary h-8 md:h-9" onClick={() => setShareOpen(true)}>
+                    <Share2 className="size-3.5" />
+                    Share
+                  </Button>
+                )}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
@@ -800,6 +822,11 @@ export default function TripDetailContent({ id }: { id: string }) {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-52">
+                    {/* Everything in this menu is owner-only. Duplicate forks
+                        the trip into the actor's account as an unrevocable
+                        copy; the PDF report embeds full vendor contact details;
+                        Delete cascades every child row. */}
+                    {isOwner && (
                     <DropdownMenuItem
                       disabled={duplicating}
                       onClick={async () => {
@@ -821,6 +848,7 @@ export default function TripDetailContent({ id }: { id: string }) {
                       <Copy />
                       Duplicate trip
                     </DropdownMenuItem>
+                    )}
                     {/* The whole Export section is web-only for now:
                         - window.open of an /api URL is a NAVIGATION, not a
                           fetch — native-fetch's Bearer rewrite never touches
@@ -830,7 +858,7 @@ export default function TripDetailContent({ id }: { id: string }) {
                         - window.print() is a silent no-op inside WKWebView.
                         Bring these back on native via apiFetch + native file
                         sharing / a print plugin. */}
-                    {!isNativePlatform() && (
+                    {isOwner && !isNativePlatform() && (
                       <>
                         <DropdownMenuSeparator />
                         <DropdownMenuLabel className="text-xs font-medium uppercase tracking-wider text-slate-400">
@@ -850,11 +878,15 @@ export default function TripDetailContent({ id }: { id: string }) {
                         </DropdownMenuItem>
                       </>
                     )}
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>
-                      <Trash2 />
-                      Delete trip
-                    </DropdownMenuItem>
+                    {isOwner && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>
+                          <Trash2 />
+                          Delete trip
+                        </DropdownMenuItem>
+                      </>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -1024,7 +1056,17 @@ export default function TripDetailContent({ id }: { id: string }) {
               </TabsContent>
 
               <TabsContent value="people" className="mt-5">
+                {/* Full width above the grid: who can open this trip is the
+                    first thing you want to know on the People tab. */}
+                <div className="mb-5">
+                  <TripCollaborators tripId={id} isOwner={isOwner} viewerRole={viewerRole} />
+                </div>
                 <div className="grid gap-5 lg:grid-cols-2">
+                  {/* Contacts are owner-only in v1. Beyond the PII in these
+                      rows, LinkSelector would offer the VIEWER's own address
+                      book for linking onto someone else's trip — two different
+                      people's contacts in one list. */}
+                  {isOwner && (
                   <div className={`tm-card p-6 ${isWorkTrip ? '' : 'lg:col-span-2'}`}>
                     <h3 className="mb-4 flex items-center gap-2 text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">
                       <HeartHandshake className="size-4 text-slate-400" />
@@ -1043,7 +1085,8 @@ export default function TripDetailContent({ id }: { id: string }) {
                       />
                     )}
                   </div>
-                  {isWorkTrip && (
+                  )}
+                  {isOwner && isWorkTrip && (
                     <>
                       <div className="tm-card p-6">
                         <h3 className="mb-4 flex items-center gap-2 text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">
@@ -1294,9 +1337,11 @@ export default function TripDetailContent({ id }: { id: string }) {
       {/* Mobile action footer — replaces the tab bar on detail screens. */}
       {!editing && (
         <TMActionFooter>
-          <button type="button" className="tm-btn tm-btn-secondary h-11 flex-1" onClick={() => setEditing(true)}>
-            Edit
-          </button>
+          {canEdit && (
+            <button type="button" className="tm-btn tm-btn-secondary h-11 flex-1" onClick={() => setEditing(true)}>
+              Edit
+            </button>
+          )}
           <button
             type="button"
             className="tm-btn tm-btn-primary h-11 flex-[2]"

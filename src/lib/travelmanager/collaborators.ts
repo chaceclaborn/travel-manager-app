@@ -102,7 +102,16 @@ export async function listCollaborators(tripId: string, userId: string) {
     },
     orderBy: { createdAt: 'asc' },
   });
-  return { collaborators: rows, viewerRole: access.viewerRole, isOwner: access.isOwner };
+  // The caller needs to know which row is theirs in order to leave, and the
+  // client has no reliable handle on its own user id. Naming it here beats the
+  // client guessing "the first accepted row".
+  const myRowId = rows.find((r) => r.user.id === userId)?.id ?? null;
+  return {
+    collaborators: rows,
+    viewerRole: access.viewerRole,
+    isOwner: access.isOwner,
+    myRowId,
+  };
 }
 
 /**

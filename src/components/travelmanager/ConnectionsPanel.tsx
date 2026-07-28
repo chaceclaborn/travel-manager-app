@@ -20,7 +20,7 @@ function initials(user: PublicUserSummary): string {
     .toUpperCase();
 }
 
-function UserAvatar({ user, className }: { user: PublicUserSummary; className?: string }) {
+export function UserAvatar({ user, className }: { user: PublicUserSummary; className?: string }) {
   return (
     <Avatar className={className}>
       {user.avatarUrl && <AvatarImage src={user.avatarUrl} alt={user.name || user.username || ''} />}
@@ -31,7 +31,7 @@ function UserAvatar({ user, className }: { user: PublicUserSummary; className?: 
   );
 }
 
-function UserIdentity({ user }: { user: PublicUserSummary }) {
+export function UserIdentity({ user }: { user: PublicUserSummary }) {
   return (
     <div className="min-w-0 flex-1">
       {user.name && <p className="truncate text-[14px] font-medium text-tm-ink">{user.name}</p>}
@@ -52,7 +52,7 @@ function UserIdentity({ user }: { user: PublicUserSummary }) {
  * phone screen. Explicit flex-row here, and the group sits in ONE bordered
  * container with dividers rather than a card per person.
  */
-function ConnectionRow({
+export function ConnectionRow({
   user,
   children,
 }: {
@@ -69,7 +69,7 @@ function ConnectionRow({
 }
 
 /** Bordered container for a run of ConnectionRows. */
-function RowGroup({ children }: { children: React.ReactNode }) {
+export function RowGroup({ children }: { children: React.ReactNode }) {
   return (
     <div className="divide-y divide-tm-divider overflow-hidden rounded-[14px] border border-tm-line bg-tm-surface shadow-tm-card">
       {children}
