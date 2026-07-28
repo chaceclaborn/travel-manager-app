@@ -100,6 +100,13 @@ export function ClickTracker() {
         page: window.location.pathname,
         platform,
       });
+      // Arm the debounce immediately. The timer is otherwise only set inside the
+      // click handler, so a load with zero clicks held this row in memory until
+      // beforeunload — which never fires in WKWebView when the app is swiped
+      // away, while it usually does fire on a web tab close. That would have
+      // dropped native sessions and kept web ones, biasing the very ratio this
+      // event exists to measure.
+      timer.current = setTimeout(flush, 5000);
     }
 
     const handler = (e: MouseEvent) => {
@@ -141,11 +148,20 @@ export function ClickTracker() {
       if (timer.current) clearTimeout(timer.current);
       timer.current = setTimeout(flush, 5000);
     };
+    // visibilitychange -> hidden is the event that actually fires in WKWebView
+    // when the app is backgrounded or swiped away; beforeunload does not. Keep
+    // both: beforeunload still covers a web tab close.
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') flush();
+    };
+
     window.addEventListener('click', handler);
     window.addEventListener('beforeunload', flush);
+    document.addEventListener('visibilitychange', onVisibility);
     return () => {
       window.removeEventListener('click', handler);
       window.removeEventListener('beforeunload', flush);
+      document.removeEventListener('visibilitychange', onVisibility);
       if (timer.current) clearTimeout(timer.current);
       flush();
     };

@@ -69,12 +69,17 @@ export async function GET(request: NextRequest) {
           orderBy: { _count: { label: 'desc' } },
           take: 20,
         }),
+        // Scoped to the 'rage' label, NOT all frustration rows. The retired
+        // heuristic wrote `frustration:whitespace` on essentially every click
+        // that missed a control (2,371 of 3,115 rows ever recorded); counting
+        // those here would relabel years of instrumentation noise as rage
+        // clicks and keep the metric useless for another 30 days.
         prisma.clickEvent.count({
-          where: { ...where, type: 'frustration' },
+          where: { ...where, type: 'frustration', label: { startsWith: 'rage' } },
         }),
         prisma.clickEvent.groupBy({
           by: ['page'],
-          where: { ...where, type: 'frustration' },
+          where: { ...where, type: 'frustration', label: { startsWith: 'rage' } },
           _count: { page: true },
           orderBy: { _count: { page: 'desc' } },
           take: 10,
