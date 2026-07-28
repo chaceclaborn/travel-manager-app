@@ -10,11 +10,8 @@ import {
   Search,
   X,
   MapPin,
-  Clock,
   Trash2,
   Loader2,
-  AlertCircle,
-  RefreshCw,
   Building2,
   Pencil,
   CheckSquare,
@@ -31,7 +28,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { TMEmptyState } from '@/components/travelmanager/TMEmptyState';
+import {
+  TMEmptyState,
+  TMFilteredEmpty,
+  TMErrorState,
+  TMListSkeleton,
+} from '@/components/travelmanager/TMEmptyState';
+import { TMPageShell, TMScreenHeader } from '@/components/travelmanager/TMPageShell';
+import { TMIconTile, TMDateTile, TMChip } from '@/components/travelmanager/TMPrimitives';
 import { useTMToast } from '@/components/travelmanager/TMToast';
 import { TMDeleteDialog } from '@/components/travelmanager/TMDeleteDialog';
 import { DatePicker } from '@/components/travelmanager/DatePicker';
@@ -145,6 +149,11 @@ function MeetingCard({
   onDelete: (id: string) => void;
   onSaved: () => void;
 }) {
+  const start = new Date(meeting.startDateTime);
+  const isPast = start.getTime() < Date.now();
+  // "Imminent" is within the next seven days — the window in which a meeting
+  // stops being a plan and starts being a commitment.
+  const isImminent = !isPast && start.getTime() - Date.now() < 7 * 86_400_000;
   const { showToast } = useTMToast();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -217,7 +226,13 @@ function MeetingCard({
       layout
       exit={{ opacity: 0, scale: 0.95 }}
       whileTap={{ scale: 0.98 }}
-      className={`relative rounded-[15px] border bg-white p-4 shadow-card transition-all duration-200 ${editing ? 'border-amber-300 ring-1 ring-amber-200' : selected ? 'border-amber-400 ring-2 ring-amber-300' : 'border-[#eef2f6] hover:-translate-y-[3px] motion-reduce:hover:translate-y-0 hover:shadow-card-hover'}`}
+      className={`group relative px-4 py-3.5 md:px-5 ${
+        editing
+          ? 'bg-tm-accent-bg/40'
+          : selected
+            ? 'bg-tm-wash ring-2 ring-inset ring-tm-accent'
+            : `hover:bg-tm-wash ${isPast ? 'opacity-75 hover:opacity-100' : ''}`
+      }`}
     >
       {selectMode && !editing && (
         <button
@@ -230,30 +245,55 @@ function MeetingCard({
           {selected ? <CheckSquare className="size-4 text-amber-500" /> : <Square className="size-4" />}
         </button>
       )}
-      <div className="mb-3 flex items-start justify-between gap-2">
+      <div className={`flex items-start justify-between gap-3 ${editing ? 'mb-3' : ''}`}>
         {editing ? (
-          <div className="flex items-center gap-2">
-            <span className="flex items-center justify-center rounded-lg bg-indigo-50 p-1.5 ring-1 ring-indigo-200">
-              <Users className="size-4 text-indigo-500" />
-            </span>
-            <p className="text-sm font-medium text-slate-700">Edit Meeting</p>
+          <div className="flex items-center gap-2.5">
+            <TMIconTile icon={Users} size={38} bg="#EFF4FB" fg="#2563EB" />
+            <p className="text-[13px] font-medium text-tm-body">Edit meeting</p>
           </div>
         ) : (
-          <div className="flex items-center gap-2.5 min-w-0 flex-1">
-            <span className="flex items-center justify-center shrink-0 size-[38px] rounded-[11px] bg-indigo-50">
-              <Users className="size-[18px] text-indigo-600" />
-            </span>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold leading-[1.3] text-slate-800 truncate">{meeting.title}</p>
+          <div className="flex min-w-0 flex-1 items-start gap-3">
+            {/* Meetings this week invert to dark — that's the difference
+                between "look at this" and "it's on the books". */}
+            <TMDateTile date={start} size={44} imminent={isImminent} />
+            <div className="min-w-0 flex-1">
+              <p className={`truncate text-[14px] font-semibold tracking-[-0.01em] ${isPast ? 'text-tm-body' : 'text-tm-ink'}`}>
+                {meeting.title}
+              </p>
+              <p className="mt-0.5 truncate text-[12px] text-tm-subtle tm-nums">
+                {formatDateTime(meeting.startDateTime)}
+                {meeting.endDateTime ? ` – ${formatDateTime(meeting.endDateTime)}` : ''}
+                {meeting.timezone ? ` (${getTzAbbreviation(meeting.timezone)})` : ''}
+                {meeting.location ? ` · ${meeting.location}` : ''}
+              </p>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {meeting.trip && (
+                  <Link href={detailHref('trips', meeting.trip.id)}>
+                    <TMChip tone={isPast ? 'neutral' : 'accent'} icon={MapPin}>
+                      {meeting.trip.title}
+                    </TMChip>
+                  </Link>
+                )}
+                {meeting.client && (
+                  <Link href={detailHref('clients', meeting.client.id)}>
+                    <TMChip tone={isPast ? 'neutral' : 'info'} icon={Building2}>
+                      {meeting.client.name}
+                    </TMChip>
+                  </Link>
+                )}
+              </div>
+              {meeting.notes && (
+                <p className="tm-prose mt-2 text-[12px] leading-[1.5] text-tm-subtle">{meeting.notes}</p>
+              )}
             </div>
           </div>
         )}
-        <div className="flex items-center gap-1">
+        <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
           {!editing && (
             <>
               <button
                 onClick={startEdit}
-                className="inline-flex items-center justify-center cursor-pointer rounded-md p-2 sm:p-1.5 min-w-11 min-h-11 sm:min-w-0 sm:min-h-0 text-slate-300 transition-all duration-200 hover:bg-amber-50 hover:text-amber-500 focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:outline-none"
+                className="inline-flex size-8 cursor-pointer items-center justify-center rounded-[7px] text-tm-ghost hover:bg-tm-fill hover:text-tm-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tm-accent/40"
                 title="Edit meeting"
                 aria-label="Edit meeting"
               >
@@ -261,7 +301,7 @@ function MeetingCard({
               </button>
               <button
                 onClick={() => onDelete(meeting.id)}
-                className="inline-flex items-center justify-center cursor-pointer rounded-md p-2 sm:p-1.5 min-w-11 min-h-11 sm:min-w-0 sm:min-h-0 text-slate-300 transition-all duration-200 hover:bg-red-50 hover:text-red-500 focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:outline-none"
+                className="inline-flex size-8 cursor-pointer items-center justify-center rounded-[7px] text-tm-ghost hover:bg-tm-danger-bg hover:text-tm-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tm-accent/40"
                 title="Delete meeting"
                 aria-label="Delete meeting"
               >
@@ -394,7 +434,7 @@ function MeetingCard({
             </div>
           </div>
           <div className="flex gap-2">
-            <Button type="submit" size="sm" disabled={saving} className="h-11 sm:h-7 text-xs bg-amber-500 hover:bg-amber-600">
+            <Button type="submit" size="sm" disabled={saving} className="h-11 sm:h-7 text-xs tm-btn tm-btn-primary">
               {saving ? <><Loader2 className="size-3.5 animate-spin" />Saving...</> : 'Save'}
             </Button>
             <Button type="button" size="sm" variant="outline" onClick={() => setEditing(false)} className="h-11 sm:h-7 text-xs">
@@ -403,61 +443,7 @@ function MeetingCard({
           </div>
         </motion.form>
       ) : (
-        <motion.div
-          key="view"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.15 }}
-        >
-          <div className="mb-2 flex flex-wrap gap-1.5">
-            {meeting.trip && (
-              <Link
-                href={detailHref('trips', meeting.trip.id)}
-                className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-[3px] text-[11px] font-semibold text-amber-700 transition-colors hover:bg-amber-100"
-              >
-                <MapPin className="size-3" />
-                {meeting.trip.title}
-              </Link>
-            )}
-            {meeting.client && (
-              <Link
-                href={detailHref('clients', meeting.client.id)}
-                className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-[3px] text-[11px] font-semibold text-blue-700 transition-colors hover:bg-blue-100"
-              >
-                <Building2 className="size-3" />
-                {meeting.client.name}
-              </Link>
-            )}
-            {!meeting.trip && !meeting.client && (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-[3px] text-[11px] font-semibold text-slate-500">
-                Standalone
-              </span>
-            )}
-          </div>
-
-          <div className="space-y-1.5 text-[13px]">
-            <div className="flex items-center gap-2 text-slate-500">
-              <Clock className="size-3.5 shrink-0 text-indigo-400" />
-              <span>
-                {formatDateTime(meeting.startDateTime)}
-                {meeting.endDateTime ? ` - ${formatDateTime(meeting.endDateTime)}` : ''}
-                {meeting.timezone && (
-                  <span className="ml-1 text-xs text-slate-400">({getTzAbbreviation(meeting.timezone)})</span>
-                )}
-              </span>
-            </div>
-            {meeting.location && (
-              <div className="flex items-center gap-2 text-slate-500">
-                <MapPin className="size-3.5 shrink-0 text-indigo-400" />
-                <span className="truncate">{meeting.location}</span>
-              </div>
-            )}
-            {meeting.notes && (
-              <p className="mt-2 text-xs text-slate-400 italic">{meeting.notes}</p>
-            )}
-          </div>
-        </motion.div>
+        <motion.div key="view" className="hidden" aria-hidden="true" />
       )}
       </AnimatePresence>
     </motion.div>
@@ -670,100 +656,72 @@ export default function MeetingsPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6" role="status" aria-label="Loading meetings">
-        {/* Title row: heading + action buttons */}
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h1 className="text-[26px] font-bold tracking-[-0.02em] text-slate-900">Meetings</h1>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="h-8 w-24 rounded-md bg-slate-200/60 animate-pulse" />
-            <div className="h-9 w-36 rounded-md bg-slate-200/70 animate-pulse" />
-          </div>
+      <TMPageShell width={860}>
+        <TMScreenHeader title="Meetings" />
+        <div className="pt-5 md:pt-7" role="status" aria-label="Loading meetings">
+          <TMListSkeleton rows={5} />
         </div>
-
-        {/* Search bar */}
-        <div className="h-9 w-full rounded-md bg-slate-200/70 animate-pulse" />
-
-        {/* Result count line */}
-        <div className="h-4 w-44 rounded bg-slate-200/50 animate-pulse" />
-
-        {/* Meeting cards */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="rounded-[15px] border border-[#eef2f6] bg-white p-4 shadow-card">
-              <div className="mb-3 flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="size-9 shrink-0 rounded-xl bg-slate-200/70 animate-pulse" />
-                  <div className="h-4 w-28 rounded bg-slate-200/80 animate-pulse" />
-                </div>
-                <div className="h-4 w-12 rounded bg-slate-200/50 animate-pulse" />
-              </div>
-              <div className="space-y-2">
-                <div className="h-3.5 w-3/4 rounded bg-slate-200/60 animate-pulse" />
-                <div className="h-3.5 w-1/2 rounded bg-slate-200/50 animate-pulse" />
-                <div className="h-3.5 w-1/3 rounded bg-slate-200/50 animate-pulse" />
-              </div>
-            </div>
-          ))}
-        </div>
-        <span className="sr-only">Loading meetings…</span>
-      </div>
+      </TMPageShell>
     );
   }
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center py-24 text-center">
-        <div className="relative mb-6">
-          <div className="size-20 rounded-full bg-red-50 flex items-center justify-center">
-            <AlertCircle className="size-10 text-red-400" />
-          </div>
-          <div className="absolute -bottom-1 -right-1 size-7 rounded-full bg-red-100 flex items-center justify-center">
-            <RefreshCw className="size-3.5 text-red-400" />
-          </div>
+      <TMPageShell width={860}>
+        <TMScreenHeader title="Meetings" />
+        <div className="tm-card mt-6">
+          <TMErrorState
+            title="Couldn't load your meetings"
+            description="Something went wrong on our end. Your data is safe — nothing was lost."
+            onRetry={fetchMeetings}
+          />
         </div>
-        <h2 className="text-xl font-semibold text-slate-900">Unable to load meetings</h2>
-        <p className="mt-2 text-sm text-slate-500 max-w-sm">
-          Something went wrong. Check your connection and try again.
-        </p>
-        <Button
-          onClick={fetchMeetings}
-          className="mt-6 bg-slate-900 hover:bg-slate-800 text-white shadow-sm"
-        >
-          <RefreshCw className="mr-2 size-4" />
-          Try again
-        </Button>
-      </div>
+      </TMPageShell>
     );
   }
 
+  // Split by time: what's coming is the working list; what's past is a record.
+  const now = Date.now();
+  const upcoming = filtered.filter((m) => new Date(m.startDateTime).getTime() >= now);
+  const past = filtered
+    .filter((m) => new Date(m.startDateTime).getTime() < now)
+    .sort((a, b) => new Date(b.startDateTime).getTime() - new Date(a.startDateTime).getTime());
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-2xl font-bold text-slate-800">Meetings</h1>
-        <div className="flex flex-wrap items-center gap-2">
-          {meetings.length > 0 && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={toggleSelectMode}
-              aria-pressed={selectMode}
-              aria-label={selectMode ? 'Exit select mode' : 'Enter select mode'}
-              className={selectMode ? 'border-amber-400 bg-amber-50 text-amber-700 hover:bg-amber-100' : ''}
-            >
-              <CheckSquare className="mr-2 size-4" />
-              {selectMode ? 'Done' : 'Select'}
-            </Button>
-          )}
-          <Button
-            onClick={() => setShowForm(true)}
-            className="h-10 rounded-[11px] bg-gradient-to-br from-amber-500 to-amber-600 text-white shadow-[0_4px_14px_-4px_rgba(245,158,11,0.55)] transition-transform hover:from-amber-600 hover:to-amber-700 motion-safe:hover:-translate-y-px"
-          >
-            <Plus className="mr-2 size-4" />
-            New Meeting
-          </Button>
-        </div>
-      </div>
+    <TMPageShell width={860}>
+      <TMScreenHeader
+        title="Meetings"
+        subtitle={
+          meetings.length > 0
+            ? `${upcoming.length} upcoming · ${past.length} past`
+            : undefined
+        }
+        actions={
+          <>
+            {meetings.length > 0 && (
+              <button
+                type="button"
+                className="tm-btn tm-btn-secondary"
+                onClick={toggleSelectMode}
+                aria-pressed={selectMode}
+              >
+                {selectMode ? 'Done' : 'Select'}
+              </button>
+            )}
+            <button type="button" className="tm-btn tm-btn-primary" onClick={() => setShowForm(true)}>
+              New Meeting
+            </button>
+          </>
+        }
+        mobileAction={
+          <button type="button" className="tm-btn tm-btn-primary h-[34px] px-[13px]" onClick={() => setShowForm(true)}>
+            <Plus className="size-3.5" aria-hidden="true" />
+            New
+          </button>
+        }
+      />
+
+      <div className="pt-5 md:pt-7" />
 
       {showForm && (
         <motion.form
@@ -913,7 +871,7 @@ export default function MeetingsPage() {
           </div>
 
           <div className="flex gap-2">
-            <Button type="submit" size="sm" disabled={submitting} className="bg-amber-500 hover:bg-amber-600">
+            <Button type="submit" size="sm" disabled={submitting} className="tm-btn tm-btn-primary">
               {submitting ? (
                 <>
                   <Loader2 className="mr-1.5 size-3.5 animate-spin" />
@@ -935,61 +893,65 @@ export default function MeetingsPage() {
         </motion.form>
       )}
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-        <Input
-          placeholder="Search by title, location, trip, or client..."
+      <div className="relative w-full sm:max-w-[420px]">
+        <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-tm-subtle" aria-hidden="true" />
+        <input
+          placeholder="Search meetings"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           aria-label="Search meetings"
-          className="pl-9"
+          className="tm-input pl-[34px]"
         />
       </div>
 
-      {meetings.length > 0 && (
-        <p className="text-sm text-slate-500">
-          Showing {filtered.length} of {meetings.length} meetings
-        </p>
-      )}
-
-      {filtered.length === 0 ? (
-        <TMEmptyState
-          title={meetings.length === 0 ? 'No meetings yet' : 'No matching meetings'}
-          description={
-            meetings.length === 0
-              ? 'Schedule your first meeting to get started'
-              : 'Try adjusting your search terms.'
-          }
-          icon={Users}
-        />
-      ) : (
-        <motion.div
-          className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
-          initial="hidden"
-          animate="visible"
-          variants={{
-            hidden: {},
-            visible: { transition: { staggerChildren: 0.05 } },
-          }}
-        >
-          <AnimatePresence mode="popLayout">
-            {filtered.map((meeting) => (
-              <MeetingCard
-                key={meeting.id}
-                meeting={meeting}
-                trips={trips}
-                clients={clients}
-                timezones={timezones}
-                selectMode={selectMode}
-                selected={selectedIds.has(meeting.id)}
-                onToggleSelect={toggleSelected}
-                onDelete={setDeleteTarget}
-                onSaved={fetchMeetings}
+      <div className="pt-5">
+        {filtered.length === 0 ? (
+          <div className="tm-card">
+            {meetings.length === 0 ? (
+              <TMEmptyState
+                title="No meetings yet"
+                description="Schedule a meeting and link it to the trip or client it belongs to."
+                actionLabel="New Meeting"
+                onAction={() => setShowForm(true)}
+                icon={Users}
               />
-            ))}
-          </AnimatePresence>
-        </motion.div>
-      )}
+            ) : (
+              <TMFilteredEmpty noun="meetings" query={search} onClear={() => setSearch('')} />
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-6">
+            {[
+              { label: 'Upcoming', rows: upcoming },
+              { label: 'Past', rows: past },
+            ]
+              .filter((section) => section.rows.length > 0)
+              .map((section) => (
+                <section key={section.label}>
+                  <h2 className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-tm-subtle">
+                    {section.label}
+                  </h2>
+                  <div className="tm-card divide-y divide-tm-divider overflow-hidden">
+                    {section.rows.map((meeting) => (
+                      <MeetingCard
+                        key={meeting.id}
+                        meeting={meeting}
+                        trips={trips}
+                        clients={clients}
+                        timezones={timezones}
+                        selectMode={selectMode}
+                        selected={selectedIds.has(meeting.id)}
+                        onToggleSelect={toggleSelected}
+                        onDelete={setDeleteTarget}
+                        onSaved={fetchMeetings}
+                      />
+                    ))}
+                  </div>
+                </section>
+              ))}
+          </div>
+        )}
+      </div>
 
       <TMDeleteDialog
         open={!!deleteTarget}
@@ -1048,7 +1010,7 @@ export default function MeetingsPage() {
                 type="button"
                 size="sm"
                 onClick={() => setBulkDeleteOpen(true)}
-                className="bg-red-500 text-white hover:bg-red-600"
+                className="tm-btn tm-btn-danger"
                 aria-label="Delete selected meetings"
               >
                 <Trash2 className="mr-1.5 size-3.5" />
@@ -1058,6 +1020,6 @@ export default function MeetingsPage() {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </TMPageShell>
   );
 }

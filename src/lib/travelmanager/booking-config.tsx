@@ -1,4 +1,20 @@
-import { Plane, Building2, Car, Train, Bus, Package } from 'lucide-react';
+import { Plane, Building2, Car, Train, Bus, Package, type LucideIcon } from 'lucide-react';
+
+/**
+ * The icon *component* for each booking type.
+ *
+ * `typeConfig.icon` below is a pre-sized element, which is convenient inline
+ * but useless where a size has to be chosen at the call site (the 38px card
+ * tile vs the 52px detail tile). This map is the component form.
+ */
+export const BOOKING_TYPE_ICON: Record<BookingType, LucideIcon> = {
+  FLIGHT: Plane,
+  HOTEL: Building2,
+  CAR_RENTAL: Car,
+  TRAIN: Train,
+  BUS: Bus,
+  OTHER: Package,
+};
 
 export type BookingType = 'FLIGHT' | 'HOTEL' | 'CAR_RENTAL' | 'TRAIN' | 'BUS' | 'OTHER';
 

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { MapPin, Globe as GlobeIcon, Plane, Car, Route, Loader2, Home, Search } from 'lucide-react';
-import { TMBreadcrumb } from '@/components/travelmanager/TMBreadcrumb';
+import { TMScreenHeader } from '@/components/travelmanager/TMPageShell';
 import { haversineDistance, KM_TO_MILES } from '@/lib/distance';
 import { useGeocodingSearch, formatGeoName } from '@/lib/travelmanager/useGeocodingSearch';
 import type { GeoResult } from '@/lib/travelmanager/useGeocodingSearch';
@@ -266,21 +266,22 @@ export default function MapPage() {
 
   return (
     <div className="flex flex-col h-full overflow-x-hidden">
-      <div className="px-4 pt-4 pb-2 md:px-6 md:pt-6">
-        <TMBreadcrumb items={[
-          { label: 'Travel Manager', href: '/' },
-          { label: 'Map' },
-        ]} />
-        <h1 className="text-2xl font-bold text-slate-900">Travel Map</h1>
-        <p className="text-sm text-slate-500 mt-1">Your destinations around the world</p>
+      <div className="px-4 md:px-10">
+        <TMScreenHeader
+          title="Where you travel"
+          subtitle={`${trips.length} ${trips.length === 1 ? 'trip' : 'trips'} · ${uniqueDestinations} ${uniqueDestinations === 1 ? 'city' : 'cities'}`}
+        />
       </div>
 
       {!loading && !homeLocation && (
         <div className="mx-4 mb-2 md:mx-6" ref={homeContainerRef}>
-          <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3">
-            <div className="flex items-center gap-2 shrink-0">
-              <Home className="size-4 text-amber-600" />
-              <span className="text-sm font-medium text-amber-800">Set your home location to see travel routes</span>
+          <div
+            className="flex flex-col gap-3 rounded-[11px] px-4 py-3 sm:flex-row sm:items-center"
+            style={{ background: '#FFFBF2', boxShadow: 'inset 0 0 0 1px #FDE9C8' }}
+          >
+            <div className="flex shrink-0 items-center gap-2">
+              <Home className="size-4 text-tm-accent-text" aria-hidden="true" />
+              <span className="text-[13px] font-medium text-tm-accent-text">Set your home location to see travel routes</span>
             </div>
             <div className="relative flex-1 max-w-sm">
               <input
@@ -289,7 +290,7 @@ export default function MapPage() {
                 onChange={(e) => handleHomeInputChange(e.target.value)}
                 onFocus={() => { if (homeResults.length > 0) setHomeSearchOpen(true); }}
                 placeholder="Search your home city..."
-                className="w-full rounded-lg border border-amber-300 bg-white px-3 py-1.5 pl-8 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
+                className="tm-input pl-8"
                 autoComplete="off"
               />
               <div className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400">
@@ -300,12 +301,12 @@ export default function MapPage() {
                 )}
               </div>
               {homeSearchOpen && homeResults.length > 0 && (
-                <div className="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-[200px] overflow-y-auto">
+                <div className="absolute z-50 mt-1 max-h-[200px] w-full overflow-y-auto rounded-[9px] border border-tm-line bg-white shadow-tm-card-hover">
                   {homeResults.map((result, idx) => (
                     <button
                       key={`${result.lat}-${result.lon}-${idx}`}
                       type="button"
-                      className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 border-b border-slate-100 last:border-b-0 flex items-start gap-2"
+                      className="flex w-full items-start gap-2 border-b border-tm-divider px-3 py-2 text-left text-[13px] last:border-b-0 hover:bg-tm-wash"
                       onClick={() => handleSelectHome(result)}
                     >
                       <MapPin className="size-3.5 text-amber-500 mt-0.5 shrink-0" />
@@ -323,9 +324,9 @@ export default function MapPage() {
       )}
 
       <div className="flex-1 flex flex-col lg:flex-row gap-4 p-4 min-h-0">
-        <div className="flex-1 rounded-xl overflow-hidden border border-slate-200 relative h-[50vmax] min-h-[240px] md:h-[calc(100vh-12rem)] z-0 isolate">
+        <div className="relative isolate z-0 h-[50vmax] min-h-[280px] flex-1 overflow-hidden rounded-[14px] border border-tm-line shadow-tm-card md:h-[calc(100vh-14rem)]">
           {loading ? (
-            <div className="absolute inset-0 flex items-center justify-center bg-slate-100">
+            <div className="absolute inset-0 flex items-center justify-center bg-tm-canvas">
               <div className="text-center">
                 <Loader2 className="size-6 text-slate-400 animate-spin mx-auto mb-2" />
                 <p className="text-slate-500 text-sm">Loading trips...</p>
@@ -348,54 +349,54 @@ export default function MapPage() {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-1 lg:w-72 lg:flex lg:flex-col gap-3">
-          <div className="flex-1 bg-white border border-slate-200 rounded-xl p-4">
+          <div className="flex-1 tm-card p-4">
             <div className="flex items-center gap-2 text-slate-500 mb-1">
               <MapPin className="size-4" />
-              <span className="text-xs font-medium uppercase tracking-wide">Destinations</span>
+              <span className="tm-label-upper">Destinations</span>
             </div>
-            <div className="text-3xl font-bold text-slate-900">{uniqueDestinations}</div>
-            <p className="text-xs text-slate-400 mt-1">Unique locations</p>
+            <div className="text-[26px] font-semibold tracking-[-0.02em] tm-nums text-tm-ink">{uniqueDestinations}</div>
+            <p className="mt-1 text-[12px] text-tm-subtle">Unique locations</p>
           </div>
 
-          <div className="flex-1 bg-white border border-slate-200 rounded-xl p-4">
+          <div className="flex-1 tm-card p-4">
             <div className="flex items-center gap-2 text-slate-500 mb-1">
               <GlobeIcon className="size-4" />
-              <span className="text-xs font-medium uppercase tracking-wide">Completed</span>
+              <span className="tm-label-upper">Completed</span>
             </div>
-            <div className="text-3xl font-bold text-slate-900">{completedTrips}</div>
-            <p className="text-xs text-slate-400 mt-1">Trips completed</p>
+            <div className="text-[26px] font-semibold tracking-[-0.02em] tm-nums text-tm-ink">{completedTrips}</div>
+            <p className="mt-1 text-[12px] text-tm-subtle">Trips completed</p>
           </div>
 
-          <div className="flex-1 bg-white border border-slate-200 rounded-xl p-4">
+          <div className="flex-1 tm-card p-4">
             <div className="flex items-center gap-2 text-slate-500 mb-1">
               <Plane className="size-4" />
-              <span className="text-xs font-medium uppercase tracking-wide">Travelled</span>
+              <span className="tm-label-upper">Travelled</span>
             </div>
-            <div className="text-3xl font-bold text-slate-900">
+            <div className="text-[26px] font-semibold tracking-[-0.02em] tm-nums text-tm-ink">
               {formatDistance(travelledDistance)}
             </div>
-            <p className="text-xs text-slate-400 mt-1">Miles completed</p>
+            <p className="mt-1 text-[12px] text-tm-subtle">Miles completed</p>
           </div>
 
           {(modeMiles.flown > 0 || modeMiles.ground > 0) && (
-            <div className="flex-1 bg-white border border-slate-200 rounded-xl p-4">
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-500 mb-2">By mode</p>
+            <div className="flex-1 tm-card p-4">
+              <p className="tm-label-upper mb-2">By mode</p>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="flex items-center gap-2 text-sm text-slate-600">
+                  <span className="flex items-center gap-2 text-[13px] text-tm-body">
                     <Plane className="size-4 text-amber-500" />
                     Flown
                   </span>
-                  <span className="text-sm font-bold tabular-nums text-slate-900">
+                  <span className="text-[13px] font-semibold tm-nums text-tm-ink">
                     ~{formatDistance(modeMiles.flown)} mi
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="flex items-center gap-2 text-sm text-slate-600">
+                  <span className="flex items-center gap-2 text-[13px] text-tm-body">
                     <Car className="size-4 text-amber-500" />
                     Driven
                   </span>
-                  <span className="text-sm font-bold tabular-nums text-slate-900">
+                  <span className="text-[13px] font-semibold tm-nums text-tm-ink">
                     ~{formatDistance(modeMiles.ground)} mi
                   </span>
                 </div>
@@ -403,19 +404,19 @@ export default function MapPage() {
             </div>
           )}
 
-          <div className="flex-1 bg-white border border-slate-200 rounded-xl p-4">
+          <div className="flex-1 tm-card p-4">
             <div className="flex items-center gap-2 text-slate-500 mb-1">
               <Route className="size-4" />
-              <span className="text-xs font-medium uppercase tracking-wide">Planned</span>
+              <span className="tm-label-upper">Planned</span>
             </div>
-            <div className="text-3xl font-bold text-slate-900">
+            <div className="text-[26px] font-semibold tracking-[-0.02em] tm-nums text-tm-ink">
               {formatDistance(plannedDistance)}
             </div>
-            <p className="text-xs text-slate-400 mt-1">Total miles planned</p>
+            <p className="mt-1 text-[12px] text-tm-subtle">Total miles planned</p>
           </div>
 
-          <div className="col-span-2 sm:col-span-4 lg:col-span-1 bg-white border border-slate-200 rounded-xl p-4">
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-500 mb-2">Markers</p>
+          <div className="col-span-2 sm:col-span-4 lg:col-span-1 tm-card p-4">
+            <p className="tm-label-upper mb-2">Markers</p>
             <div className="space-y-1.5">
               {[
                 { label: 'Planned', color: '#f59e0b' },
@@ -426,39 +427,39 @@ export default function MapPage() {
               ].map(item => (
                 <div key={item.label} className="flex items-center gap-2">
                   <span className="size-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-                  <span className="text-xs text-slate-600">{item.label}</span>
+                  <span className="text-[12px] text-tm-muted">{item.label}</span>
                 </div>
               ))}
             </div>
             {homeLocation ? (
               <>
-                <p className="text-xs font-medium uppercase tracking-wide text-slate-500 mb-2 mt-3">Routes</p>
+                <p className="tm-label-upper mb-2 mt-3">Routes</p>
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-2">
                     <span className="w-5 h-0 border-t-2 border-amber-500" />
-                    <span className="text-xs text-slate-600">Flight</span>
+                    <span className="text-[12px] text-tm-muted">Flight</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="w-5 h-0 border-t-2 border-emerald-500" />
-                    <span className="text-xs text-slate-600">Drive</span>
+                    <span className="text-[12px] text-tm-muted">Drive</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="w-5 h-0 border-t-2 border-blue-500" />
-                    <span className="text-xs text-slate-600">Connected</span>
+                    <span className="text-[12px] text-tm-muted">Connected</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="w-5 h-0 border-t-2 border-dashed border-slate-400" />
-                    <span className="text-xs text-slate-600">Return home</span>
+                    <span className="text-[12px] text-tm-muted">Return home</span>
                   </div>
                 </div>
               </>
             ) : geoTrips.length > 1 && (
               <>
-                <p className="text-xs font-medium uppercase tracking-wide text-slate-500 mb-2 mt-3">Routes</p>
+                <p className="tm-label-upper mb-2 mt-3">Routes</p>
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-2">
                     <span className="w-5 h-0 border-t-2 border-dashed border-amber-500" />
-                    <span className="text-xs text-slate-600">Trip connections</span>
+                    <span className="text-[12px] text-tm-muted">Trip connections</span>
                   </div>
                 </div>
               </>

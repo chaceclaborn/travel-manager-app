@@ -1,76 +1,35 @@
 'use client';
 
 import Link from 'next/link';
-import { Inbox, type LucideIcon } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { motion } from 'framer-motion';
+import {
+  Inbox,
+  SearchX,
+  TriangleAlert,
+  RefreshCw,
+  WifiOff,
+  CircleAlert,
+  type LucideIcon,
+} from 'lucide-react';
+
+/**
+ * Empty, filtered-empty, error and offline states.
+ *
+ * The old treatment (animated dashed-suitcase illustration + fading blocks)
+ * was replaced with a single quiet icon tile: an empty list is a routine
+ * condition, not an event worth a performance. Nothing here animates.
+ */
+
+/* ------------------------------------------------------------------ empty */
 
 interface TMEmptyStateProps {
   title: string;
   description: string;
   actionLabel?: string;
   actionHref?: string;
+  /** Use instead of actionHref when the action opens a modal rather than navigating. */
+  onAction?: () => void;
   icon?: LucideIcon;
   secondaryAction?: { label: string; onClick: () => void };
-}
-
-function SuitcaseIllustration() {
-  return (
-    <svg
-      width="80"
-      height="80"
-      viewBox="0 0 80 80"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className="mb-2"
-    >
-      {/* Suitcase body */}
-      <rect
-        x="14"
-        y="28"
-        width="52"
-        height="36"
-        rx="5"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeDasharray="4 3"
-        className="text-slate-300"
-      />
-      {/* Handle */}
-      <path
-        d="M30 28V22a6 6 0 0 1 6-6h8a6 6 0 0 1 6 6v6"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeDasharray="4 3"
-        className="text-amber-400"
-      />
-      {/* Center clasp */}
-      <rect
-        x="35"
-        y="40"
-        width="10"
-        height="6"
-        rx="2"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        className="text-amber-400"
-      />
-      {/* Center belt line */}
-      <line
-        x1="14"
-        y1="46"
-        x2="66"
-        y2="46"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeDasharray="4 3"
-        className="text-slate-200"
-      />
-      {/* Wheels */}
-      <circle cx="26" cy="66" r="2.5" className="fill-slate-200" />
-      <circle cx="54" cy="66" r="2.5" className="fill-slate-200" />
-    </svg>
-  );
 }
 
 export function TMEmptyState({
@@ -78,90 +37,243 @@ export function TMEmptyState({
   description,
   actionLabel,
   actionHref,
+  onAction,
   icon: Icon = Inbox,
   secondaryAction,
 }: TMEmptyStateProps) {
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-      className="relative flex flex-col items-center justify-center py-20 text-center"
-    >
-      {/* Decorative background dots */}
-      <div className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden">
-        <svg width="200" height="200" className="opacity-[0.04]">
-          {Array.from({ length: 8 }).map((_, row) =>
-            Array.from({ length: 8 }).map((_, col) => (
-              <circle
-                key={`${row}-${col}`}
-                cx={14 + col * 25}
-                cy={14 + row * 25}
-                r="2"
-                fill="currentColor"
-                className="text-slate-900"
-              />
-            ))
+    <div className="flex flex-col items-center px-8 py-11 text-center">
+      <span
+        className="mb-4 flex size-[52px] items-center justify-center rounded-[14px] bg-tm-app"
+        style={{ boxShadow: 'inset 0 0 0 1px #EEF1F5' }}
+        aria-hidden="true"
+      >
+        <Icon className="size-[23px] text-tm-faint" strokeWidth={1.8} />
+      </span>
+      <h3 className="text-[16px] font-semibold tracking-[-0.01em] text-tm-ink">{title}</h3>
+      <p className="tm-prose mt-1.5 text-[13px] leading-[1.6] text-tm-subtle">{description}</p>
+      {(actionLabel || secondaryAction) && (
+        <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+          {actionLabel && actionHref && (
+            <Link href={actionHref} className="tm-btn tm-btn-primary">
+              {actionLabel}
+            </Link>
           )}
-        </svg>
+          {actionLabel && !actionHref && onAction && (
+            <button type="button" onClick={onAction} className="tm-btn tm-btn-primary">
+              {actionLabel}
+            </button>
+          )}
+          {secondaryAction && (
+            <button type="button" onClick={secondaryAction.onClick} className="tm-btn tm-btn-secondary">
+              {secondaryAction.label}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* --------------------------------------------------------- filtered empty */
+
+/**
+ * Shown when filters — not the absence of data — produced zero rows. The
+ * filter bar must stay mounted above this so the user can see *why* the list
+ * is empty and undo it in one click.
+ */
+export function TMFilteredEmpty({
+  query,
+  filterLabel,
+  onClear,
+  noun = 'results',
+}: {
+  query?: string;
+  filterLabel?: string;
+  onClear: () => void;
+  noun?: string;
+}) {
+  const parts = [
+    query ? `"${query}"` : null,
+    filterLabel && filterLabel.toLowerCase() !== 'all' ? filterLabel : null,
+  ].filter(Boolean);
+
+  return (
+    <div className="flex flex-col items-center px-8 py-11 text-center">
+      <span
+        className="mb-4 flex size-[52px] items-center justify-center rounded-[14px] bg-tm-app"
+        style={{ boxShadow: 'inset 0 0 0 1px #EEF1F5' }}
+        aria-hidden="true"
+      >
+        <SearchX className="size-[23px] text-tm-faint" strokeWidth={1.8} />
+      </span>
+      <h3 className="text-[16px] font-semibold tracking-[-0.01em] text-tm-ink">No {noun} found</h3>
+      <p className="tm-prose mt-1.5 text-[13px] leading-[1.6] text-tm-subtle">
+        {parts.length > 0
+          ? `Nothing matches ${parts.join(' · ')}. Try a different search or clear the filters.`
+          : 'Nothing matches the current filters.'}
+      </p>
+      <button type="button" onClick={onClear} className="tm-btn tm-btn-secondary mt-5">
+        Clear all filters
+      </button>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ error */
+
+export function TMErrorState({
+  title = 'Something went wrong',
+  description = 'Something went wrong on our end. Your data is safe — nothing was lost.',
+  onRetry,
+  reference,
+}: {
+  title?: string;
+  description?: string;
+  onRetry?: () => void;
+  /** Short support reference, e.g. "ref TM-5031-A · 10:42 PDT". */
+  reference?: string;
+}) {
+  return (
+    <div className="flex flex-col items-center px-8 py-11 text-center">
+      <span
+        className="mb-4 flex size-[52px] items-center justify-center rounded-[14px]"
+        style={{ background: '#FEF2F2', boxShadow: 'inset 0 0 0 1px #FEE2E2' }}
+        aria-hidden="true"
+      >
+        <TriangleAlert className="size-[23px] text-tm-cancel-text" strokeWidth={1.8} />
+      </span>
+      <h3 className="text-[16px] font-semibold tracking-[-0.01em] text-tm-ink">{title}</h3>
+      <p className="tm-prose mt-1.5 text-[13px] leading-[1.6] text-tm-subtle">{description}</p>
+      <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+        {onRetry && (
+          <button type="button" onClick={onRetry} className="tm-btn tm-btn-primary">
+            <RefreshCw className="size-[15px]" aria-hidden="true" />
+            Try again
+          </button>
+        )}
+        <Link href="/support" className="tm-btn tm-btn-secondary">
+          Contact support
+        </Link>
       </div>
+      {reference && <p className="mt-4 font-mono text-[10px] text-tm-ghost">{reference}</p>}
+    </div>
+  );
+}
 
-      <motion.div
-        initial={{ y: 8, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.1, duration: 0.4, ease: 'easeOut' }}
-        className="relative mb-2"
-      >
-        <SuitcaseIllustration />
-      </motion.div>
+/* ---------------------------------------------------------------- offline */
 
-      <motion.div
-        initial={{ y: 8, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.15, duration: 0.4, ease: 'easeOut' }}
-        className="mb-1 flex size-11 items-center justify-center rounded-full bg-slate-100"
-      >
-        <Icon className="size-5 text-slate-400" />
-      </motion.div>
-
-      <motion.div
-        initial={{ y: 8, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.2, duration: 0.4, ease: 'easeOut' }}
-      >
-        <h3 className="mt-4 text-xl font-semibold tracking-tight text-slate-900">
-          {title}
-        </h3>
-        <p className="mt-2 max-w-sm text-sm leading-relaxed text-slate-400">
-          {description}
+export function TMOfflineBanner({ className = '' }: { className?: string }) {
+  return (
+    <div
+      className={`flex items-start gap-3 rounded-[11px] px-4 py-3 ${className}`}
+      style={{ background: '#FFFBF2', boxShadow: 'inset 0 0 0 1px #FDE9C8' }}
+      role="status"
+    >
+      <WifiOff className="mt-px size-[15px] shrink-0 text-tm-accent-text" aria-hidden="true" />
+      <div className="min-w-0">
+        <p className="text-[13px] font-medium text-tm-accent-text">You&apos;re offline</p>
+        <p className="mt-0.5 text-[12px] leading-[1.5]" style={{ color: '#8B7355' }}>
+          Showing your last synced data. Changes will upload when you reconnect.
         </p>
-      </motion.div>
+      </div>
+    </div>
+  );
+}
 
-      {actionLabel && actionHref && (
-        <motion.div
-          initial={{ y: 8, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.3, duration: 0.4, ease: 'easeOut' }}
-        >
-          <Button
-            asChild
-            className="mt-6 bg-amber-500 px-6 font-medium text-white shadow-md shadow-amber-500/20 hover:bg-amber-600 hover:shadow-lg hover:shadow-amber-500/25 transition-all"
-          >
-            <Link href={actionHref}>{actionLabel}</Link>
-          </Button>
-        </motion.div>
-      )}
-      {secondaryAction && (
-        <motion.button
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.4, duration: 0.3 }}
-          onClick={secondaryAction.onClick}
-          className="mt-3 cursor-pointer text-sm text-slate-400 hover:text-amber-600 transition-colors"
-        >
-          {secondaryAction.label}
-        </motion.button>
-      )}
-    </motion.div>
+/** Inline validation message. Pair the field itself with `tm-input-error`. */
+export function TMFieldError({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="mt-1.5 flex items-center gap-1.5 text-[12px] text-tm-danger">
+      <CircleAlert className="size-3 shrink-0" aria-hidden="true" />
+      {children}
+    </p>
+  );
+}
+
+/* -------------------------------------------------------------- skeletons */
+
+/**
+ * Skeletons mirror the real layout so nothing reflows when data lands.
+ * Prefer these over a spinner for anything that can take longer than ~2s.
+ */
+export function TMSkeleton({ className = '', style }: { className?: string; style?: React.CSSProperties }) {
+  return <div className={`tm-skeleton ${className}`} style={style} aria-hidden="true" />;
+}
+
+/** Matches the 5-cell dashboard stat strip. */
+export function TMStatStripSkeleton({ cells = 5 }: { cells?: number }) {
+  return (
+    <div className="tm-card grid overflow-hidden" style={{ gridTemplateColumns: `repeat(${cells}, 1fr)` }} aria-hidden="true">
+      {Array.from({ length: cells }).map((_, i) => (
+        <div key={i} className="px-6 py-5" style={{ borderRight: i < cells - 1 ? '1px solid #EEF1F5' : undefined }}>
+          <TMSkeleton className="h-[9px] w-16" />
+          <TMSkeleton className="mt-3 h-6 w-12" />
+          <TMSkeleton className="mt-2.5 h-[9px] w-20" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Matches a 3-up card grid. */
+export function TMCardGridSkeleton({ count = 6, columns = 3 }: { count?: number; columns?: number }) {
+  return (
+    <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }} aria-hidden="true">
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="tm-card p-[18px]">
+          <div className="flex items-center gap-3">
+            <TMSkeleton className="size-[38px]" style={{ borderRadius: 10 }} />
+            <div className="flex-1">
+              <TMSkeleton className="h-3.5 w-28" />
+              <TMSkeleton className="mt-2 h-[10px] w-20" />
+            </div>
+          </div>
+          <TMSkeleton className="mt-4 h-[10px] w-full" />
+          <TMSkeleton className="mt-2 h-[10px] w-2/3" />
+          <div className="mt-4 border-t border-tm-divider pt-3">
+            <TMSkeleton className="h-3 w-16" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Matches a divided list card. */
+export function TMListSkeleton({ rows = 5 }: { rows?: number }) {
+  return (
+    <div className="tm-card overflow-hidden" aria-hidden="true">
+      {Array.from({ length: rows }).map((_, i) => (
+        <div key={i} className="flex items-center gap-3 px-6 py-4" style={{ borderTop: i ? '1px solid #F1F4F8' : undefined }}>
+          <TMSkeleton className="size-10" style={{ borderRadius: 10 }} />
+          <div className="flex-1">
+            <TMSkeleton className="h-3.5 w-40" />
+            <TMSkeleton className="mt-2 h-[10px] w-24" />
+          </div>
+          <TMSkeleton className="h-3 w-16" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * The inline spinner. For sub-2-second actions only — anything longer should
+ * use a skeleton so the page doesn't sit blank.
+ */
+export function TMSpinner({ size = 26, className = '' }: { size?: number; className?: string }) {
+  return (
+    <span
+      className={`inline-block animate-tm-spin rounded-full ${className}`}
+      style={{
+        width: size,
+        height: size,
+        border: '2.5px solid #EEF1F5',
+        borderTopColor: '#F59E0B',
+      }}
+      role="status"
+      aria-label="Loading"
+    />
   );
 }

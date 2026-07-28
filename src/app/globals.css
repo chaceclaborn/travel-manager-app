@@ -50,7 +50,7 @@
 
 :root {
   --radius: 0.625rem;
-  --background: #F8FAFC;
+  --background: #F7F8FA;
   --foreground: #1E293B;
   --card: #FFFFFF;
   --card-foreground: #1E293B;
@@ -91,6 +91,118 @@
   --shadow-glow: 0 0 20px rgba(245, 158, 11, 0.35);
 }
 
+/* ==========================================================================
+   2026 design system ("tm-" tokens)
+   --------------------------------------------------------------------------
+   The token layer for the redesign. Every value here is normative — it comes
+   from the design handoff, not from Tailwind's default palette. Tokens are
+   namespaced `tm-` so they sit alongside (rather than clobber) the shadcn
+   `--color-primary` / `--color-muted` variables the ui/ primitives depend on.
+
+   Role names are used instead of literal hues so the meaning survives a
+   re-theme: `text-tm-ink` not `text-slate-900`, `bg-tm-fill` not `bg-slate-100`.
+   ========================================================================== */
+@theme {
+  /* Surfaces */
+  --color-tm-app: #F7F8FA;        /* app background */
+  --color-tm-surface: #FFFFFF;    /* cards, panels, table surfaces */
+  --color-tm-wash: #FBFCFD;       /* row hover, card header strips */
+  --color-tm-fill: #F1F4F8;       /* neutral tiles, chips, progress tracks */
+  --color-tm-canvas: #EDEFF3;     /* overview/canvas pages only */
+
+  /* Lines. `line` is the card border; `control` is inputs/buttons; `hairline`
+     is grid rules; `divider` is list-row rules; `strong` is hover/section. */
+  --color-tm-line: #E9EDF2;
+  --color-tm-control: #E4E8EE;
+  --color-tm-control-hover: #CBD3DE;
+  --color-tm-hairline: #EEF1F5;
+  --color-tm-divider: #F1F4F8;
+  --color-tm-strong: #DDE3EA;
+
+  /* Text ramp, darkest → lightest */
+  --color-tm-ink: #0F172A;        /* headings, numbers, key values */
+  --color-tm-body: #334155;       /* body copy */
+  --color-tm-label: #475569;      /* labels */
+  --color-tm-muted: #64748B;      /* supporting text */
+  --color-tm-subtle: #8B94A5;     /* meta, captions, uppercase labels */
+  --color-tm-faint: #A6AEBC;      /* timestamps, disabled */
+  --color-tm-ghost: #C4CBD6;      /* chevrons, breadcrumb separators */
+
+  /* Accent — reserved for the next trip, today, active state, accent numbers.
+     Deliberately NOT the primary-action color; see --color-tm-action. */
+  --color-tm-accent: #F59E0B;
+  --color-tm-accent-hover: #FBBF24;
+  --color-tm-accent-text: #B45309;
+  --color-tm-accent-text-hover: #92400E;
+  --color-tm-accent-bg: #FEF6E7;
+  --color-tm-accent-ring: #FDE9C8;
+
+  /* Primary action */
+  --color-tm-action: #0F172A;
+  --color-tm-action-hover: #1E293B;
+
+  /* Dark chrome (sidebar, hero panel, dark bands) */
+  --color-tm-nav: #0B1220;
+  --color-tm-nav-text: #98A1B2;
+  --color-tm-nav-text-active: #FFFFFF;
+  --color-tm-nav-icon: #5B6472;
+  --color-tm-nav-kbd: #3B4453;
+  --color-tm-nav-meta: #5B6472;
+  --color-tm-on-dark: #E5EAF1;
+
+  /* Status — dot / text / chip fill / chip ring */
+  --color-tm-draft-dot: #94A3B8;
+  --color-tm-draft-text: #64748B;
+  --color-tm-draft-bg: #F1F4F8;
+  --color-tm-planned-dot: #3B82F6;
+  --color-tm-planned-text: #2563EB;
+  --color-tm-planned-bg: #EFF4FB;
+  --color-tm-planned-ring: #D6E4F7;
+  --color-tm-progress-dot: #F59E0B;
+  --color-tm-progress-text: #B45309;
+  --color-tm-progress-bg: #FEF6E7;
+  --color-tm-progress-ring: #FDE9C8;
+  --color-tm-done-dot: #10B981;
+  --color-tm-done-text: #047857;
+  --color-tm-done-bg: #ECFDF5;
+  --color-tm-done-ring: #A7F3D0;
+  --color-tm-cancel-dot: #F87171;
+  --color-tm-cancel-text: #DC2626;
+  --color-tm-cancel-bg: #FEF2F2;
+  --color-tm-cancel-ring: #FEE2E2;
+
+  /* Destructive (settings danger row, inline field errors) */
+  --color-tm-danger: #B91C1C;
+  --color-tm-danger-border: #FCA5A5;
+  --color-tm-danger-bg: #FEF2F2;
+
+  /* Elevation */
+  --shadow-tm-card: 0 1px 2px rgba(15, 23, 42, 0.03), 0 2px 8px -2px rgba(15, 23, 42, 0.04);
+  --shadow-tm-card-hover: 0 2px 4px rgba(15, 23, 42, 0.04), 0 12px 28px -8px rgba(15, 23, 42, 0.12);
+  --shadow-tm-action: 0 1px 2px rgba(15, 23, 42, 0.2), 0 4px 12px -4px rgba(15, 23, 42, 0.3);
+  --shadow-tm-control: 0 1px 2px rgba(15, 23, 42, 0.03);
+  --shadow-tm-hero: 0 1px 2px rgba(15, 23, 42, 0.1), 0 16px 40px -16px rgba(11, 18, 32, 0.5);
+  --shadow-tm-accent: 0 4px 14px -4px rgba(245, 158, 11, 0.5);
+  --shadow-tm-toast: 0 8px 24px -8px rgba(15, 23, 42, 0.5);
+
+  /* The only two motions in the system are the toggle knob and Leaflet's
+     flyTo. These three animations are the exhaustive list. */
+  --animate-tm-ping: tm-ping 1.6s cubic-bezier(0, 0, 0.2, 1) infinite;
+  --animate-tm-shimmer: tm-shimmer 1.4s linear infinite;
+  --animate-tm-spin: tm-spin 700ms linear infinite;
+
+  @keyframes tm-ping {
+    75%, 100% { transform: scale(2); opacity: 0; }
+  }
+  @keyframes tm-shimmer {
+    0% { background-position: -500px 0; }
+    100% { background-position: 500px 0; }
+  }
+  @keyframes tm-spin {
+    to { transform: rotate(360deg); }
+  }
+}
+
 /* Frosted-glass surface for overlays and chrome (light theme). */
 @utility glass {
   background: rgba(255, 255, 255, 0.72);
@@ -118,12 +230,293 @@
   color: transparent;
 }
 
+/* --------------------------------------------------------------------------
+   Component utilities.
+
+   These exist because the same handful of boxes (card, primary button,
+   segmented control, …) recur on every one of the ~25 screens. Encoding them
+   once keeps the spec in a single place — change the card shadow here and it
+   changes everywhere, instead of hunting 200 copies of an arbitrary value.
+   Anything used fewer than ~3 times stays as inline Tailwind.
+   -------------------------------------------------------------------------- */
+
+/* Card: the default surface for every panel in the app. */
+@utility tm-card {
+  background: var(--color-tm-surface);
+  border: 1px solid var(--color-tm-line);
+  border-radius: 14px;
+  box-shadow: var(--shadow-tm-card);
+}
+
+/* Add to `tm-card` for cards that are links/clickable. No transform on hover —
+   the design uses elevation and border darkening only. */
+@utility tm-card-interactive {
+  &:hover {
+    border-color: var(--color-tm-strong);
+    box-shadow: var(--shadow-tm-card-hover);
+  }
+}
+
+/* Buttons. All share a 36px box; the `on-dark` pair is 34px per the hero spec. */
+@utility tm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+@utility tm-btn-primary {
+  background: var(--color-tm-action);
+  color: #fff;
+  box-shadow: var(--shadow-tm-action);
+  &:hover { background: var(--color-tm-action-hover); }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+}
+
+@utility tm-btn-secondary {
+  background: var(--color-tm-surface);
+  border: 1px solid var(--color-tm-control);
+  color: var(--color-tm-body);
+  box-shadow: var(--shadow-tm-control);
+  &:hover {
+    border-color: var(--color-tm-control-hover);
+    background: var(--color-tm-wash);
+  }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+}
+
+@utility tm-btn-danger {
+  background: var(--color-tm-surface);
+  border: 1px solid var(--color-tm-danger-border);
+  color: var(--color-tm-danger);
+  &:hover { background: var(--color-tm-danger-bg); }
+}
+
+/* On-dark variants — hero panel and dark bands only. */
+@utility tm-btn-accent {
+  height: 34px;
+  background: var(--color-tm-accent);
+  color: var(--color-tm-nav);
+  font-weight: 600;
+  box-shadow: var(--shadow-tm-accent);
+  &:hover { background: var(--color-tm-accent-hover); }
+}
+
+@utility tm-btn-ghost-dark {
+  height: 34px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: var(--color-tm-on-dark);
+  &:hover { background: rgba(255, 255, 255, 0.1); }
+}
+
+/* Square icon button, 34px. */
+@utility tm-btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 9px;
+  border: 1px solid var(--color-tm-control);
+  background: var(--color-tm-surface);
+  color: var(--color-tm-muted);
+  box-shadow: var(--shadow-tm-control);
+  cursor: pointer;
+  &:hover { border-color: var(--color-tm-control-hover); background: var(--color-tm-wash); }
+}
+
+/* Text input / select. The focus ring is the one place accent is used on a
+   control — it marks "active", consistent with the accent's reserved meaning. */
+@utility tm-input {
+  height: 38px;
+  width: 100%;
+  border-radius: 9px;
+  border: 1px solid var(--color-tm-control);
+  background: var(--color-tm-surface);
+  padding: 0 12px;
+  font-size: 13px;
+  color: #1E293B;
+  box-shadow: var(--shadow-tm-control);
+  &::placeholder { color: var(--color-tm-subtle); }
+  &:focus {
+    outline: none;
+    border-color: var(--color-tm-accent);
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.12);
+  }
+  &:disabled { background: var(--color-tm-fill); cursor: not-allowed; }
+}
+
+/* Inline validation error — pairs with a 12px #B91C1C message + CircleAlert. */
+@utility tm-input-error {
+  border-color: var(--color-tm-danger-border);
+  box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.12);
+  &:focus {
+    border-color: var(--color-tm-danger-border);
+    box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.12);
+  }
+}
+
+/* Segmented control: a 36px shell padded 3px around 6px-radius segments. */
+@utility tm-seg {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 36px;
+  padding: 3px;
+  border-radius: 9px;
+  border: 1px solid var(--color-tm-control);
+  background: var(--color-tm-surface);
+  box-shadow: var(--shadow-tm-control);
+}
+
+@utility tm-seg-item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 0 13px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-tm-muted);
+  white-space: nowrap;
+  cursor: pointer;
+  &:hover { color: var(--color-tm-body); }
+  &[aria-selected='true'], &[data-selected='true'] {
+    background: var(--color-tm-action);
+    color: #fff;
+  }
+}
+
+/* Filter pill — the list-page equivalent of a segment, but free-flowing. */
+@utility tm-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 13px;
+  border-radius: 9999px;
+  border: 1px solid var(--color-tm-control);
+  background: var(--color-tm-surface);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-tm-muted);
+  white-space: nowrap;
+  cursor: pointer;
+  &:hover { border-color: var(--color-tm-control-hover); }
+  &[aria-selected='true'], &[data-selected='true'] {
+    background: var(--color-tm-action);
+    border-color: var(--color-tm-action);
+    color: #fff;
+  }
+}
+
+/* The stat strip's grid. Cell count comes from `--tm-cells` so one utility
+   serves the dashboard's 5 cells and analytics' 4. Collapses 5 → 3 → 2 up. */
+@utility tm-strip {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  @media (min-width: 640px) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  @media (min-width: 1024px) {
+    grid-template-columns: repeat(var(--tm-cells, 4), minmax(0, 1fr));
+  }
+}
+
+/* Uppercase label ramp. `micro` is the smaller of the two (card eyebrows). */
+@utility tm-label-upper {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-tm-subtle);
+}
+
+@utility tm-label-micro {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-tm-faint);
+}
+
+/* Every numeric cell in the app aligns on its digits. */
+@utility tm-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Long prose: capped measure + no orphaned last words. */
+@utility tm-prose {
+  text-wrap: pretty;
+  max-width: 38ch;
+}
+
+/* Loading skeleton. Reproduces the real layout so nothing reflows on load. */
+@utility tm-skeleton {
+  border-radius: 5px;
+  background: linear-gradient(90deg, #F1F4F8 8%, #E7EBF1 18%, #F1F4F8 33%);
+  background-size: 800px 100%;
+  animation: var(--animate-tm-shimmer);
+}
+
+/* Page shell: the standard padding + centered measure for a content route. */
+@utility tm-page {
+  padding: 36px 40px 56px;
+  max-width: 1200px;
+  margin-inline: auto;
+  @media (max-width: 767px) {
+    padding: 16px 16px 32px;
+  }
+}
+
+/* Navy mobile tab bar — the phone's counterpart to the desktop sidebar, so the
+   app's chrome reads as one dark frame on both form factors. */
+@utility tm-tabbar-dark {
+  background: rgba(11, 18, 32, 0.94);
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+/* Mobile bottom tab bar surface (and the detail-screen action footer). */
+@utility tm-tabbar {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  border-top: 1px solid rgba(226, 232, 240, 0.8);
+}
+
 /* Faint blueprint grid for hero / empty-state backdrops. */
 @utility bg-grid-faint {
   background-image:
     linear-gradient(rgba(148, 163, 184, 0.07) 1px, transparent 1px),
     linear-gradient(90deg, rgba(148, 163, 184, 0.07) 1px, transparent 1px);
   background-size: 32px 32px;
+}
+
+/* The dark "Up next" hero. Three layers: base gradient, a 36px rule grid, and
+   an amber glow bled off the top-right corner. The decorative layers are
+   painted here rather than as DOM nodes so the hero stays one element. */
+@utility tm-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px;
+  background:
+    radial-gradient(380px circle at calc(100% + 80px) -120px, rgba(245, 158, 11, 0.14), transparent 65%),
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px) 0 0 / 36px 36px,
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px) 0 0 / 36px 36px,
+    linear-gradient(120deg, #0B1220 0%, #101B31 60%, #13223D 100%);
+  box-shadow: var(--shadow-tm-hero);
 }
 
 @layer base {
@@ -166,10 +559,56 @@
 .leaflet-container img {
   max-width: none !important;
 }
-/* Friendly fallback background while tiles are loading (or if they fail).
-   Matches the app's dark theme so the map doesn't flash white on load. */
+/* Fallback background while tiles load (or if they fail). Tuned to the CARTO
+   `light_all` basemap the redesign uses, so the map never flashes a dark
+   rectangle before the first tile paints. */
 .leaflet-container {
-  background: #1e293b;
+  background: #EDF0F4;
+}
+/* The attribution is required by the tile terms but shouldn't compete with the
+   map — shrink it to a caption on a translucent chip. */
+.leaflet-control-attribution {
+  font-size: 9px !important;
+  background: rgba(255, 255, 255, 0.8) !important;
+  color: var(--color-tm-subtle);
+}
+.leaflet-control-attribution a { color: var(--color-tm-muted); }
+
+/* Marker pins are rendered as `L.divIcon`s carrying this class. The double
+   shadow is a white keyline (so pins stay legible over dark map features)
+   plus a soft drop shadow. */
+.tm-pin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 26px;
+  min-width: 26px;
+  padding: 0 6px;
+  border-radius: 9999px;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #fff;
+  background: var(--color-tm-ink);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.95), 0 3px 10px -2px rgba(15, 23, 42, 0.5);
+}
+.tm-pin-next { background: var(--color-tm-accent); color: var(--color-tm-nav); }
+.tm-pin-past { background: #94A3B8; }
+.tm-pin-sm { height: 22px; min-width: 22px; font-size: 9px; }
+
+/* WKWebView rubber-band: when the document bounces past the top, a sticky
+   header appears to stretch because the gap above it shows the page behind.
+   Rather than fight the bounce (an inner scroll container broke scrolling
+   outright), the header paints a slab of its own background upward with a
+   box-shadow, so anything revealed by the bounce is the same colour and there
+   is nothing to see stretching. */
+@utility tm-sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: var(--color-tm-app);
+  box-shadow: 0 -120px 0 var(--color-tm-app);
 }
 
 /* iOS safe area support — accounts for notch / Dynamic Island and home indicator.

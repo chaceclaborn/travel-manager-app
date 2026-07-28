@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getChecklistItems, createChecklistItem } from '@/lib/travelmanager/checklists';
 import { requireAuth } from '@/lib/travelmanager/auth';
+import { requireTripAccess, TripAccessError } from '@/lib/travelmanager/trip-access';
 import { rateLimit } from '@/lib/rate-limit';
 import { sanitizeString, validateUUID } from '@/lib/sanitize';
 
@@ -16,9 +17,14 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     if (!validateUUID(id)) {
       return NextResponse.json({ error: 'Invalid trip ID' }, { status: 400 });
     }
+    await requireTripAccess(id, user.id, 'view');
+
     const items = await getChecklistItems(id, user.id);
     return NextResponse.json(items);
   } catch (error) {
+    if (error instanceof TripAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('Error fetching checklist items:', error instanceof Error ? error.message : error);
     return NextResponse.json({ error: 'Failed to fetch checklist items' }, { status: 500 });
   }
@@ -37,6 +43,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: 'Invalid trip ID' }, { status: 400 });
     }
 
+    await requireTripAccess(id, user.id, 'edit');
+
     const body = await request.json();
     const label = typeof body.label === 'string' ? sanitizeString(body.label) : '';
     const sortOrder = typeof body.sortOrder === 'number' ? body.sortOrder : undefined;
@@ -52,6 +60,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }, user.id);
     return NextResponse.json(item, { status: 201 });
   } catch (error) {
+    if (error instanceof TripAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('Error creating checklist item:', error instanceof Error ? error.message : error);
     return NextResponse.json({ error: 'Failed to create checklist item' }, { status: 500 });
   }

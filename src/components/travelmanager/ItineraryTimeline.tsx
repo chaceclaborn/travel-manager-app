@@ -475,7 +475,7 @@ export function ItineraryTimeline({ items, tripId, onRefresh, tripStartDate, tri
         <Button
           size="sm"
           onClick={handleOpenForm}
-          className="bg-amber-500 hover:bg-amber-600"
+          className="tm-btn tm-btn-primary"
         >
           <Plus className="mr-1 size-4" />
           Add Item
@@ -493,7 +493,7 @@ export function ItineraryTimeline({ items, tripId, onRefresh, tripStartDate, tri
           >
             {renderFormFields(form, setForm, timeError, 'itin')}
             <div className="flex gap-2">
-              <Button type="submit" size="sm" disabled={isSubmitting} className="bg-amber-500 hover:bg-amber-600">
+              <Button type="submit" size="sm" disabled={isSubmitting} className="tm-btn tm-btn-primary">
                 {isSubmitting ? 'Adding...' : 'Add'}
               </Button>
               <Button type="button" size="sm" variant="outline" onClick={() => setShowForm(false)}>
@@ -579,7 +579,7 @@ export function ItineraryTimeline({ items, tripId, onRefresh, tripStartDate, tri
                       <form onSubmit={handleUpdate} className="space-y-3">
                         {renderFormFields(editForm, setEditForm, editTimeError, 'edit')}
                         <div className="flex gap-2">
-                          <Button type="submit" size="sm" disabled={isEditSubmitting} className="bg-amber-500 hover:bg-amber-600">
+                          <Button type="submit" size="sm" disabled={isEditSubmitting} className="tm-btn tm-btn-primary">
                             {isEditSubmitting ? 'Saving...' : 'Save'}
                           </Button>
                           <Button type="button" size="sm" variant="outline" onClick={() => setEditingId(null)}>

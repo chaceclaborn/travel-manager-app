@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
-import { Menu, X, Search, MessageSquarePlus, ChevronRight, Bell } from 'lucide-react';
+import { Search, ChevronRight, Bell } from 'lucide-react';
 import { TMSidebar } from '@/components/travelmanager/TMSidebar';
+import { TMTabBar } from '@/components/travelmanager/TMTabBar';
 import { TMToastProvider } from '@/components/travelmanager/TMToast';
 import { TMCommandPalette } from '@/components/travelmanager/TMCommandPalette';
 import { TMUserMenu } from '@/components/travelmanager/TMUserMenu';
@@ -16,6 +17,7 @@ import { PushRegister } from '@/components/travelmanager/PushRegister';
 import { NotificationOptInCard } from '@/components/travelmanager/NotificationOptInCard';
 import { OfflineIndicator } from '@/components/travelmanager/OfflineIndicator';
 import { useAuth } from '@/lib/travelmanager/useAuth';
+import { useIsAdmin } from '@/lib/travelmanager/useIsAdmin';
 import { KEYBIND_DEFS, useKeybinds } from '@/lib/travelmanager/keybinds';
 import { AppUpdateGate } from '@/components/travelmanager/AppUpdateGate';
 import { installNativeApiFetchPatch } from '@/lib/travelmanager/native-fetch';
@@ -33,14 +35,20 @@ export default function TravelManagerLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [demoDismissed, setDemoDismissed] = useState(true);
   const [searchOpen, setSearchOpen] = useState(false);
+  // The sidebar's "Send Feedback" button was removed in the redesign; the
+  // entry point now lives on the mobile More screen and in Settings, both of
+  // which raise this event rather than duplicating the modal.
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  useEffect(() => {
+    const open = () => setFeedbackOpen(true);
+    window.addEventListener('tm-open-feedback', open);
+    return () => window.removeEventListener('tm-open-feedback', open);
+  }, []);
   const [modKey, setModKey] = useState('⌘');
   const { binds: keybinds } = useKeybinds();
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isAdminChecked, setIsAdminChecked] = useState(false);
+  const { isAdmin, checked: isAdminChecked } = useIsAdmin();
   const pathname = usePathname();
   const router = useRouter();
   const { user, loading, signOut } = useAuth();
@@ -48,18 +56,31 @@ export default function TravelManagerLayout({
   const PUBLIC_PATHS = ['/tour', '/privacy', '/terms', '/support'];
   const isPublicPage = PUBLIC_PATHS.includes(pathname);
 
-  // Root shows no page title — the brand block alone is the header ("Dashboard"
-  // as a label was hated, reasonably)
-  const pageTitle = pathname === '/' ? ''
-    : pathname.includes('/trips') ? 'Trips'
-    : pathname.includes('/bookings') ? 'Bookings'
-    : pathname.includes('/vendors') ? 'Vendors'
-    : pathname.includes('/clients') ? 'Clients'
-    : pathname.includes('/analytics') ? 'Analytics'
-    : pathname.includes('/map') ? 'Map'
-    : pathname.includes('/settings') ? 'Settings'
-    : pathname.includes('/friends') ? 'Friends'
-    : pathname.includes('/admin') ? 'Admin'
+  // Breadcrumb trail for the desktop top bar. Always rooted at "Workspace";
+  // detail routes add a third level whose middle segment links back to the
+  // list it came from, which is the only way back on a deep link.
+  const SECTIONS: Array<{ match: string; label: string; href: string }> = [
+    { match: '/trips', label: 'Trips', href: '/trips' },
+    { match: '/bookings', label: 'Bookings', href: '/bookings' },
+    { match: '/meetings', label: 'Meetings', href: '/meetings' },
+    { match: '/vendors', label: 'Vendors', href: '/vendors' },
+    { match: '/clients', label: 'Clients', href: '/clients' },
+    { match: '/friends', label: 'Friends', href: '/friends' },
+    { match: '/analytics', label: 'Analytics', href: '/analytics' },
+    { match: '/map', label: 'Map', href: '/map' },
+    { match: '/settings', label: 'Settings', href: '/settings' },
+    { match: '/more', label: 'More', href: '/more' },
+    { match: '/admin', label: 'Admin', href: '/admin' },
+  ];
+  const section = pathname === '/' ? null : SECTIONS.find((s) => pathname.startsWith(s.match));
+  // A leaf is anything below the section root — /trips/new, /trips/detail, an
+  // [id] page. Its own name isn't known here (the page owns the record), so
+  // the crumb shows the action or a neutral "Detail".
+  const leafSegment = section && pathname !== section.href ? pathname.slice(section.href.length + 1).split('/')[0] : '';
+  const leaf = leafSegment
+    ? leafSegment === 'new'
+      ? `New ${section!.label.replace(/s$/, '')}`
+      : 'Detail'
     : '';
 
   useEffect(() => {
@@ -82,33 +103,15 @@ export default function TravelManagerLayout({
   }, []);
 
   useEffect(() => {
-    // No user → no admin check needed; the sidebar renders `isAdminChecked &&
-    // isAdmin`, which is false either way, and signed-out users are redirected.
+    // The admin check itself now lives in useIsAdmin(), so the mobile More
+    // screen can ask the same question — see the note there.
     if (!user) return;
-    fetch('/api/auth/is-admin')
-      .then((r) => r.json())
-      .then((data) => {
-        setIsAdmin(data.isAdmin === true);
-        setIsAdminChecked(true);
-      })
-      .catch(() => {
-        setIsAdmin(false);
-        setIsAdminChecked(true);
-      });
 
     if (!sessionStorage.getItem('tm-daily-visit')) {
       sessionStorage.setItem('tm-daily-visit', '1');
       fetch('/api/auth/visit', { method: 'POST' }).catch(() => {});
     }
   }, [user]);
-
-  // Close the mobile drawer on navigation — state adjustment during render
-  // instead of an effect, per React's "adjusting state when props change".
-  const [prevPathname, setPrevPathname] = useState(pathname);
-  if (pathname !== prevPathname) {
-    setPrevPathname(pathname);
-    setMobileMenuOpen(false);
-  }
 
   // Redirect unauthenticated users to the tour page.
   // Must run in an effect (not during render) — render must be a pure function.
@@ -198,35 +201,35 @@ export default function TravelManagerLayout({
       <style>{`
         /* Force light theme for Travel Manager regardless of dark mode */
         body, body .dark, :root {
-          --background: #F8FAFC !important;
-          --foreground: #1E293B !important;
+          --background: #F7F8FA !important;
+          --foreground: #334155 !important;
           --card: #FFFFFF !important;
           --card-foreground: #1E293B !important;
           --popover: #FFFFFF !important;
           --popover-foreground: #1E293B !important;
           --primary: #F59E0B !important;
           --primary-foreground: #FFFFFF !important;
-          --muted: #F1F5F9 !important;
+          --muted: #F1F4F8 !important;
           --muted-foreground: #64748B !important;
-          --accent: #F1F5F9 !important;
-          --accent-foreground: #1E293B !important;
-          --border: #E2E8F0 !important;
-          --input: #E2E8F0 !important;
+          --accent: #F1F4F8 !important;
+          --accent-foreground: #0F172A !important;
+          --border: #E9EDF2 !important;
+          --input: #E4E8EE !important;
           --ring: #F59E0B !important;
           color-scheme: light !important;
         }
         body {
-          background-color: #F8FAFC !important;
-          color: #1E293B !important;
+          background-color: #F7F8FA !important;
+          color: #334155 !important;
         }
         /* Ensure inputs have solid white backgrounds for readability */
         input, textarea, select, [data-slot="select-trigger"] {
           background-color: #FFFFFF !important;
           color: #1E293B !important;
-          border-color: #E2E8F0 !important;
+          border-color: #E4E8EE !important;
         }
         input::placeholder, textarea::placeholder {
-          color: #94A3B8 !important;
+          color: #8B94A5 !important;
         }
         /* Date input icon color fix for dark mode */
         input[type="date"]::-webkit-calendar-picker-indicator {
@@ -270,168 +273,116 @@ export default function TravelManagerLayout({
         <NotificationOptInCard />
         <OfflineIndicator />
 
+        {/* The document scrolls — deliberately NOT an inner scroll container.
+            A 100dvh shell with <main> scrolling inside looked tidier but made
+            the whole app unscrollable on iOS the moment a flex sizing detail
+            was off, which is far worse than the cosmetic overscroll it fixed.
+            The header stretch is handled in the header itself instead. */}
         <div className="flex min-h-screen max-w-[100vw] overflow-x-clip">
-          {/* Desktop Sidebar */}
-          <aside className="hidden md:flex w-64 flex-col fixed inset-y-0 left-0 bg-gradient-to-b from-slate-900 to-slate-950 border-r border-white/[0.06] z-40 safe-area-top safe-area-bottom safe-area-left" role="navigation" aria-label="Main navigation">
-            <div className="flex items-center gap-[11px] px-[18px] py-[18px] border-b border-white/[0.08]">
-              <div className="flex size-[42px] shrink-0 items-center justify-center rounded-[13px] bg-white p-1 shadow-[0_4px_14px_-4px_rgba(0,0,0,0.5)]">
-                <Image src="/brand/logo.png" alt="" width={42} height={42} className="size-full object-contain" aria-hidden="true" />
+          {/* Desktop sidebar — 248px, flat #0B1220, no bottom rule under the
+              brand (the nav's own padding is enough separation). */}
+          <aside
+            className="fixed inset-y-0 left-0 z-40 hidden w-[248px] flex-col border-r border-white/[0.06] bg-tm-nav safe-area-top safe-area-bottom safe-area-left md:flex"
+            role="navigation"
+            aria-label="Main navigation"
+          >
+            <div className="flex items-center gap-[11px] px-[18px] py-5">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-white p-[3px] shadow-[0_2px_10px_-2px_rgba(0,0,0,0.5)]">
+                <Image src="/brand/logo.png" alt="" width={36} height={36} className="size-full object-contain" aria-hidden="true" />
               </div>
-              <div>
-                <h1 className="text-[15px] font-bold leading-[1.15] tracking-[-0.01em] text-white">Travel Manager</h1>
-                <p className="text-[11px] text-slate-500">Trips · Clients · Vendors</p>
+              <div className="min-w-0">
+                <h1 className="truncate text-[14px] font-semibold leading-tight tracking-[-0.01em] text-white">Travel Manager</h1>
+                <p className="text-[11px] text-tm-nav-meta">Workspace</p>
               </div>
             </div>
+
             <TMSidebar isAdmin={isAdminChecked && isAdmin} />
-            <div className="mt-auto px-4 py-4 border-t border-white/10 space-y-1">
-              <button
-                onClick={() => setSearchOpen(true)}
-                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-400 hover:bg-white/10 hover:text-white transition-colors"
-              >
-                <Search className="size-4" />
-                <span>Search</span>
-                <kbd className="ml-auto font-mono text-[10px] tracking-wide border border-white/10 bg-white/5 px-1.5 py-0.5 rounded-md">{modKey}+{keybinds.search.toUpperCase()}</kbd>
-              </button>
-              <button
-                onClick={() => setFeedbackOpen(true)}
-                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-400 hover:bg-white/10 hover:text-white transition-colors"
-              >
-                <MessageSquarePlus className="size-4" />
-                <span>Send Feedback</span>
-              </button>
+
+            <div className="border-t border-white/[0.06] p-3 pt-2">
+              <TMUserMenu user={user} onSignOut={signOut} variant="chip" />
             </div>
           </aside>
 
-          {/* Mobile Top Bar */}
-          <div className="md:hidden fixed top-0 inset-x-0 z-40 bg-slate-900/95 backdrop-blur-md border-b border-white/10 safe-area-top">
-            <div className="flex items-center justify-between px-4 h-16">
-              <div>
-                <h1 className="text-lg font-bold text-white flex items-center gap-2">
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-[10px] bg-white p-[3px] shadow-[0_2px_8px_-2px_rgba(0,0,0,0.4)]"><Image src="/brand/logo.png" alt="" width={32} height={32} className="size-full object-contain" aria-hidden="true" /></span>
-                  Travel Manager
-                </h1>
-                {pageTitle && (
-                  <p className="text-xs text-slate-400 -mt-0.5">{pageTitle}</p>
-                )}
-              </div>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setSearchOpen(true)}
-                  className="text-white/70 hover:text-white min-w-11 min-h-11 p-2.5 flex items-center justify-center"
-                  aria-label="Search"
-                >
-                  <Search className="size-5" />
-                </button>
-                <TMUserMenu user={user} onSignOut={signOut} />
-                <button
-                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                  className="text-white min-w-11 min-h-11 p-2.5 flex items-center justify-center"
-                  aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
-                  aria-expanded={mobileMenuOpen}
-                  aria-controls="mobile-nav"
-                >
-                  {mobileMenuOpen ? <X className="size-6" /> : <Menu className="size-6" />}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Mobile Sidebar Overlay */}
-          <AnimatePresence>
-            {mobileMenuOpen && (
-              <>
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="md:hidden fixed inset-0 bg-black/50 z-[60]"
-                  onClick={() => setMobileMenuOpen(false)}
-                  onKeyDown={(e) => { if (e.key === 'Escape') setMobileMenuOpen(false); }}
-                  role="button"
-                  tabIndex={-1}
-                  aria-label="Close navigation overlay"
-                />
-                <motion.aside
-                  initial={{ x: '-100%' }}
-                  animate={{ x: 0 }}
-                  exit={{ x: '-100%' }}
-                  transition={{ duration: 0.3, ease: 'easeInOut' }}
-                  className="md:hidden fixed inset-y-0 left-0 w-64 bg-gradient-to-b from-slate-900 to-slate-950 z-[60] flex flex-col"
-                  id="mobile-nav"
-                  role="navigation"
-                  aria-label="Main navigation"
-                >
-                  <div className="flex items-center justify-between px-5 py-5 border-b border-white/10">
-                    <div className="flex items-center gap-2.5">
-                      <span className="flex size-[42px] shrink-0 items-center justify-center rounded-[13px] bg-white p-1 shadow-[0_4px_14px_-4px_rgba(0,0,0,0.5)]"><Image src="/brand/logo.png" alt="" width={42} height={42} className="size-full object-contain" aria-hidden="true" /></span>
-                      <div>
-                        <h1 className="text-base font-bold text-white leading-tight">Travel Manager</h1>
-                        <p className="text-[11px] text-slate-400">Trips · Clients · Vendors</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="text-white min-w-11 min-h-11 -mr-2 flex items-center justify-center"
-                      aria-label="Close menu"
-                    >
-                      <X className="size-5" />
-                    </button>
-                  </div>
-                  <div onClick={() => setMobileMenuOpen(false)}>
-                    <TMSidebar isAdmin={isAdminChecked && isAdmin} />
-                  </div>
-                  <div className="mt-auto px-4 py-4 border-t border-white/10">
-                    <button
-                      onClick={() => { setMobileMenuOpen(false); setFeedbackOpen(true); }}
-                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-400 hover:bg-white/10 hover:text-white transition-colors"
-                    >
-                      <MessageSquarePlus className="size-4" />
-                      <span>Send Feedback</span>
-                    </button>
-                  </div>
-                </motion.aside>
-              </>
-            )}
-          </AnimatePresence>
-
           {/* Main Content */}
-          <main id="main-content" className="flex-1 min-w-0 md:ml-64 mt-[calc(4rem+var(--safe-area-top))] md:mt-0 overflow-x-clip safe-area-bottom">
-            {/* Desktop sticky top bar (md+). A sticky child of <main>, not a new
-                fixed element, so the mobile offset math is unchanged. */}
-            <div className="hidden md:flex sticky top-0 z-30 items-center justify-between gap-4 glass-topbar border-b border-[rgba(226,232,240,0.7)] px-8 py-3.5 safe-area-top">
-              <div className="flex items-center gap-2.5">
-                <span className="text-[13px] text-slate-400">Workspace</span>
-                {pageTitle && (
+          <main
+            id="main-content"
+            // `overscroll-contain` is what stops the sticky header stretching
+            // when you swipe down hard: without it WKWebView rubber-bands the
+            // whole scroller and drags the pinned header with it.
+            className="min-w-0 flex-1 overflow-x-clip md:ml-[248px]"
+            // Clears the tab bar exactly: 6px top padding + 48px item +
+            // max(8px, inset) bottom. Matching the bar's own math instead of
+            // guessing keeps the last row reachable without leaving a gap.
+            style={{ paddingBottom: 'calc(54px + max(8px, var(--safe-area-bottom)))' }}
+          >
+            {/* Desktop sticky top bar (md+). A sticky child of <main>, not a
+                fixed element, so it scrolls with the document's containing
+                block and never overlaps the sidebar. */}
+            <div
+              className="sticky top-0 z-30 hidden h-[60px] items-center justify-between gap-4 border-b border-[rgba(226,232,240,0.8)] px-10 safe-area-top md:flex"
+              style={{
+                background: 'rgba(247,248,250,0.8)',
+                backdropFilter: 'blur(14px) saturate(1.5)',
+                WebkitBackdropFilter: 'blur(14px) saturate(1.5)',
+              }}
+            >
+              <nav className="flex min-w-0 items-center gap-2" aria-label="Breadcrumb">
+                <Link href="/" className="text-[13px] text-tm-subtle hover:text-tm-body">
+                  Workspace
+                </Link>
+                {section && (
                   <>
-                    <ChevronRight className="size-3.5 text-slate-300" aria-hidden="true" />
-                    <span className="text-[15px] font-semibold text-slate-800">{pageTitle}</span>
+                    <ChevronRight className="size-3.5 shrink-0 text-tm-ghost" aria-hidden="true" />
+                    {leaf ? (
+                      <Link href={section.href} className="truncate text-[13px] text-tm-subtle hover:text-tm-body">
+                        {section.label}
+                      </Link>
+                    ) : (
+                      <span className="truncate text-[13px] font-medium text-[#1E293B]">{section.label}</span>
+                    )}
                   </>
                 )}
-              </div>
+                {leaf && (
+                  <>
+                    <ChevronRight className="size-3.5 shrink-0 text-tm-ghost" aria-hidden="true" />
+                    <span className="truncate text-[13px] font-medium text-[#1E293B]">{leaf}</span>
+                  </>
+                )}
+              </nav>
               <div className="flex items-center gap-2.5">
                 <button
                   type="button"
                   onClick={() => setSearchOpen(true)}
                   aria-label="Search"
-                  className="flex h-[38px] min-w-[200px] items-center gap-2 rounded-[10px] border border-slate-200 bg-white px-3 text-left shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:border-amber-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/40"
+                  className="flex h-[34px] min-w-[220px] items-center gap-2 rounded-[9px] border border-tm-control bg-white px-3 text-left shadow-tm-control hover:border-tm-control-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-tm-accent/40"
                 >
-                  <Search className="size-[15px] text-slate-400" aria-hidden="true" />
-                  <span className="flex-1 text-[13px] text-slate-400">Search anything…</span>
-                  <kbd className="rounded-[5px] border border-slate-200 px-1.5 py-0.5 font-mono text-[10px] text-slate-400">{modKey}+{keybinds.search.toUpperCase()}</kbd>
+                  <Search className="size-3.5 text-tm-subtle" aria-hidden="true" />
+                  <span className="flex-1 text-[13px] text-tm-subtle">Search</span>
+                  <kbd className="rounded-[5px] bg-tm-app px-1.5 py-0.5 font-mono text-[10px] text-tm-subtle">
+                    {modKey}
+                    {keybinds.search.toUpperCase()}
+                  </kbd>
                 </button>
                 <button
                   type="button"
                   aria-label="Notifications"
-                  className="relative flex size-[38px] items-center justify-center rounded-[10px] border border-slate-200 bg-white text-slate-500 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:border-slate-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/40"
+                  className="tm-btn-icon relative"
                 >
-                  <Bell className="size-[17px]" aria-hidden="true" />
+                  <Bell className="size-[15px]" aria-hidden="true" />
+                  <span
+                    className="absolute size-1.5 rounded-full bg-tm-accent"
+                    style={{ top: 7, right: 8, boxShadow: '0 0 0 2px #fff' }}
+                    aria-hidden="true"
+                  />
                 </button>
-                <TMUserMenu user={user} onSignOut={signOut} />
               </div>
             </div>
-            <div className="p-4 md:p-8 max-w-full">{children}</div>
+            {children}
           </main>
+
+          {/* Mobile tab bar. Replaces the drawer; page headers carry their own
+              titles and safe-area top padding. */}
+          <TMTabBar />
         </div>
       </TMToastProvider>
 

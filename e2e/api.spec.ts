@@ -6,9 +6,34 @@ import { test, expect } from '@playwright/test';
  */
 
 test('auth-gated API rejects unauthenticated requests', async ({ request }) => {
-  for (const path of ['/api/dashboard', '/api/trips', '/api/search?q=test']) {
+  for (const path of [
+    '/api/dashboard',
+    '/api/trips',
+    '/api/search?q=test',
+    // Collaboration: these expose who can reach whose trip, so an auth
+    // regression here is a membership dump, not just an error.
+    '/api/collaborations',
+    '/api/trips/any-id/collaborators',
+  ]) {
     const res = await request.get(path);
     expect(res.status(), `${path} must require auth`).toBe(401);
+  }
+});
+
+test('collaboration mutations reject unauthenticated requests', async ({ request }) => {
+  // A GET-only check would miss the paths that actually change membership.
+  const cases: Array<[string, () => Promise<{ status: () => number }>]> = [
+    ['POST /api/trips/:id/collaborators', () =>
+      request.post('/api/trips/any-id/collaborators', { data: { userId: 'x', role: 'EDITOR' } })],
+    ['PATCH /api/collaborations/:id', () =>
+      request.patch('/api/collaborations/any-id', { data: { action: 'accept' } })],
+    ['DELETE /api/collaborations/:id', () => request.delete('/api/collaborations/any-id')],
+    ['DELETE /api/trips/:id/collaborators/:userId', () =>
+      request.delete('/api/trips/any-id/collaborators/any-user')],
+  ];
+  for (const [label, call] of cases) {
+    const res = await call();
+    expect(res.status(), `${label} must require auth`).toBe(401);
   }
 });
 

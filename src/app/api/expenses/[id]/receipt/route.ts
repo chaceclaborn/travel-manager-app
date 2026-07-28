@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { updateExpense } from '@/lib/travelmanager/expenses';
 import { requireAuth } from '@/lib/travelmanager/auth';
+import { requireTripAccess, TripAccessError } from '@/lib/travelmanager/trip-access';
 import { rateLimit } from '@/lib/rate-limit';
 import { createSupabaseAdmin } from '@/lib/supabase/admin';
 import prisma from '@/lib/prisma';
@@ -26,15 +27,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: 'Invalid expense ID' }, { status: 400 });
     }
 
-    const expense = await prisma.expense.findUnique({ where: { id: expenseId } });
+    const expense = await prisma.expense.findUnique({
+      where: { id: expenseId },
+      select: { tripId: true },
+    });
     if (!expense) {
       return NextResponse.json({ error: 'Expense not found' }, { status: 404 });
     }
 
-    const trip = await prisma.trip.findFirst({ where: { id: expense.tripId, userId: user.id } });
-    if (!trip) {
-      return NextResponse.json({ error: 'Expense not found' }, { status: 404 });
-    }
+    const access = await requireTripAccess(expense.tripId, user.id, 'edit');
 
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
@@ -58,7 +59,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const storagePath = `${user.id}/receipts/${expenseId}/${Date.now()}-${safeName}`;
+    // Keyed on the trip OWNER, not the uploader. Account deletion wipes the
+    // leaving user's whole storage prefix, so a collaborator's receipt filed
+    // under their own id would vanish out of the owner's live trip the day they
+    // close their account. Storage lifetime has to match trip lifetime.
+    const storagePath = `${access.ownerId}/receipts/${expenseId}/${Date.now()}-${safeName}`;
 
     const admin = createSupabaseAdmin();
     const { error: uploadError } = await admin.storage
@@ -76,6 +81,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     return NextResponse.json(updated, { status: 201 });
   } catch (error) {
+    if (error instanceof TripAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('Error uploading receipt:', error instanceof Error ? error.message : error);
     return NextResponse.json({ error: 'Failed to upload receipt' }, { status: 500 });
   }

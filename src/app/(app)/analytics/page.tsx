@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { AlertCircle, DollarSign, MapPin, Plane, RefreshCw, TrendingUp } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { TMPageShell, TMScreenHeader } from '@/components/travelmanager/TMPageShell';
+import { TMStatStrip, type TMStat } from '@/components/travelmanager/TMStatsCard';
+import { TMErrorState, TMStatStripSkeleton, TMSkeleton } from '@/components/travelmanager/TMEmptyState';
 import {
   ResponsiveContainer,
   PieChart,
@@ -23,7 +24,9 @@ import {
 /* ───────────────────────── Color Palette ───────────────────────── */
 
 const PIE_COLORS = [
-  '#f59e0b', '#3b82f6', '#10b981', '#ef4444',
+  '#0F172A', '#F59E0B', '#94A3B8', '#CBD5E1', '#E4E8EE',
+  // Retained tail for datasets with more categories than the design's five.
+  '#3b82f6', '#10b981', '#ef4444',
   '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6b7280',
 ];
 
@@ -131,67 +134,7 @@ function CustomLegend({
 
 /* ───────────────────────── Shimmer Skeleton ───────────────────────── */
 
-function Skeleton({ className }: { className?: string }) {
-  return (
-    <div className={`relative overflow-hidden rounded-lg bg-slate-100 ${className ?? ''}`}>
-      <div
-        className="absolute inset-0"
-        style={{
-          background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.6) 50%, transparent 100%)',
-          animation: 'shimmer 1.8s ease-in-out infinite',
-        }}
-      />
-      <style>{`
-        @keyframes shimmer {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(100%); }
-        }
-      `}</style>
-    </div>
-  );
-}
 
-function LoadingSkeleton() {
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <Skeleton className="h-8 w-32" />
-        <div className="flex gap-1">
-          {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-9 w-14 !rounded-full" />
-          ))}
-        </div>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {[1, 2, 3, 4].map((i) => (
-          <div
-            key={i}
-            className="rounded-2xl bg-white border border-[#eef2f6] p-5 space-y-3"
-          >
-            <div className="flex items-center gap-2.5">
-              <Skeleton className="size-9 !rounded-lg" />
-              <Skeleton className="h-3.5 w-20" />
-            </div>
-            <Skeleton className="h-7 w-28" />
-          </div>
-        ))}
-      </div>
-
-      <div className="grid gap-[18px] lg:grid-cols-2">
-        {[1, 2, 3, 4].map((i) => (
-          <div
-            key={i}
-            className="rounded-2xl bg-white border border-[#eef2f6] p-5 space-y-4"
-          >
-            <Skeleton className="h-4 w-36" />
-            <Skeleton className="h-[260px] w-full !rounded-lg" />
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 /* ───────────────────────── Chart Card Wrapper ───────────────────────── */
 
@@ -209,9 +152,9 @@ function ChartCard({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, delay: 0.1 + index * 0.08, ease: [0.25, 0.46, 0.45, 0.94] }}
-      className="rounded-2xl bg-white border border-[#eef2f6] p-[22px] shadow-card hover:shadow-card-hover transition-shadow duration-300"
+      className="tm-card px-6 py-[22px]"
     >
-      <h2 className="text-sm font-semibold text-slate-700 mb-5">{title}</h2>
+      <h2 className="mb-5 text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">{title}</h2>
       {children}
     </motion.div>
   );
@@ -275,144 +218,91 @@ export default function AnalyticsPage() {
   }, []);
 
   if (loading) {
-    return <LoadingSkeleton />;
+    return (
+      <TMPageShell width={1120}>
+        <TMScreenHeader title="Analytics" />
+        <div className="pt-5 md:pt-7">
+          <TMStatStripSkeleton cells={4} />
+          <div className="mt-5 grid gap-5 lg:grid-cols-2">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <TMSkeleton key={i} className="h-[300px] w-full" style={{ borderRadius: 14 }} />
+            ))}
+          </div>
+        </div>
+      </TMPageShell>
+    );
   }
 
   if (error || !data) {
     return (
-      <div className="flex flex-col items-center justify-center py-24 text-center">
-        <div className="relative mb-6">
-          <div className="size-20 rounded-full bg-red-50 flex items-center justify-center">
-            <AlertCircle className="size-10 text-red-400" />
-          </div>
-          <div className="absolute -bottom-1 -right-1 size-7 rounded-full bg-red-100 flex items-center justify-center">
-            <RefreshCw className="size-3.5 text-red-400" />
-          </div>
+      <TMPageShell width={1120}>
+        <TMScreenHeader title="Analytics" />
+        <div className="tm-card mt-6">
+          <TMErrorState
+            title="Couldn't load your analytics"
+            description="Something went wrong on our end. Your data is safe — nothing was lost."
+            onRetry={refetch}
+          />
         </div>
-        <h2 className="text-xl font-semibold text-slate-900">Unable to load analytics</h2>
-        <p className="mt-2 text-sm text-slate-500 max-w-sm">
-          Something went wrong. Check your connection and try again.
-        </p>
-        <Button
-          onClick={refetch}
-          className="mt-6 bg-slate-900 hover:bg-slate-800 text-white shadow-sm"
-        >
-          <RefreshCw className="mr-2 size-4" />
-          Try again
-        </Button>
-      </div>
+      </TMPageShell>
     );
   }
 
-  const summaryCards = [
-    {
-      label: 'Total Spent',
-      value: formatCurrency(data.totalSpent),
-      icon: DollarSign,
-      gradient: 'from-amber-400 to-amber-500',
-      bgLight: 'bg-amber-50',
-    },
-    {
-      label: 'Total Trips',
-      value: data.totalTrips.toString(),
-      icon: Plane,
-      gradient: 'from-blue-400 to-blue-500',
-      bgLight: 'bg-blue-50',
-    },
-    {
-      label: 'Avg Trip Cost',
-      value: formatCurrency(data.averageTripCost),
-      icon: TrendingUp,
-      gradient: 'from-emerald-400 to-emerald-500',
-      bgLight: 'bg-emerald-50',
-    },
-    {
-      label: 'Most Visited',
-      value: data.mostVisited || 'N/A',
-      icon: MapPin,
-      gradient: 'from-purple-400 to-purple-600',
-      bgLight: 'bg-purple-50',
-    },
+  // One divided strip instead of four gradient tiles: these are four readings
+  // of the same instrument, not four unrelated facts.
+  const stats: TMStat[] = [
+    { label: 'Total spent', value: formatCurrency(data.totalSpent) },
+    { label: 'Trips taken', value: data.totalTrips.toString() },
+    { label: 'Avg trip cost', value: formatCurrency(data.averageTripCost) },
+    { label: 'Most visited', value: data.mostVisited || '—' },
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Header & Period Filter */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <motion.h1
-          initial={{ opacity: 0, x: -10 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.35 }}
-          className="text-[26px] font-bold tracking-[-0.02em] text-slate-900"
-        >
-          Analytics
-        </motion.h1>
+    <TMPageShell width={1120}>
+      <TMScreenHeader
+        title="Analytics"
+        subtitle={`${data.totalTrips} ${data.totalTrips === 1 ? 'trip' : 'trips'} · ${formatCurrency(data.totalSpent)} tracked`}
+        actions={
+          <div className="tm-seg" role="radiogroup" aria-label="Time period">
+            {PERIODS.map((p) => (
+              <button
+                key={p.value}
+                type="button"
+                role="radio"
+                aria-checked={period === p.value}
+                data-selected={period === p.value}
+                onClick={() => setPeriod(p.value)}
+                className="tm-seg-item"
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+        }
+      />
 
-        {/* Pill Toggle Group */}
-        <motion.div
-          initial={{ opacity: 0, x: 10 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.35 }}
-          className="relative flex gap-1 rounded-full bg-slate-100 p-1"
-        >
-          {PERIODS.map((p) => (
-            <button
-              key={p.value}
-              onClick={() => setPeriod(p.value)}
-              aria-label={`Show ${p.label} period`}
-              aria-pressed={period === p.value}
-              className={`relative z-10 inline-flex items-center justify-center rounded-full px-4 py-2.5 min-h-11 sm:py-1.5 sm:min-h-0 text-sm font-semibold transition-colors duration-200 ${
-                period === p.value
-                  ? 'text-white'
-                  : 'text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              {period === p.value && (
-                <motion.div
-                  layoutId="period-pill"
-                  className="absolute inset-0 rounded-full bg-amber-500 shadow-[0_2px_8px_-2px_rgba(245,158,11,0.5)]"
-                  transition={{ type: 'spring', bounce: 0.15, duration: 0.5 }}
-                />
-              )}
-              <span className="relative z-10">{p.label}</span>
-            </button>
-          ))}
-        </motion.div>
+      {/* On a phone the segmented control moves below the title — it's too
+          wide to share a row with a 24px heading at 402px. */}
+      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 pt-4 md:hidden">
+        {PERIODS.map((p) => (
+          <button
+            key={p.value}
+            type="button"
+            data-selected={period === p.value}
+            onClick={() => setPeriod(p.value)}
+            className="tm-pill"
+          >
+            {p.label}
+          </button>
+        ))}
       </div>
 
-      {/* Summary Cards */}
-      <motion.div
-        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
-        initial="hidden"
-        animate="visible"
-        variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.07 } } }}
-      >
-        {summaryCards.map((card) => (
-          <motion.div
-            key={card.label}
-            variants={{
-              hidden: { opacity: 0, y: 16, scale: 0.97 },
-              visible: { opacity: 1, y: 0, scale: 1 },
-            }}
-            transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
-            whileHover={{ y: -3, boxShadow: '0 8px 24px -6px rgba(15,23,42,0.13)' }}
-            className="rounded-2xl bg-white border border-[#eef2f6] p-5 shadow-card cursor-default transition-colors duration-200"
-          >
-            <div className="flex items-center gap-3">
-              <div className={`flex items-center justify-center size-[38px] rounded-[10px] bg-gradient-to-br ${card.gradient} shadow-sm`}>
-                <card.icon className="size-4 text-white" strokeWidth={2.5} />
-              </div>
-              <span className="text-sm text-slate-500 font-medium">{card.label}</span>
-            </div>
-            <p className="mt-3.5 text-[26px] font-bold text-slate-900 truncate tracking-[-0.02em]">
-              {card.value}
-            </p>
-          </motion.div>
-        ))}
-      </motion.div>
+      <div className="pt-4 md:pt-7">
+        <TMStatStrip stats={stats} />
+      </div>
 
       {/* Charts Grid */}
-      <div className="grid gap-[18px] lg:grid-cols-2">
+      <div className="mt-5 grid gap-5 lg:grid-cols-2">
         {/* ── Spending by Category - Donut ── */}
         <ChartCard title="Spending by Category" index={0}>
           {data.spendingByCategory.length > 0 ? (
@@ -513,20 +403,20 @@ export default function AnalyticsPage() {
               <BarChart data={data.tripsByMonth} barCategoryGap="20%">
                 <defs>
                   <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#fbbf24" />
-                    <stop offset="100%" stopColor="#f59e0b" />
+                    <stop offset="0%" stopColor="#1E293B" />
+                    <stop offset="100%" stopColor="#0F172A" />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#EEF1F5" vertical={false} />
                 <XAxis
                   dataKey="month"
-                  tick={{ fontSize: 11, fill: '#94a3b8' }}
-                  axisLine={{ stroke: '#e2e8f0' }}
+                  tick={{ fontSize: 11, fill: '#A6AEBC' }}
+                  axisLine={{ stroke: '#E9EDF2' }}
                   tickLine={false}
                 />
                 <YAxis
                   allowDecimals={false}
-                  tick={{ fontSize: 11, fill: '#94a3b8' }}
+                  tick={{ fontSize: 11, fill: '#A6AEBC' }}
                   axisLine={false}
                   tickLine={false}
                 />
@@ -565,16 +455,16 @@ export default function AnalyticsPage() {
               <BarChart data={data.topDestinations} layout="vertical" barCategoryGap="25%">
                 <defs>
                   <linearGradient id="hBarGradient" x1="0" y1="0" x2="1" y2="0">
-                    <stop offset="0%" stopColor="#60a5fa" />
-                    <stop offset="100%" stopColor="#3b82f6" />
+                    <stop offset="0%" stopColor="#334155" />
+                    <stop offset="100%" stopColor="#0F172A" />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#EEF1F5" horizontal={false} />
                 <XAxis
                   type="number"
                   allowDecimals={false}
-                  tick={{ fontSize: 11, fill: '#94a3b8' }}
-                  axisLine={{ stroke: '#e2e8f0' }}
+                  tick={{ fontSize: 11, fill: '#A6AEBC' }}
+                  axisLine={{ stroke: '#E9EDF2' }}
                   tickLine={false}
                 />
                 <YAxis
@@ -624,16 +514,16 @@ export default function AnalyticsPage() {
                     <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.02} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#EEF1F5" vertical={false} />
                 <XAxis
                   dataKey="quarter"
-                  tick={{ fontSize: 11, fill: '#94a3b8' }}
-                  axisLine={{ stroke: '#e2e8f0' }}
+                  tick={{ fontSize: 11, fill: '#A6AEBC' }}
+                  axisLine={{ stroke: '#E9EDF2' }}
                   tickLine={false}
                 />
                 <YAxis
                   allowDecimals={false}
-                  tick={{ fontSize: 11, fill: '#94a3b8' }}
+                  tick={{ fontSize: 11, fill: '#A6AEBC' }}
                   axisLine={false}
                   tickLine={false}
                 />
@@ -688,7 +578,7 @@ export default function AnalyticsPage() {
                 </div>
                 <div>
                   <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Pending payout</p>
-                  <p className="text-xl font-bold text-amber-600">{formatCurrency(data.commissionPending)}</p>
+                  <p className="text-[20px] font-semibold text-tm-accent-text">{formatCurrency(data.commissionPending)}</p>
                 </div>
               </div>
               <div role="img" aria-label="Commissions per month stacked bar chart" className="[&_svg]:focus:outline-none [&_.recharts-wrapper_svg]:outline-none">
@@ -700,19 +590,19 @@ export default function AnalyticsPage() {
                       <stop offset="100%" stopColor="#10b981" />
                     </linearGradient>
                     <linearGradient id="commissionPendingGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#fbbf24" />
-                      <stop offset="100%" stopColor="#f59e0b" />
+                      <stop offset="0%" stopColor="#D1FAE5" />
+                      <stop offset="100%" stopColor="#A7F3D0" />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#EEF1F5" vertical={false} />
                   <XAxis
                     dataKey="month"
-                    tick={{ fontSize: 11, fill: '#94a3b8' }}
-                    axisLine={{ stroke: '#e2e8f0' }}
+                    tick={{ fontSize: 11, fill: '#A6AEBC' }}
+                    axisLine={{ stroke: '#E9EDF2' }}
                     tickLine={false}
                   />
                   <YAxis
-                    tick={{ fontSize: 11, fill: '#94a3b8' }}
+                    tick={{ fontSize: 11, fill: '#A6AEBC' }}
                     axisLine={false}
                     tickLine={false}
                     tickFormatter={(v: number) => formatCurrency(v)}
@@ -759,6 +649,6 @@ export default function AnalyticsPage() {
           )}
         </ChartCard>
       </div>
-    </div>
+    </TMPageShell>
   );
 }

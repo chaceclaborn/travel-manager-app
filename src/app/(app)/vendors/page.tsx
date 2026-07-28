@@ -2,10 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
-import { Plus, Search, AlertCircle, RefreshCw } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+import { Plus, Search, Building2 } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -14,7 +11,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { VendorCard } from '@/components/travelmanager/VendorCard';
-import { TMEmptyState } from '@/components/travelmanager/TMEmptyState';
+import {
+  TMEmptyState,
+  TMFilteredEmpty,
+  TMErrorState,
+  TMCardGridSkeleton,
+} from '@/components/travelmanager/TMEmptyState';
+import { TMPageShell, TMScreenHeader } from '@/components/travelmanager/TMPageShell';
 import { TMDeleteDialog } from '@/components/travelmanager/TMDeleteDialog';
 import { useTMToast } from '@/components/travelmanager/TMToast';
 
@@ -167,238 +170,185 @@ export default function VendorsPage() {
     return result;
   }, [vendors, search, categoryFilter, sortBy]);
 
-  if (isLoading) {
-    return (
-      <div className="space-y-6" role="status" aria-label="Loading vendors">
-        {/* Header row */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-[26px] font-bold tracking-[-0.02em] text-slate-900">Vendors</h1>
-          <div className="h-9 w-32 rounded-md bg-slate-200/80 animate-pulse" />
-        </div>
-
-        {/* Search + filter row */}
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <div className="h-9 flex-1 rounded-md bg-slate-200/60 animate-pulse" />
-          <div className="h-9 w-full sm:w-44 rounded-md bg-slate-200/60 animate-pulse" />
-          <div className="h-9 w-full sm:w-44 rounded-md bg-slate-200/60 animate-pulse" />
-        </div>
-
-        {/* Card grid */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div
-              key={i}
-              className="h-44 rounded-xl bg-white p-5 shadow-card ring-1 ring-slate-900/[0.04]"
-            >
-              {/* Name + category badge */}
-              <div className="mb-3 flex items-start justify-between gap-2">
-                <div className="h-5 w-3/5 rounded-md bg-slate-200/80 animate-pulse" />
-                <div className="h-5 w-16 rounded-full bg-slate-200/60 animate-pulse" />
-              </div>
-              {/* Location / email / phone lines */}
-              <div className="mb-2 flex items-center gap-1.5">
-                <div className="size-3.5 rounded bg-slate-200/60 animate-pulse" />
-                <div className="h-3.5 w-2/5 rounded bg-slate-200/60 animate-pulse" />
-              </div>
-              <div className="mb-1 flex items-center gap-1.5">
-                <div className="size-3.5 rounded bg-slate-200/60 animate-pulse" />
-                <div className="h-3.5 w-3/5 rounded bg-slate-200/60 animate-pulse" />
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="size-3.5 rounded bg-slate-200/60 animate-pulse" />
-                <div className="h-3.5 w-2/5 rounded bg-slate-200/50 animate-pulse" />
-              </div>
-              {/* Trip count */}
-              <div className="mt-3 h-3 w-14 rounded bg-slate-200/50 animate-pulse" />
-            </div>
-          ))}
-        </div>
-        <span className="sr-only">Loading vendors…</span>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center py-24 text-center">
-        <div className="relative mb-6">
-          <div className="size-20 rounded-full bg-red-50 flex items-center justify-center">
-            <AlertCircle className="size-10 text-red-400" />
-          </div>
-          <div className="absolute -bottom-1 -right-1 size-7 rounded-full bg-red-100 flex items-center justify-center">
-            <RefreshCw className="size-3.5 text-red-400" />
-          </div>
-        </div>
-        <h2 className="text-xl font-semibold text-slate-900">Unable to load vendors</h2>
-        <p className="mt-2 text-sm text-slate-500 max-w-sm">
-          Something went wrong. Check your connection and try again.
-        </p>
-        <Button
-          onClick={fetchVendors}
-          className="mt-6 bg-slate-900 hover:bg-slate-800 text-white shadow-sm"
-        >
-          <RefreshCw className="mr-2 size-4" />
-          Try again
-        </Button>
-      </div>
-    );
-  }
+  const cityCount = new Set(filtered.map((v) => v.city).filter(Boolean)).size;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-[26px] font-bold tracking-[-0.02em] text-slate-900">Vendors</h1>
-          {!isLoading && vendors.length > 0 && (
-            <p className="mt-1.5 text-sm text-slate-500">
-              Showing {filtered.length} of {vendors.length} vendors
-            </p>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          {vendors.length > 0 && (
-            <Button
-              variant="outline"
-              className="rounded-[11px]"
-              onClick={() => {
-                setSelectMode((m) => !m);
-                setSelectedIds(new Set());
-              }}
-            >
-              {selectMode ? 'Cancel' : 'Select'}
-            </Button>
-          )}
-          <Button asChild className="bg-gradient-to-br from-amber-500 to-amber-600 text-white rounded-[11px] shadow-[0_4px_14px_-4px_rgba(245,158,11,0.55)] hover:from-amber-600 hover:to-amber-700 motion-safe:hover:-translate-y-px transition-transform">
-            <Link href="/vendors/new">
-              <Plus className="mr-2 size-4" />
+    <TMPageShell width={1120}>
+      <TMScreenHeader
+        title="Vendors"
+        subtitle={
+          isLoading
+            ? undefined
+            : `${vendors.length} ${vendors.length === 1 ? 'vendor' : 'vendors'}${
+                cityCount ? ` · across ${cityCount} ${cityCount === 1 ? 'city' : 'cities'}` : ''
+              }`
+        }
+        actions={
+          <>
+            {vendors.length > 0 && (
+              <button
+                type="button"
+                className="tm-btn tm-btn-secondary"
+                onClick={() => {
+                  setSelectMode((m) => !m);
+                  setSelectedIds(new Set());
+                }}
+              >
+                {selectMode ? 'Cancel' : 'Select'}
+              </button>
+            )}
+            <Link href="/vendors/new" className="tm-btn tm-btn-primary">
               New Vendor
             </Link>
-          </Button>
-        </div>
-      </div>
+          </>
+        }
+        mobileAction={
+          <Link href="/vendors/new" className="tm-btn tm-btn-primary h-[34px] px-[13px]">
+            <Plus className="size-3.5" aria-hidden="true" />
+            New
+          </Link>
+        }
+      />
 
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-          <Input
-            placeholder="Search by name or city..."
+      <div className="flex flex-col gap-3 pt-4 md:pt-6">
+        <div className="relative w-full sm:max-w-[420px]">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-tm-subtle" aria-hidden="true" />
+          <input
+            placeholder="Search vendors"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             aria-label="Search vendors"
-            className="pl-9 h-10 rounded-[11px] focus-visible:!border-amber-400 focus-visible:ring-amber-500/15"
+            className="tm-input pl-[34px]"
           />
         </div>
-        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-          <SelectTrigger className="w-full sm:w-44" aria-label="Filter by category">
-            <SelectValue placeholder="Category" />
-          </SelectTrigger>
-          <SelectContent>
-            {CATEGORIES.map((cat) => (
-              <SelectItem key={cat} value={cat}>
-                {cat === 'ALL' ? 'All Categories' : cat.charAt(0) + cat.slice(1).toLowerCase()}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={sortBy} onValueChange={setSortBy}>
-          <SelectTrigger className="w-full sm:w-44" aria-label="Sort vendors">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="name-az">Name (A-Z)</SelectItem>
-            <SelectItem value="name-za">Name (Z-A)</SelectItem>
-            <SelectItem value="category">Category</SelectItem>
-          </SelectContent>
-        </Select>
+
+        {/* Category pills. A pill row beats a dropdown here: five options that
+            each answer "show me only these" should be one tap, not two. */}
+        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:flex-wrap md:px-0">
+          {CATEGORIES.map((cat) => (
+            <button
+              key={cat}
+              type="button"
+              data-selected={categoryFilter === cat}
+              onClick={() => setCategoryFilter(cat)}
+              className="tm-pill"
+            >
+              {cat === 'ALL' ? 'All' : cat.charAt(0) + cat.slice(1).toLowerCase() + 's'}
+            </button>
+          ))}
+          <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger className="tm-pill ml-auto hidden w-[150px] md:flex" aria-label="Sort vendors">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="name-az">Name · A–Z</SelectItem>
+              <SelectItem value="name-za">Name · Z–A</SelectItem>
+              <SelectItem value="category">Category</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
+      <div className="pt-5">
+        {isLoading ? (
+          <TMCardGridSkeleton count={6} columns={3} />
+        ) : error ? (
+          <div className="tm-card">
+            <TMErrorState
+              title="Couldn't load your vendors"
+              description="Something went wrong on our end. Your data is safe — nothing was lost."
+              onRetry={fetchVendors}
+            />
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="tm-card">
+            {vendors.length === 0 ? (
+              <TMEmptyState
+                title="No vendors yet"
+                description="Keep your hotels, suppliers, and drivers in one place with notes and rates."
+                actionLabel="New Vendor"
+                actionHref="/vendors/new"
+                icon={Building2}
+              />
+            ) : (
+              <TMFilteredEmpty
+                noun="vendors"
+                query={search}
+                filterLabel={categoryFilter === 'ALL' ? undefined : categoryFilter.toLowerCase()}
+                onClear={() => { setSearch(''); setCategoryFilter('ALL'); }}
+              />
+            )}
+          </div>
+        ) : (
+          <>
+            <div className="tm-card divide-y divide-tm-divider overflow-hidden md:hidden">
+              {filtered.map((vendor) => (
+                <VendorCard
+                  key={vendor.id}
+                  vendor={vendor}
+                  variant="row"
+                  onSaved={fetchVendors}
+                  onDeleted={fetchVendors}
+                />
+              ))}
+            </div>
 
-      {filtered.length === 0 ? (
-        <TMEmptyState
-          title={vendors.length === 0 ? 'No vendors yet' : 'No matching vendors'}
-          description={
-            vendors.length === 0
-              ? 'Create your first vendor to get started.'
-              : 'Try adjusting your search or filters.'
-          }
-          actionLabel={vendors.length === 0 ? 'New Vendor' : undefined}
-          actionHref={vendors.length === 0 ? '/vendors/new' : undefined}
-        />
-      ) : (
-        <motion.div
-          className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
-          initial="hidden"
-          animate="visible"
-          variants={{
-            hidden: {},
-            visible: { transition: { staggerChildren: 0.05 } },
-          }}
-        >
-          {filtered.map((vendor) => {
-            const isSelected = selectedIds.has(vendor.id);
-            return (
-              <motion.div
-                key={vendor.id}
-                variants={{
-                  hidden: { opacity: 0, y: 10 },
-                  visible: { opacity: 1, y: 0 },
-                }}
-              >
-                <div
-                  className={`relative rounded-[15px] transition-all ${
-                    selectMode && isSelected ? 'ring-2 ring-amber-500 ring-offset-2' : ''
-                  }`}
-                  onClick={(e) => {
-                    if (selectMode) {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      toggleSelected(vendor.id, !isSelected);
-                    }
-                  }}
-                >
-                  {selectMode && (
-                    <label
-                      className="absolute top-2 left-2 z-10 flex items-center justify-center rounded bg-white/95 p-1.5 shadow-sm ring-1 ring-slate-200 cursor-pointer"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <input
-                        type="checkbox"
-                        className="size-4 cursor-pointer accent-amber-500"
-                        checked={isSelected}
-                        onChange={(e) => toggleSelected(vendor.id, e.target.checked)}
-                        aria-label={`Select ${vendor.name}`}
-                      />
-                    </label>
-                  )}
-                  <div className={selectMode ? 'pointer-events-none' : ''}>
-                    <VendorCard vendor={vendor} onSaved={fetchVendors} onDeleted={fetchVendors} />
+            <div className="hidden gap-4 md:grid md:grid-cols-2 lg:grid-cols-3">
+              {filtered.map((vendor) => {
+                const isSelected = selectedIds.has(vendor.id);
+                return (
+                  <div
+                    key={vendor.id}
+                    className={`relative min-w-0 rounded-[14px] ${selectMode && isSelected ? 'ring-2 ring-tm-accent ring-offset-2' : ''}`}
+                    onClick={(e) => {
+                      if (selectMode) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        toggleSelected(vendor.id, !isSelected);
+                      }
+                    }}
+                  >
+                    {selectMode && (
+                      <label
+                        className="absolute left-2 top-2 z-10 flex cursor-pointer items-center justify-center rounded bg-white/95 p-1.5 shadow-sm ring-1 ring-tm-line"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <input
+                          type="checkbox"
+                          className="size-4 cursor-pointer accent-[#0F172A]"
+                          checked={isSelected}
+                          onChange={(e) => toggleSelected(vendor.id, e.target.checked)}
+                          aria-label={`Select ${vendor.name}`}
+                        />
+                      </label>
+                    )}
+                    <div className={selectMode ? 'pointer-events-none' : ''}>
+                      <VendorCard vendor={vendor} onSaved={fetchVendors} onDeleted={fetchVendors} />
+                    </div>
                   </div>
-                </div>
-              </motion.div>
-            );
-          })}
-        </motion.div>
-      )}
+                );
+              })}
+            </div>
+          </>
+        )}
+      </div>
 
       {selectMode && selectedIds.size > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 md:left-64 z-40 border-t border-slate-200 bg-white px-3 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-lg">
-          <div className="mx-auto flex max-w-6xl items-center gap-3 flex-wrap">
-            <span className="font-semibold text-slate-800">
-              {selectedIds.size} selected
-            </span>
-            <Button variant="outline" size="sm" onClick={() => setSelectedIds(new Set())}>
+        <div
+          className="tm-tabbar fixed inset-x-0 bottom-0 z-40 md:left-[248px]"
+          style={{ padding: '12px 16px calc(12px + var(--safe-area-bottom))' }}
+        >
+          <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3">
+            <span className="text-[13px] font-semibold text-tm-ink">{selectedIds.size} selected</span>
+            <button type="button" className="tm-btn tm-btn-secondary" onClick={() => setSelectedIds(new Set())}>
               Clear
-            </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => setBulkDeleteOpen(true)}
-            >
+            </button>
+            <button type="button" className="tm-btn tm-btn-danger" onClick={() => setBulkDeleteOpen(true)}>
               Delete
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleBulkExportCsv}>
+            </button>
+            <button type="button" className="tm-btn tm-btn-secondary" onClick={handleBulkExportCsv}>
               Export CSV
-            </Button>
+            </button>
           </div>
         </div>
       )}
@@ -411,6 +361,6 @@ export default function VendorsPage() {
         description="This action cannot be undone. Trip associations will also be removed."
         isDeleting={isBulkDeleting}
       />
-    </div>
+    </TMPageShell>
   );
 }

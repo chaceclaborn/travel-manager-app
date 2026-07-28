@@ -3,24 +3,15 @@ import { detailHref } from '@/lib/travelmanager/detail-routes';
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { motion, useReducedMotion } from 'framer-motion';
-import { MapPin, Mail, Phone, Pencil, X, Trash2, Loader2 } from 'lucide-react';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Mail, Phone, User, ChevronRight, Pencil, X, Trash2, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useTMToast } from '@/components/travelmanager/TMToast';
 import { TMDeleteDialog } from '@/components/travelmanager/TMDeleteDialog';
-
-const categoryColors: Record<string, string> = {
-  SUPPLIER: 'bg-blue-50 text-blue-700',
-  HOTEL: 'bg-purple-50 text-purple-700',
-  TRANSPORT: 'bg-amber-50 text-amber-700',
-  RESTAURANT: 'bg-emerald-50 text-emerald-700',
-  OTHER: 'bg-slate-50 text-slate-600',
-};
+import { TMLetterTile } from '@/components/travelmanager/TMPrimitives';
+import { vendorCategoryPalette } from '@/lib/travelmanager/design';
 
 interface VendorCardProps {
   vendor: {
@@ -36,9 +27,11 @@ interface VendorCardProps {
   };
   onSaved?: () => void;
   onDeleted?: () => void;
+  /** `row` is the mobile divided-list form; `card` is the desktop grid form. */
+  variant?: 'card' | 'row';
 }
 
-export function VendorCard({ vendor, onSaved, onDeleted }: VendorCardProps) {
+export function VendorCard({ vendor, onSaved, onDeleted, variant = 'card' }: VendorCardProps) {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -53,13 +46,11 @@ export function VendorCard({ vendor, onSaved, onDeleted }: VendorCardProps) {
     state: vendor.state || '',
   });
   const { showToast } = useTMToast();
-  const reducedMotion = useReducedMotion();
 
   const location = [vendor.city, vendor.state].filter(Boolean).join(', ');
   const tripCount = vendor.trips?.length || 0;
-  const colorClass = categoryColors[vendor.category] || categoryColors.OTHER;
+  const palette = vendorCategoryPalette(vendor.category);
   const categoryLabel = vendor.category.charAt(0) + vendor.category.slice(1).toLowerCase();
-  const initial = (vendor.name?.trim().charAt(0) || '?').toUpperCase();
 
   const startEdit = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -99,10 +90,13 @@ export function VendorCard({ vendor, onSaved, onDeleted }: VendorCardProps) {
 
   if (editing) {
     return (
-      <Card className="p-[18px] bg-white border border-amber-300 ring-1 ring-amber-200 rounded-[15px]">
+      <div
+        className="tm-card p-[18px]"
+        style={{ borderColor: 'var(--color-tm-accent)', boxShadow: '0 0 0 3px rgba(245,158,11,0.12)' }}
+      >
         <form onSubmit={handleSave} className="space-y-3">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-slate-700">Edit Vendor</p>
+            <p className="text-[13px] font-medium text-tm-body">Edit Vendor</p>
             <button type="button" onClick={() => setEditing(false)} className="rounded-md p-2.5 sm:p-2 min-w-11 min-h-11 sm:min-w-0 sm:min-h-0 inline-flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-600" aria-label="Cancel editing"><X className="size-4" /></button>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -127,50 +121,115 @@ export function VendorCard({ vendor, onSaved, onDeleted }: VendorCardProps) {
             <div><Label className="text-xs">State</Label><Input value={form.state} onChange={(e) => setForm(f => ({ ...f, state: e.target.value }))} className="h-10 text-base sm:h-8 sm:text-xs" /></div>
           </div>
           <div className="flex gap-2">
-            <Button type="submit" size="sm" disabled={saving} className="h-10 text-sm sm:h-7 sm:text-xs bg-amber-500 hover:bg-amber-600">{saving ? <><Loader2 className="size-3.5 animate-spin" />Saving...</> : 'Save'}</Button>
-            <Button type="button" size="sm" variant="outline" onClick={() => setEditing(false)} className="h-10 text-sm sm:h-7 sm:text-xs">Cancel</Button>
+            <Button type="submit" size="sm" disabled={saving} className="tm-btn tm-btn-primary h-9">{saving ? <><Loader2 className="size-3.5 animate-spin" />Saving…</> : 'Save'}</Button>
+            <Button type="button" size="sm" variant="outline" onClick={() => setEditing(false)} className="tm-btn tm-btn-secondary h-9">Cancel</Button>
           </div>
         </form>
-      </Card>
+      </div>
+    );
+  }
+
+  const actions = (
+    <span className="flex shrink-0 items-center gap-0.5">
+      <button
+        onClick={startEdit}
+        className="inline-flex size-8 items-center justify-center rounded-[7px] text-tm-ghost hover:bg-tm-fill hover:text-tm-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tm-accent/40"
+        title="Edit"
+        aria-label="Edit vendor"
+      >
+        <Pencil className="size-3.5" />
+      </button>
+      <button
+        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteOpen(true); }}
+        className="inline-flex size-8 items-center justify-center rounded-[7px] text-tm-ghost hover:bg-tm-danger-bg hover:text-tm-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tm-accent/40"
+        title="Delete"
+        aria-label="Delete vendor"
+      >
+        <Trash2 className="size-3.5" />
+      </button>
+    </span>
+  );
+
+  const categoryChip = (
+    <span
+      className="shrink-0 rounded-full px-[9px] py-[3px] text-[11px] font-medium"
+      style={{ background: palette.bg, color: palette.fg }}
+    >
+      {categoryLabel}
+    </span>
+  );
+
+  if (variant === 'row') {
+    return (
+      <>
+        <div className="flex items-center gap-3 px-4 py-3">
+          <Link href={detailHref('vendors', vendor.id)} className="flex min-w-0 flex-1 items-center gap-3">
+            <TMLetterTile label={vendor.name} size={38} />
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[14px] font-semibold text-tm-ink">{vendor.name}</span>
+              <span className="block truncate text-[12px] text-tm-subtle">
+                {[vendor.contactName, location].filter(Boolean).join(' · ') || categoryLabel}
+              </span>
+            </span>
+          </Link>
+          {categoryChip}
+          {actions}
+        </div>
+        <TMDeleteDialog open={deleteOpen} onClose={() => setDeleteOpen(false)} onConfirm={handleDelete} title="Delete Vendor" description="Are you sure? This will also unlink the vendor from all trips." isDeleting={deleting} />
+      </>
     );
   }
 
   return (
     <>
-      <motion.div
-        whileHover={reducedMotion ? undefined : { y: -3 }}
-        whileTap={reducedMotion ? undefined : { scale: 0.98 }}
-        transition={{ duration: 0.2 }}
-      >
-        <Card className="relative p-[18px] bg-white border border-[#eef2f6] hover:shadow-card-hover hover:border-slate-200 transition-all rounded-[15px] group">
-          <div className="flex items-start gap-3">
-            <div aria-hidden="true" className={`flex size-11 shrink-0 items-center justify-center rounded-[12px] text-[17px] font-bold ${colorClass}`}>{initial}</div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-start justify-between gap-2">
-                <Link href={detailHref('vendors', vendor.id)} className="min-w-0 flex-1">
-                  <h3 className="font-semibold text-[15px] leading-tight text-slate-800 truncate hover:text-amber-600 transition-colors" title={vendor.name}>{vendor.name}</h3>
-                </Link>
-                <div className="flex items-center gap-1 shrink-0">
-                  <button onClick={startEdit} className="rounded-md p-2.5 sm:p-2 min-w-11 min-h-11 sm:min-w-0 sm:min-h-0 inline-flex items-center justify-center text-slate-400 transition-all duration-200 hover:bg-amber-50 hover:text-amber-500 focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:outline-none" title="Edit" aria-label="Edit vendor"><Pencil className="size-4" /></button>
-                  <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteOpen(true); }} className="rounded-md p-2.5 sm:p-2 min-w-11 min-h-11 sm:min-w-0 sm:min-h-0 inline-flex items-center justify-center text-slate-400 transition-all duration-200 hover:bg-red-50 hover:text-red-500 focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:outline-none" title="Delete" aria-label="Delete vendor"><Trash2 className="size-4" /></button>
-                  <Badge className={`${colorClass} border-0 ml-1 shrink-0 rounded-full px-[9px] py-[3px] text-[10px] font-semibold`}>{categoryLabel}</Badge>
-                </div>
-              </div>
-
-              <Link href={detailHref('vendors', vendor.id)} className="block mt-2 space-y-1">
-                {location && <div className="flex items-center gap-1.5 text-[13px] text-slate-500"><MapPin className="size-[13px] shrink-0 text-slate-400" /><span className="truncate">{location}</span></div>}
-                {vendor.email && <div className="flex items-center gap-1.5 text-[13px] text-slate-500"><Mail className="size-[13px] shrink-0 text-slate-400" /><span className="truncate">{vendor.email}</span></div>}
-                {vendor.phone && <div className="flex items-center gap-1.5 text-[13px] text-slate-500"><Phone className="size-[13px] shrink-0 text-slate-400" /><span className="truncate">{vendor.phone}</span></div>}
-              </Link>
-            </div>
-          </div>
-
-          <Link href={detailHref('vendors', vendor.id)} className="mt-[14px] flex items-center justify-between border-t border-slate-100 pt-[13px]">
-            <span className="text-xs text-slate-400 truncate">{vendor.contactName || ''}</span>
-            <span className="text-xs font-semibold text-slate-500 shrink-0">{tripCount} {tripCount === 1 ? 'trip' : 'trips'}</span>
+      <div className="tm-card tm-card-interactive group min-w-0 p-[18px]">
+        <div className="flex items-start gap-3">
+          <TMLetterTile label={vendor.name} size={38} />
+          <Link href={detailHref('vendors', vendor.id)} className="min-w-0 flex-1">
+            <h3 className="truncate text-[14px] font-semibold tracking-[-0.01em] text-tm-ink" title={vendor.name}>
+              {vendor.name}
+            </h3>
+            {location && <p className="mt-0.5 truncate text-[12px] text-tm-subtle">{location}</p>}
           </Link>
-        </Card>
-      </motion.div>
+          <span className="flex shrink-0 items-center gap-1">
+            <span className="flex md:hidden md:group-hover:flex md:group-focus-within:flex">
+              {actions}
+            </span>
+            {categoryChip}
+          </span>
+        </div>
+
+        <Link href={detailHref('vendors', vendor.id)} className="mt-3.5 block space-y-1.5">
+          {vendor.contactName && (
+            <div className="flex items-center gap-2 text-[12px] font-medium text-tm-body">
+              <User className="size-3 shrink-0 text-tm-faint" aria-hidden="true" />
+              <span className="truncate">{vendor.contactName}</span>
+            </div>
+          )}
+          {vendor.email && (
+            <div className="flex items-center gap-2 text-[12px] text-tm-muted">
+              <Mail className="size-3 shrink-0 text-tm-faint" aria-hidden="true" />
+              <span className="truncate">{vendor.email}</span>
+            </div>
+          )}
+          {vendor.phone && (
+            <div className="flex items-center gap-2 font-mono text-[11px] text-tm-muted">
+              <Phone className="size-3 shrink-0 text-tm-faint" aria-hidden="true" />
+              <span className="truncate">{vendor.phone}</span>
+            </div>
+          )}
+        </Link>
+
+        <Link
+          href={detailHref('vendors', vendor.id)}
+          className="mt-3.5 flex items-center justify-between border-t border-tm-divider pt-3"
+        >
+          <span className="text-[12px] text-tm-subtle">
+            {tripCount} {tripCount === 1 ? 'trip' : 'trips'} together
+          </span>
+          <ChevronRight className="size-[15px] shrink-0 text-tm-ghost" aria-hidden="true" />
+        </Link>
+      </div>
       <TMDeleteDialog open={deleteOpen} onClose={() => setDeleteOpen(false)} onConfirm={handleDelete} title="Delete Vendor" description="Are you sure? This will also unlink the vendor from all trips." isDeleting={deleting} />
     </>
   );

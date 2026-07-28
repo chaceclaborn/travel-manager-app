@@ -64,6 +64,11 @@ export async function searchAll(userId: string, query: string): Promise<SearchRe
     prisma.booking.findMany({
       where: {
         userId,
+        // userId on a Booking means AUTHOR now, so this alone would keep
+        // surfacing bookings the caller made on someone else's trip long after
+        // they were removed from it. Search is a personal rollup: restrict it
+        // to rows that are genuinely theirs.
+        AND: [{ OR: [{ tripId: null }, { trip: { userId } }] }],
         OR: [
           { provider: contains },
           { confirmationNum: contains },

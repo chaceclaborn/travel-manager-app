@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import path from 'node:path';
+import fs from 'node:fs';
 import {
   getMobileRoutes,
   extractMobileNavTargets,
@@ -75,6 +76,56 @@ describe('every internal navigation target resolves inside the mobile bundle', (
         `In the iOS app they hard-404 and bounce the user back to the dashboard.\n` +
         `Use detailHref()/normalizeDeepLink() from @/lib/travelmanager/detail-routes\n` +
         `or add a statically exportable route.\n${report}`
+    ).toEqual([]);
+  });
+});
+
+describe('internal links go through next/link, never a raw anchor', () => {
+  /**
+   * A second, distinct failure mode from the one above — and the one that
+   * shipped as "I tapped Privacy Policy and landed on the home screen with no
+   * nav bar" (build 12).
+   *
+   * `/privacy` is a perfectly real route, so the resolver suite passed it. The
+   * problem was the element: a raw <a href="/privacy"> is a full page load,
+   * and Next only appends the export's trailing slash to hrefs it renders
+   * itself. The Capacitor file server has no /privacy — only /privacy/ — so it
+   * 404s and falls back to index.html. That paints the dashboard at pathname
+   * /privacy, which the (app) layout reads as a public page and renders
+   * without the sidebar or tab bar, stranding the user.
+   *
+   * Client-side <Link> never leaves the document, so it sidesteps the file
+   * server entirely. Use it for every in-app destination; a raw anchor is for
+   * external URLs, mailto: and tel: only.
+   */
+  const OFFENDER = /<a\s[^>]*href=["']\/(?!\/)/g;
+
+  function tsxFiles(dir: string): string[] {
+    return fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+      const full = path.join(dir, e.name);
+      if (e.isDirectory()) return e.name === 'node_modules' ? [] : tsxFiles(full);
+      return e.name.endsWith('.tsx') && !e.name.includes('.test.') ? [full] : [];
+    });
+  }
+
+  it('has no raw <a> pointing at an in-app path', () => {
+    const offenders = tsxFiles(SRC_DIR).flatMap((file) => {
+      const src = fs.readFileSync(file, 'utf8');
+      // Collapse the element onto one line so multi-line <a\n href="/x"> is
+      // caught too — the exact shape the settings page shipped.
+      const flat = src.replace(/\s+/g, ' ');
+      return [...flat.matchAll(OFFENDER)].map((m) => ({
+        file: path.relative(ROOT, file),
+        snippet: flat.slice(m.index, m.index + 60),
+      }));
+    });
+    const report = offenders.map((o) => `  ${o.file}: ${o.snippet}…`).join('\n');
+    expect(
+      offenders,
+      `Raw <a> tags pointing at in-app routes. In the iOS bundle these do a ` +
+        `full page load without the export's trailing slash, 404, and fall ` +
+        `back to index.html — the user lands on the dashboard with no tab bar.\n` +
+        `Use <Link> from next/link instead.\n${report}`
     ).toEqual([]);
   });
 });

@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
-import Image from 'next/image';
-import Link from 'next/link';
+import { TMDocHeader, TMDocFooter } from '@/components/travelmanager/TMDocChrome';
 import {
   LogIn,
   MapPinned,
@@ -54,7 +53,7 @@ const faqs: Faq[] = [
     icon: Share2,
     question: 'How do I share a trip with a client?',
     answer:
-      'Open the trip, tap the share icon, and toggle \u201cShare with client\u201d on. Copy the generated link and send it. Your client sees a clean, read-only itinerary with weather and a map \u2014 no login required. You can revoke the link or set an expiration date any time.',
+      'Open the trip, tap the share icon, and toggle \u201cShare with client\u201d on. Copy the generated link and send it. Your client sees a clean, read-only itinerary with weather and a map — no login required. You can revoke the link or set an expiration date any time.',
   },
   {
     icon: Wallet,
@@ -66,13 +65,13 @@ const faqs: Faq[] = [
     icon: Download,
     question: 'How do I export my data?',
     answer:
-      'Go to Settings \u2192 Account \u2192 Export my data. You\u2019ll download a complete JSON archive of everything in your account \u2014 trips, clients, vendors, bookings, notes, and attachments metadata.',
+      'Go to Settings → Account → Export my data. You’ll download a complete JSON archive of everything in your account — trips, clients, vendors, bookings, notes, and attachments metadata.',
   },
   {
     icon: Trash2,
     question: 'How do I delete my account?',
     answer:
-      'Go to Settings \u2192 Account \u2192 Delete my account. Deletion is immediate and permanent \u2014 all trips, clients, vendors, bookings, and sign-in history are removed and cannot be recovered. Export your data first if you want a copy.',
+      'Go to Settings → Account → Delete my account. Deletion is immediate and permanent — all trips, clients, vendors, bookings, and sign-in history are removed and cannot be recovered. Export your data first if you want a copy.',
   },
   {
     icon: HelpCircle,
@@ -84,25 +83,9 @@ const faqs: Faq[] = [
 
 export default function SupportPage() {
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-900">
-      <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 md:py-12">
-        <Link
-          href="/"
-          className="mb-8 inline-flex items-center gap-2 text-sm text-slate-600 transition-colors hover:text-amber-600"
-        >
-          <span aria-hidden="true">&larr;</span>
-          <Image src="/brand/logo.png" alt="" width={20} height={20} className="size-5" aria-hidden="true" />
-          Travel Manager
-        </Link>
-
-        <header className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-            Travel Manager Support
-          </h1>
-          <p className="mt-2 text-sm text-slate-500">
-            Need help? You&rsquo;re in the right place.
-          </p>
-        </header>
+    <main className="min-h-screen bg-tm-app text-tm-body">
+      <div className="mx-auto max-w-3xl px-4 pb-8 sm:px-6">
+        <TMDocHeader title="Support" subtitle="Need help? You&rsquo;re in the right place." />
 
         <div className="mb-6 rounded-xl bg-white p-6 shadow-sm">
           <p className="text-sm leading-relaxed text-slate-600">
@@ -163,19 +146,7 @@ export default function SupportPage() {
           </p>
         </section>
 
-        <footer className="mt-10 flex flex-col items-center gap-3 text-center text-sm text-slate-500">
-          <div className="flex flex-wrap justify-center gap-x-4 gap-y-2">
-            <Link href="/terms" className="text-amber-600 hover:underline">
-              Terms of Service
-            </Link>
-            <Link href="/privacy" className="text-amber-600 hover:underline">
-              Privacy Policy
-            </Link>
-            <Link href="/" className="text-amber-600 hover:underline">
-              Back to Travel Manager
-            </Link>
-          </div>
-        </footer>
+        <TMDocFooter current="support" />
       </div>
     </main>
   );

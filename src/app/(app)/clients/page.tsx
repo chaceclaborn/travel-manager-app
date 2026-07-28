@@ -2,10 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
-import { Plus, Search, Users, AlertCircle, RefreshCw } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+import { Plus, Search, Users } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -14,7 +11,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ClientCard } from '@/components/travelmanager/ClientCard';
-import { TMEmptyState } from '@/components/travelmanager/TMEmptyState';
+import {
+  TMEmptyState,
+  TMFilteredEmpty,
+  TMErrorState,
+  TMCardGridSkeleton,
+} from '@/components/travelmanager/TMEmptyState';
+import { TMPageShell, TMScreenHeader } from '@/components/travelmanager/TMPageShell';
 import { TMDeleteDialog } from '@/components/travelmanager/TMDeleteDialog';
 import { useTMToast } from '@/components/travelmanager/TMToast';
 
@@ -25,7 +28,7 @@ interface Client {
   email: string | null;
   phone: string | null;
   notes?: string | null;
-  trips: unknown[];
+  trips: Array<{ trip?: { startDate?: string | null; status?: string | null } | null }>;
 }
 
 function escapeCsv(v: unknown): string {
@@ -158,218 +161,173 @@ export default function ClientsPage() {
     return result;
   }, [clients, search, sortBy]);
 
-  if (loading) {
-    return (
-      <div className="space-y-6" role="status" aria-label="Loading clients">
-        {/* Header row */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-[26px] font-bold tracking-[-0.02em] text-slate-900">Clients</h1>
-          <div className="h-9 w-32 rounded-md bg-slate-200/80 animate-pulse" />
-        </div>
-
-        {/* Search + sort row */}
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <div className="h-9 flex-1 rounded-md bg-slate-200/60 animate-pulse" />
-          <div className="h-9 w-full sm:w-44 rounded-md bg-slate-200/60 animate-pulse" />
-        </div>
-
-        {/* Count line */}
-        <div className="h-4 w-40 rounded bg-slate-200/60 animate-pulse" />
-
-        {/* Card grid */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div
-              key={i}
-              className="h-44 rounded-xl bg-white p-5 shadow-card ring-1 ring-slate-900/[0.04]"
-            >
-              {/* Name + company */}
-              <div className="h-5 w-3/5 rounded-md bg-slate-200/80 animate-pulse" />
-              <div className="mt-1.5 h-3 w-2/5 rounded bg-slate-200/60 animate-pulse" />
-              {/* Email / phone lines */}
-              <div className="mt-4 flex items-center gap-1.5">
-                <div className="size-3.5 rounded bg-slate-200/60 animate-pulse" />
-                <div className="h-3.5 w-3/5 rounded bg-slate-200/60 animate-pulse" />
-              </div>
-              <div className="mt-2 flex items-center gap-1.5">
-                <div className="size-3.5 rounded bg-slate-200/60 animate-pulse" />
-                <div className="h-3.5 w-2/5 rounded bg-slate-200/50 animate-pulse" />
-              </div>
-              {/* Trip count */}
-              <div className="mt-3 h-3 w-14 rounded bg-slate-200/50 animate-pulse" />
-            </div>
-          ))}
-        </div>
-        <span className="sr-only">Loading clients…</span>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center py-24 text-center">
-        <div className="relative mb-6">
-          <div className="size-20 rounded-full bg-red-50 flex items-center justify-center">
-            <AlertCircle className="size-10 text-red-400" />
-          </div>
-          <div className="absolute -bottom-1 -right-1 size-7 rounded-full bg-red-100 flex items-center justify-center">
-            <RefreshCw className="size-3.5 text-red-400" />
-          </div>
-        </div>
-        <h2 className="text-xl font-semibold text-slate-900">Unable to load clients</h2>
-        <p className="mt-2 text-sm text-slate-500 max-w-sm">
-          Something went wrong. Check your connection and try again.
-        </p>
-        <Button
-          onClick={fetchClients}
-          className="mt-6 bg-slate-900 hover:bg-slate-800 text-white shadow-sm"
-        >
-          <RefreshCw className="mr-2 size-4" />
-          Try again
-        </Button>
-      </div>
-    );
-  }
+  const upcomingCount = filtered.filter((c) =>
+    (c.trips as Array<{ trip?: { startDate?: string | null; status?: string | null } | null }>).some((t) => {
+      const trip = t?.trip;
+      if (!trip?.startDate || trip.status === 'COMPLETED' || trip.status === 'CANCELLED') return false;
+      return new Date(trip.startDate) >= new Date();
+    }),
+  ).length;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold text-slate-800">Clients</h1>
-        <div className="flex items-center gap-2">
-          {clients.length > 0 && (
-            <Button
-              variant="outline"
-              onClick={() => {
-                setSelectMode((m) => !m);
-                setSelectedIds(new Set());
-              }}
-            >
-              {selectMode ? 'Cancel' : 'Select'}
-            </Button>
-          )}
-          <Button asChild className="h-10 rounded-[11px] bg-gradient-to-br from-amber-500 to-amber-600 px-[18px] text-white shadow-[0_4px_14px_-4px_rgba(245,158,11,0.55)] transition-transform motion-safe:hover:-translate-y-px hover:from-amber-600 hover:to-amber-700">
-            <Link href="/clients/new">
-              <Plus className="mr-2 size-4" />
+    <TMPageShell width={1120}>
+      <TMScreenHeader
+        title="Clients"
+        subtitle={
+          loading
+            ? undefined
+            : `${clients.length} ${clients.length === 1 ? 'client' : 'clients'}${
+                upcomingCount ? ` · ${upcomingCount} with upcoming travel` : ''
+              }`
+        }
+        actions={
+          <>
+            {clients.length > 0 && (
+              <button
+                type="button"
+                className="tm-btn tm-btn-secondary"
+                onClick={() => {
+                  setSelectMode((m) => !m);
+                  setSelectedIds(new Set());
+                }}
+              >
+                {selectMode ? 'Cancel' : 'Select'}
+              </button>
+            )}
+            <Link href="/clients/new" className="tm-btn tm-btn-primary">
               New Client
             </Link>
-          </Button>
-        </div>
-      </div>
+          </>
+        }
+        mobileAction={
+          <Link href="/clients/new" className="tm-btn tm-btn-primary h-[34px] px-[13px]">
+            <Plus className="size-3.5" aria-hidden="true" />
+            New
+          </Link>
+        }
+      />
 
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
-          <Input
+      <div className="flex flex-col gap-3 pt-4 sm:flex-row md:pt-6">
+        <div className="relative w-full sm:max-w-[420px]">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-tm-subtle" aria-hidden="true" />
+          <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search clients by name, company, or email..."
+            placeholder="Search clients"
             aria-label="Search clients"
-            className="pl-10"
+            className="tm-input pl-[34px]"
           />
         </div>
         <Select value={sortBy} onValueChange={setSortBy}>
-          <SelectTrigger className="w-full sm:w-44" aria-label="Sort clients">
+          <SelectTrigger className="tm-input h-9 w-full sm:w-[168px]" aria-label="Sort clients">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="name-az">Name (A-Z)</SelectItem>
-            <SelectItem value="name-za">Name (Z-A)</SelectItem>
+            <SelectItem value="name-az">Name · A–Z</SelectItem>
+            <SelectItem value="name-za">Name · Z–A</SelectItem>
             <SelectItem value="company">Company</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
-      <p className="text-sm text-slate-500">
-        Showing {filtered.length} of {clients.length} clients
-      </p>
+      <div className="pt-5">
+        {loading ? (
+          <TMCardGridSkeleton count={6} columns={3} />
+        ) : error ? (
+          <div className="tm-card">
+            <TMErrorState
+              title="Couldn't load your clients"
+              description="Something went wrong on our end. Your data is safe — nothing was lost."
+              onRetry={fetchClients}
+            />
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="tm-card">
+            {clients.length === 0 ? (
+              <TMEmptyState
+                title="No clients yet"
+                description="Save preferences and loyalty numbers once, then reuse them on every trip."
+                actionLabel="New Client"
+                actionHref="/clients/new"
+                icon={Users}
+              />
+            ) : (
+              <TMFilteredEmpty noun="clients" query={search} onClear={() => setSearch('')} />
+            )}
+          </div>
+        ) : (
+          <>
+            {/* Mobile: one card of divided rows. */}
+            <div className="tm-card divide-y divide-tm-divider overflow-hidden md:hidden">
+              {filtered.map((client, i) => (
+                <ClientCard
+                  key={client.id}
+                  client={client}
+                  index={i}
+                  variant="row"
+                  onSaved={fetchClients}
+                  onDeleted={fetchClients}
+                />
+              ))}
+            </div>
 
-      {filtered.length === 0 ? (
-        <TMEmptyState
-          title={search ? 'No clients found' : 'No clients yet'}
-          description={
-            search
-              ? 'Try adjusting your search terms.'
-              : 'Create your first client to get started.'
-          }
-          actionLabel={search ? undefined : 'New Client'}
-          actionHref={search ? undefined : '/clients/new'}
-          icon={Users}
-        />
-      ) : (
-        <motion.div
-          className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
-          initial="hidden"
-          animate="visible"
-          variants={{
-            hidden: {},
-            visible: { transition: { staggerChildren: 0.06 } },
-          }}
-        >
-          {filtered.map((client) => {
-            const isSelected = selectedIds.has(client.id);
-            return (
-              <motion.div
-                key={client.id}
-                variants={{
-                  hidden: { opacity: 0, y: 12 },
-                  visible: { opacity: 1, y: 0 },
-                }}
-              >
-                <div
-                  className={`relative rounded-xl transition-all ${
-                    selectMode && isSelected ? 'ring-2 ring-amber-500 ring-offset-2' : ''
-                  }`}
-                  onClick={(e) => {
-                    if (selectMode) {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      toggleSelected(client.id, !isSelected);
-                    }
-                  }}
-                >
-                  {selectMode && (
-                    <label
-                      className="absolute top-2 left-2 z-10 flex items-center justify-center rounded bg-white/95 p-1.5 shadow-sm ring-1 ring-slate-200 cursor-pointer"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <input
-                        type="checkbox"
-                        className="size-4 cursor-pointer accent-amber-500"
-                        checked={isSelected}
-                        onChange={(e) => toggleSelected(client.id, e.target.checked)}
-                        aria-label={`Select ${client.name}`}
-                      />
-                    </label>
-                  )}
-                  <div className={selectMode ? 'pointer-events-none' : ''}>
-                    <ClientCard client={client} onSaved={fetchClients} onDeleted={fetchClients} />
+            {/* Desktop: a 3-up card grid. */}
+            <div className="hidden gap-4 md:grid md:grid-cols-2 lg:grid-cols-3">
+              {filtered.map((client, i) => {
+                const isSelected = selectedIds.has(client.id);
+                return (
+                  <div
+                    key={client.id}
+                    className={`relative min-w-0 rounded-[14px] ${selectMode && isSelected ? 'ring-2 ring-tm-accent ring-offset-2' : ''}`}
+                    onClick={(e) => {
+                      if (selectMode) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        toggleSelected(client.id, !isSelected);
+                      }
+                    }}
+                  >
+                    {selectMode && (
+                      <label
+                        className="absolute left-2 top-2 z-10 flex cursor-pointer items-center justify-center rounded bg-white/95 p-1.5 shadow-sm ring-1 ring-tm-line"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <input
+                          type="checkbox"
+                          className="size-4 cursor-pointer accent-[#0F172A]"
+                          checked={isSelected}
+                          onChange={(e) => toggleSelected(client.id, e.target.checked)}
+                          aria-label={`Select ${client.name}`}
+                        />
+                      </label>
+                    )}
+                    <div className={selectMode ? 'pointer-events-none' : ''}>
+                      <ClientCard client={client} index={i} onSaved={fetchClients} onDeleted={fetchClients} />
+                    </div>
                   </div>
-                </div>
-              </motion.div>
-            );
-          })}
-        </motion.div>
-      )}
+                );
+              })}
+            </div>
+          </>
+        )}
+      </div>
 
       {selectMode && selectedIds.size > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 md:left-64 z-40 border-t border-slate-200 bg-white px-3 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-lg">
-          <div className="mx-auto flex max-w-6xl items-center gap-3 flex-wrap">
-            <span className="font-semibold text-slate-800">
-              {selectedIds.size} selected
-            </span>
-            <Button variant="outline" size="sm" onClick={() => setSelectedIds(new Set())}>
+        <div
+          className="tm-tabbar fixed inset-x-0 bottom-0 z-40 md:left-[248px]"
+          style={{ padding: '12px 16px calc(12px + var(--safe-area-bottom))' }}
+        >
+          <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3">
+            <span className="text-[13px] font-semibold text-tm-ink">{selectedIds.size} selected</span>
+            <button type="button" className="tm-btn tm-btn-secondary" onClick={() => setSelectedIds(new Set())}>
               Clear
-            </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => setBulkDeleteOpen(true)}
-            >
+            </button>
+            <button type="button" className="tm-btn tm-btn-danger" onClick={() => setBulkDeleteOpen(true)}>
               Delete
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleBulkExportCsv}>
+            </button>
+            <button type="button" className="tm-btn tm-btn-secondary" onClick={handleBulkExportCsv}>
               Export CSV
-            </Button>
+            </button>
           </div>
         </div>
       )}
@@ -382,6 +340,6 @@ export default function ClientsPage() {
         description="This action cannot be undone. Trip associations will also be removed."
         isDeleting={isBulkDeleting}
       />
-    </div>
+    </TMPageShell>
   );
 }

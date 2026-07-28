@@ -218,7 +218,7 @@ export function TripAttachments({ tripId, onRefresh }: TripAttachmentsProps) {
             size="sm"
             onClick={handleUpload}
             disabled={uploading}
-            className="bg-amber-500 hover:bg-amber-600"
+            className="tm-btn tm-btn-primary"
           >
             {uploading ? 'Uploading...' : 'Upload'}
           </Button>

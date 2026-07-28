@@ -279,9 +279,14 @@ export function TravelMap({ trips, homeLocation, stops = [] }: TravelMapProps) {
       className="h-full w-full"
       style={{ minHeight: '400px' }}
     >
+      {/* `light_all` rather than `voyager`: the redesign wants the basemap to
+          recede so the pins and routes carry the color. Voyager's own road and
+          landuse tints competed with the status palette. */}
       <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>'
-        url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>'
+        url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+        subdomains="abcd"
+        maxZoom={19}
       />
 
       {fitBoundsPoints.length > 0 && <FitBounds points={fitBoundsPoints} />}
@@ -312,7 +317,7 @@ export function TravelMap({ trips, homeLocation, stops = [] }: TravelMapProps) {
                   <div className="text-xs text-slate-500 mt-1">
                     {trip.transportMode === 'FLIGHT' ? '\u2708\uFE0F' : '\uD83D\uDE97'}{' '}
                     {trip.transportMode === 'FLIGHT' && trip.departureAirportCode && trip.arrivalAirportCode
-                      ? `${trip.departureAirportCode} \u2192 ${trip.arrivalAirportCode}`
+                      ? `${trip.departureAirportCode} → ${trip.arrivalAirportCode}`
                       : trip.transportMode === 'FLIGHT' ? 'Flight' : 'Driving'}
                   </div>
                 )}

@@ -1,108 +1,116 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { type LucideIcon } from 'lucide-react';
-import { motion } from 'framer-motion';
 
-interface TMStatsCardProps {
-  title: string;
+/**
+ * The stat strip.
+ *
+ * This replaces the previous row of individually-gradient stat cards. Six
+ * cards, each with its own hue and accent bar, made every figure equally
+ * loud — which is the same as making none of them loud. One divided strip
+ * reads as a single instrument panel, and the only color left in it is the
+ * accent on the delta figures.
+ *
+ * Cells are links; a cell without an `href` renders as a plain div.
+ */
+
+export interface TMStat {
+  /** Uppercase label, e.g. "Total trips". */
+  label: string;
   value: string | number;
-  icon: LucideIcon;
-  color: string;
+  /**
+   * Supporting line under the number, e.g. "+3 this quarter". The `emphasis`
+   * fragment is drawn in accent (or green, when a decrease is the good
+   * outcome) and the rest stays muted.
+   */
+  delta?: string;
+  emphasis?: string;
+  /** `good` paints the emphasis green — for metrics where down is better. */
+  tone?: 'accent' | 'good';
   href?: string;
 }
 
-const colorMap: Record<string, { bg: string; text: string; border: string }> = {
-  blue: { bg: 'bg-gradient-to-br from-blue-50 to-blue-100/80 ring-1 ring-inset ring-blue-500/10', text: 'text-blue-600', border: 'bg-gradient-to-r from-blue-500 to-blue-400' },
-  amber: { bg: 'bg-gradient-to-br from-amber-50 to-amber-100/80 ring-1 ring-inset ring-amber-500/10', text: 'text-amber-600', border: 'bg-gradient-to-r from-amber-500 to-amber-400' },
-  purple: { bg: 'bg-gradient-to-br from-purple-50 to-purple-100/80 ring-1 ring-inset ring-purple-500/10', text: 'text-purple-600', border: 'bg-gradient-to-r from-purple-600 to-purple-400' },
-  green: { bg: 'bg-gradient-to-br from-emerald-50 to-emerald-100/80 ring-1 ring-inset ring-emerald-500/10', text: 'text-emerald-600', border: 'bg-gradient-to-r from-emerald-600 to-emerald-400' },
-  red: { bg: 'bg-gradient-to-br from-red-50 to-red-100/80 ring-1 ring-inset ring-red-500/10', text: 'text-red-600', border: 'bg-gradient-to-r from-red-500 to-red-400' },
-  rose: { bg: 'bg-gradient-to-br from-rose-50 to-rose-100/80 ring-1 ring-inset ring-rose-500/10', text: 'text-rose-600', border: 'bg-gradient-to-r from-rose-600 to-rose-400' },
-  indigo: { bg: 'bg-gradient-to-br from-indigo-50 to-indigo-100/80 ring-1 ring-inset ring-indigo-500/10', text: 'text-indigo-600', border: 'bg-gradient-to-r from-indigo-600 to-indigo-400' },
-  slate: { bg: 'bg-gradient-to-br from-slate-50 to-slate-100/80 ring-1 ring-inset ring-slate-500/10', text: 'text-slate-600', border: 'bg-gradient-to-r from-slate-500 to-slate-400' },
-};
-
-function useCountUp(target: number, duration = 800) {
-  const [count, setCount] = useState(0);
-  // Track previous target so we can reset `count` to 0 *during render* when
-  // target drops to 0. This is the React 19 "synced state" pattern — it
-  // avoids the synchronous setState-in-effect that would otherwise be needed.
-  const [prevTarget, setPrevTarget] = useState(target);
-  if (target !== prevTarget) {
-    setPrevTarget(target);
-    if (target === 0) setCount(0);
-  }
-  const frameRef = useRef<number>(0);
-
-  useEffect(() => {
-    if (target === 0) return;
-
-    const startTime = performance.now();
-
-    function tick(now: number) {
-      const elapsed = now - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
-      setCount(Math.round(eased * target));
-
-      if (progress < 1) {
-        frameRef.current = requestAnimationFrame(tick);
-      }
-    }
-
-    frameRef.current = requestAnimationFrame(tick);
-
-    return () => cancelAnimationFrame(frameRef.current);
-  }, [target, duration]);
-
-  return count;
-}
-
-export function TMStatsCard({ title, value, icon: Icon, color, href }: TMStatsCardProps) {
-  const colors = colorMap[color] ?? colorMap.slate;
-  const isNumeric = typeof value === 'number';
-  const animatedValue = useCountUp(isNumeric ? value : 0);
-  const displayValue = isNumeric ? animatedValue : value;
-
-  const card = (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, ease: 'easeOut' }}
-      whileHover={{
-        y: -3,
-        boxShadow: '0 8px 24px -6px rgba(15,23,42,0.13)',
-      }}
-      className={`relative overflow-hidden rounded-[16px] bg-white p-4 sm:p-5 shadow-card border border-[#eef2f6] transition-colors${
-        href ? ' cursor-pointer hover:bg-slate-50/40' : ''
-      }`}
-    >
-      {/* Bottom border accent */}
-      <div className={`absolute inset-x-0 bottom-0 h-[3px] ${colors.border} rounded-b-[16px]`} />
-
-      <div className="flex items-center gap-3 sm:gap-4">
-        <div
-          className={`flex size-10 sm:size-[46px] shrink-0 items-center justify-center rounded-[13px] ${colors.bg}`}
-        >
-          <Icon className={`size-5 sm:size-[21px] ${colors.text}`} />
-        </div>
-        <div className="min-w-0">
-          <p className="truncate text-xl sm:text-[28px] font-bold tracking-[-0.02em] tabular-nums text-slate-900">
-            {displayValue}
-          </p>
-          <p className="mt-0.5 break-words text-[11px] font-semibold tracking-[0.06em] text-slate-400 uppercase">
-            {title}
-          </p>
-        </div>
-      </div>
-    </motion.div>
+function Cell({ stat, className: extra = '' }: { stat: TMStat; className?: string }) {
+  const inner = (
+    <>
+      <p className="tm-label-upper truncate">{stat.label}</p>
+      <p className="mt-2 text-[28px] font-semibold leading-none tracking-[-0.02em] tm-nums text-tm-ink">
+        {stat.value}
+      </p>
+      {(stat.delta || stat.emphasis) && (
+        <p className="mt-2 truncate text-[12px] text-tm-subtle">
+          {stat.emphasis && (
+            <span className={`font-medium ${stat.tone === 'good' ? 'text-tm-done-text' : 'text-tm-accent-text'}`}>
+              {stat.emphasis}
+            </span>
+          )}
+          {stat.emphasis && stat.delta ? ' ' : ''}
+          {stat.delta}
+        </p>
+      )}
+    </>
   );
 
-  if (href) {
-    return <Link href={href}>{card}</Link>;
-  }
+  // Every cell carries a left and top rule; the grid is then shifted 1px up
+  // and left inside the clipping card so the outermost rules fall outside the
+  // border. That draws correct internal dividers at any wrap count, which a
+  // "border-right except the last" rule cannot do once cells wrap to a
+  // second line.
+  const className = `block min-w-0 border-l border-t border-tm-hairline px-6 py-5 ${extra}`;
 
-  return card;
+  if (stat.href) {
+    return (
+      <Link href={stat.href} className={`${className} hover:bg-tm-wash`}>
+        {inner}
+      </Link>
+    );
+  }
+  return <div className={className}>{inner}</div>;
+}
+
+export function TMStatStrip({ stats, className = '' }: { stats: TMStat[]; className?: string }) {
+  if (stats.length === 0) return null;
+
+  // A cell count that doesn't fill the last row leaves an empty slot, and an
+  // empty slot draws no border — so the cell beside it loses its underline and
+  // runs into the row below (5 stats at 2-up: "Vendors" ran into "Meetings").
+  // Stretching the final cell across the remainder closes the rule and reads
+  // as deliberate rather than as a gap.
+  const spanAt = (cols: number) => (stats.length % cols === 0 ? 1 : cols - ((stats.length - 1) % cols));
+  const span2 = spanAt(2);
+  const span3 = spanAt(3);
+  const lastCellClass = [
+    span2 === 2 ? 'col-span-2' : '',
+    // Reset at each breakpoint before re-applying, or the smaller screen's
+    // span leaks upward into the 3-up and n-up layouts.
+    span3 === 1 ? 'sm:col-span-1' : span3 === 2 ? 'sm:col-span-2' : 'sm:col-span-3',
+    'lg:col-span-1',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  return (
+    <div className={`tm-card overflow-hidden ${className}`}>
+      {/* The strip is one card with internal rules, not a gapped grid — so it
+          collapses by rewrapping cells, never by breaking into loose boxes.
+          2-up on phones, 3-up on tablets, one row per cell on desktop. */}
+      <div className="tm-strip -ml-px -mt-px" style={{ ['--tm-cells' as string]: stats.length }}>
+        {stats.map((stat, i) => (
+          <Cell
+            key={stat.label}
+            stat={stat}
+            className={i === stats.length - 1 ? lastCellClass : ''}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Legacy single-card API, kept so callers that still pass one stat at a time
+ * keep working. New code should use `TMStatStrip`.
+ */
+export function TMStatsCard({ title, value, href }: { title: string; value: string | number; href?: string }) {
+  return <TMStatStrip stats={[{ label: title, value, href }]} />;
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { requireAuth } from '@/lib/travelmanager/auth';
+import { requireTripAccess, TripAccessError } from '@/lib/travelmanager/trip-access';
 import { rateLimit } from '@/lib/rate-limit';
 import { sanitizeObject, validateUUID } from '@/lib/sanitize';
 
@@ -9,9 +10,8 @@ import { sanitizeObject, validateUUID } from '@/lib/sanitize';
  * Body: { tripId: string, orderedIds: string[] }
  *
  * Updates `sortOrder` for every itinerary item in `orderedIds` to match its
- * position in the array, in a single transaction. Ownership is verified by
- * looking up the trip under the current user and confirming every id in the
- * payload belongs to that trip.
+ * position in the array, in a single transaction. Access is verified against
+ * the trip, then every id in the payload is confirmed to belong to that trip.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -46,11 +46,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'orderedIds must be valid UUIDs' }, { status: 400 });
     }
 
-    // Verify trip ownership
-    const trip = await prisma.trip.findFirst({ where: { id: tripId, userId: user.id } });
-    if (!trip) {
-      return NextResponse.json({ error: 'Trip not found' }, { status: 404 });
-    }
+    await requireTripAccess(tripId, user.id, 'edit');
 
     // Verify all ids belong to this trip (prevents cross-trip reordering attacks)
     const existing = await prisma.itineraryItem.findMany({
@@ -72,6 +68,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
+    if (error instanceof TripAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('Error reordering itinerary items:', error instanceof Error ? error.message : error);
     return NextResponse.json({ error: 'Failed to reorder itinerary items' }, { status: 500 });
   }

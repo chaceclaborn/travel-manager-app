@@ -263,7 +263,7 @@ export function TripExpenses({ tripId, tripStartDate, tripEndDate }: TripExpense
           <Button
             size="sm"
             onClick={() => { setEditingId(null); setShowForm(true); }}
-            className="bg-amber-500 hover:bg-amber-600"
+            className="tm-btn tm-btn-primary"
           >
             <Plus className="mr-1 size-3.5" />
             Add Expense
@@ -364,7 +364,7 @@ export function TripExpenses({ tripId, tripStartDate, tripEndDate }: TripExpense
               </div>
             </div>
             <div className="mt-3 flex gap-2">
-              <Button type="submit" size="sm" disabled={adding} className="bg-amber-500 hover:bg-amber-600">
+              <Button type="submit" size="sm" disabled={adding} className="tm-btn tm-btn-primary">
                 {adding ? (editingId ? 'Saving...' : 'Adding...') : (editingId ? 'Save Changes' : 'Add')}
               </Button>
               <Button type="button" size="sm" variant="outline" onClick={cancelForm}>

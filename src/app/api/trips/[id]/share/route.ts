@@ -6,6 +6,7 @@ import {
   getTripShareInfo,
 } from '@/lib/travelmanager/trips';
 import { requireAuth } from '@/lib/travelmanager/auth';
+import { requireTripAccess, TripAccessError } from '@/lib/travelmanager/trip-access';
 import { rateLimit } from '@/lib/rate-limit';
 import { validateUUID, validateDateString } from '@/lib/sanitize';
 import prisma from '@/lib/prisma';
@@ -90,6 +91,15 @@ function parseExpiresAt(raw: unknown): { ok: true; value: Date | null } | { ok: 
   return { ok: true, value: parsed };
 }
 
+/**
+ * All four methods here are owner-only, including the GET.
+ *
+ * Sharing publishes the trip to the open internet under an unauthenticated
+ * token, so it is the owner's decision alone — and the read is no safer than the
+ * writes, because what it returns *is* the secret: anyone holding shareToken can
+ * republish the trip at will, and POST additionally rotates the token, silently
+ * killing whatever link the owner had already given out.
+ */
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const rateLimitResult = rateLimit(request, 'read');
@@ -103,11 +113,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: 'Invalid trip ID' }, { status: 400 });
     }
 
+    await requireTripAccess(id, user.id, 'owner');
+
     const info = await getTripShareInfo(id, user.id);
     return NextResponse.json(serialize(request, info));
   } catch (error) {
-    if (error instanceof Error && error.message === 'Trip not found') {
-      return NextResponse.json({ error: 'Trip not found' }, { status: 404 });
+    if (error instanceof TripAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
     }
     console.error('Error fetching share info:', error instanceof Error ? error.message : error);
     return NextResponse.json({ error: 'Failed to fetch share info' }, { status: 500 });
@@ -126,6 +138,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (!validateUUID(id)) {
       return NextResponse.json({ error: 'Invalid trip ID' }, { status: 400 });
     }
+
+    await requireTripAccess(id, user.id, 'owner');
 
     // Body is optional — POST with no body simply enables sharing with no expiry.
     // If a body IS present, we accept shareExpiresAt to match the PUT contract.
@@ -149,8 +163,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     });
     return NextResponse.json(serialize(request, info));
   } catch (error) {
-    if (error instanceof Error && error.message === 'Trip not found') {
-      return NextResponse.json({ error: 'Trip not found' }, { status: 404 });
+    if (error instanceof TripAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
     }
     console.error('Error enabling share:', error instanceof Error ? error.message : error);
     return NextResponse.json({ error: 'Failed to enable sharing' }, { status: 500 });
@@ -170,6 +184,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: 'Invalid trip ID' }, { status: 400 });
     }
 
+    await requireTripAccess(id, user.id, 'owner');
+
     const body = await request.json().catch(() => null);
     if (!body || !('shareExpiresAt' in body)) {
       return NextResponse.json({ error: 'shareExpiresAt is required' }, { status: 400 });
@@ -186,8 +202,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     });
     return NextResponse.json(serialize(request, info));
   } catch (error) {
-    if (error instanceof Error && error.message === 'Trip not found') {
-      return NextResponse.json({ error: 'Trip not found' }, { status: 404 });
+    if (error instanceof TripAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
     }
     console.error('Error updating share expiry:', error instanceof Error ? error.message : error);
     return NextResponse.json({ error: 'Failed to update share expiry' }, { status: 500 });
@@ -207,12 +223,14 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       return NextResponse.json({ error: 'Invalid trip ID' }, { status: 400 });
     }
 
+    await requireTripAccess(id, user.id, 'owner');
+
     await disableTripShare(id, user.id);
     await logShareEvent(request, user.id, 'share_disabled', id);
     return NextResponse.json({ success: true });
   } catch (error) {
-    if (error instanceof Error && error.message === 'Trip not found') {
-      return NextResponse.json({ error: 'Trip not found' }, { status: 404 });
+    if (error instanceof TripAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
     }
     console.error('Error disabling share:', error instanceof Error ? error.message : error);
     return NextResponse.json({ error: 'Failed to disable sharing' }, { status: 500 });

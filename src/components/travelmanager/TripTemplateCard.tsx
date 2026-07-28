@@ -3,7 +3,6 @@ import { detailHref } from '@/lib/travelmanager/detail-routes';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -59,31 +58,31 @@ export function TripTemplateCard({ template }: TripTemplateCardProps) {
 
   return (
     <>
-      <motion.button
+      {/* The whole card is the button, so the label inside it is a plain
+          span styled as a secondary control — a filled primary button here
+          would put three competing calls-to-action in one row. */}
+      <button
         type="button"
         onClick={() => setOpen(true)}
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
-        transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-        className="group flex flex-col items-center justify-between rounded-xl border border-slate-200 bg-white p-5 text-center shadow-sm transition-colors hover:border-amber-400 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2"
+        className="tm-card tm-card-interactive group flex flex-col items-center justify-between p-5 text-center focus:outline-none focus-visible:ring-2 focus-visible:ring-tm-accent/40 focus-visible:ring-offset-2"
         aria-label={`Start with ${template.name} template`}
       >
-        <div className="flex flex-col items-center gap-2">
-          <div className="text-5xl leading-none" aria-hidden="true">
+        <span className="flex flex-col items-center gap-1.5">
+          <span className="text-[32px] leading-none" aria-hidden="true">
             {template.emoji}
-          </div>
-          <h3 className="mt-1 text-base font-semibold text-slate-800">{template.name}</h3>
-          <p className="text-xs text-slate-500 leading-relaxed">{template.description}</p>
-          <span className="mt-1 inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
+          </span>
+          <span className="mt-1 text-[14px] font-semibold tracking-[-0.01em] text-tm-ink">{template.name}</span>
+          <span className="tm-prose text-[12px] leading-[1.5] text-tm-subtle">{template.description}</span>
+          <span className="mt-1 inline-flex items-center rounded-full bg-tm-fill px-2.5 py-[3px] text-[11px] font-medium text-tm-label">
             {template.durationDays} days
           </span>
-        </div>
-        <div className="mt-4 w-full">
-          <span className="inline-flex w-full items-center justify-center rounded-md bg-amber-500 px-3 py-2 text-sm font-medium text-white transition-colors group-hover:bg-amber-600">
-            Start with this template
+        </span>
+        <span className="mt-4 w-full">
+          <span className="tm-btn tm-btn-secondary w-full group-hover:border-tm-control-hover group-hover:bg-tm-wash">
+            Use this template
           </span>
-        </div>
-      </motion.button>
+        </span>
+      </button>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
@@ -101,7 +100,7 @@ export function TripTemplateCard({ template }: TripTemplateCardProps) {
           </DialogHeader>
 
           <div className="space-y-2">
-            <label htmlFor="template-start-date" className="text-sm font-medium text-slate-700">
+            <label htmlFor="template-start-date" className="text-[13px] font-medium text-tm-label">
               Start date
             </label>
             <div id="template-start-date">
@@ -110,18 +109,14 @@ export function TripTemplateCard({ template }: TripTemplateCardProps) {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)} disabled={submitting}>
+            <Button variant="outline" onClick={() => setOpen(false)} disabled={submitting} className="tm-btn tm-btn-secondary">
               Cancel
             </Button>
-            <Button
-              onClick={handleCreate}
-              disabled={submitting || !startDate}
-              className="bg-amber-500 hover:bg-amber-600 text-white"
-            >
+            <Button onClick={handleCreate} disabled={submitting || !startDate} className="tm-btn tm-btn-primary">
               {submitting ? (
                 <>
                   <Loader2 className="mr-2 size-4 animate-spin" />
-                  Creating...
+                  Creating…
                 </>
               ) : (
                 'Create trip'

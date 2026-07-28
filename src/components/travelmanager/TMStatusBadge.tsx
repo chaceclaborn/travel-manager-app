@@ -1,59 +1,59 @@
 'use client';
 
-const statusStyles: Record<string, { badge: string; dot: string; hoverBadge: string }> = {
-  DRAFT: {
-    badge: 'bg-slate-50 text-slate-600 ring-slate-200',
-    dot: 'bg-slate-400',
-    hoverBadge: 'hover:bg-slate-100',
-  },
-  PLANNED: {
-    badge: 'bg-blue-50 text-blue-700 ring-blue-200',
-    dot: 'bg-blue-500',
-    hoverBadge: 'hover:bg-blue-100',
-  },
-  IN_PROGRESS: {
-    badge: 'bg-amber-50 text-amber-700 ring-amber-200',
-    dot: 'bg-amber-500',
-    hoverBadge: 'hover:bg-amber-100',
-  },
-  COMPLETED: {
-    badge: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
-    dot: 'bg-emerald-500',
-    hoverBadge: 'hover:bg-emerald-100',
-  },
-  CANCELLED: {
-    badge: 'bg-red-50 text-red-700 ring-red-200',
-    dot: 'bg-red-500',
-    hoverBadge: 'hover:bg-red-100',
-  },
-};
-
-const defaultStyle = {
-  badge: 'bg-slate-50 text-slate-700 ring-slate-200',
-  dot: 'bg-slate-500',
-  hoverBadge: 'hover:bg-slate-100',
-};
+import { statusPalette } from '@/lib/travelmanager/design';
 
 interface TMStatusBadgeProps {
   status: string;
+  /**
+   * `dot` — a colored dot plus a label, no background. The default, and the
+   * only thing that belongs on a list row or a card: dozens of filled pills in
+   * a list read as noise.
+   * `pill` — a filled, ringed chip. Reserved for page headers, where a single
+   * badge carries the status of the whole record.
+   */
+  variant?: 'dot' | 'pill';
+  className?: string;
 }
 
-export function TMStatusBadge({ status }: TMStatusBadgeProps) {
-  const style = statusStyles[status] ?? defaultStyle;
-  const label = status.replace(/_/g, ' ').toLowerCase().replace(/^\w/, (c) => c.toUpperCase());
+export function TMStatusBadge({ status, variant = 'dot', className = '' }: TMStatusBadgeProps) {
+  const palette = statusPalette(status);
+  // Only in-progress animates. The halo marks the one row on screen that is
+  // actively changing, which is worth an exception to the no-motion rule.
   const isInProgress = status === 'IN_PROGRESS';
 
-  return (
-    <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset transition-colors duration-150 ${style.badge} ${style.hoverBadge}`}
-    >
-      <span className="relative flex size-2">
-        {isInProgress && (
-          <span className={`absolute inline-flex size-full animate-ping rounded-full opacity-40 ${style.dot}`} />
-        )}
-        <span className={`relative inline-flex size-2 rounded-full ${style.dot}`} />
+  const dot = (
+    <span className="relative flex size-[6px] shrink-0">
+      {isInProgress && (
+        <span
+          className="absolute inline-flex size-full rounded-full opacity-35 animate-tm-ping"
+          style={{ background: palette.dot }}
+          aria-hidden="true"
+        />
+      )}
+      <span className="relative inline-flex size-[6px] rounded-full" style={{ background: palette.dot }} />
+    </span>
+  );
+
+  if (variant === 'pill') {
+    return (
+      <span
+        className={`inline-flex items-center gap-[7px] rounded-full px-2.5 py-[5px] text-[11px] font-medium ${className}`}
+        style={{
+          background: palette.bg,
+          color: palette.text,
+          boxShadow: palette.ring ? `inset 0 0 0 1px ${palette.ring}` : undefined,
+        }}
+      >
+        {dot}
+        {palette.label}
       </span>
-      {label}
+    );
+  }
+
+  return (
+    <span className={`inline-flex items-center gap-[7px] text-[12px] font-medium ${className}`} style={{ color: palette.text }}>
+      {dot}
+      {palette.label}
     </span>
   );
 }

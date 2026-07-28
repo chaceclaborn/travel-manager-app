@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { deleteStop, updateStop, STOP_TRAVEL_MODES } from '@/lib/travelmanager/stops';
 import { requireAuth } from '@/lib/travelmanager/auth';
+import { TripAccessError } from '@/lib/travelmanager/trip-access';
 import { rateLimit } from '@/lib/rate-limit';
 import { sanitizeObject, validateUUID, validateDateString, validateEnum } from '@/lib/sanitize';
 
@@ -40,6 +41,12 @@ export async function PATCH(
     const stop = await updateStop(stopId, tripId, user.id, sanitized);
     return NextResponse.json(stop);
   } catch (error) {
+    // updateStop/deleteStop authorize through requireTripAccess, so without
+    // this a VIEWER's denial surfaced as a 500 — an authorization failure
+    // dressed up as a server fault.
+    if (error instanceof TripAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('Error updating stop:', error instanceof Error ? error.message : error);
     return NextResponse.json({ error: 'Failed to update stop' }, { status: 500 });
   }
@@ -64,6 +71,12 @@ export async function DELETE(
     await deleteStop(stopId, tripId, user.id);
     return NextResponse.json({ success: true });
   } catch (error) {
+    // updateStop/deleteStop authorize through requireTripAccess, so without
+    // this a VIEWER's denial surfaced as a 500 — an authorization failure
+    // dressed up as a server fault.
+    if (error instanceof TripAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('Error deleting stop:', error instanceof Error ? error.message : error);
     return NextResponse.json({ error: 'Failed to delete stop' }, { status: 500 });
   }

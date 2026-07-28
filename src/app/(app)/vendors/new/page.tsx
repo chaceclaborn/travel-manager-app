@@ -1,10 +1,10 @@
 'use client';
 import { detailHref } from '@/lib/travelmanager/detail-routes';
+import { TMPageShell, TMBackRow } from '@/components/travelmanager/TMPageShell';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { VendorForm } from '@/components/travelmanager/VendorForm';
-import { TMBreadcrumb } from '@/components/travelmanager/TMBreadcrumb';
 import { useTMToast } from '@/components/travelmanager/TMToast';
 
 export default function NewVendorPage() {
@@ -37,14 +37,16 @@ export default function NewVendorPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <TMBreadcrumb items={[{ label: 'Dashboard', href: '/' }, { label: 'Vendors', href: '/vendors' }, { label: 'New Vendor' }]} />
+    <TMPageShell width={760}>
+      <TMBackRow href="/vendors" section="Vendors" />
+      <div className="space-y-5 pt-4 md:pt-6">
 
-      <h1 className="text-2xl font-bold text-slate-800">New Vendor</h1>
+      <h1 className="text-[24px] font-semibold tracking-[-0.02em] text-tm-ink">New Vendor</h1>
 
-      <div className="max-w-2xl rounded-lg bg-white p-6 shadow-sm">
+      <div className="tm-card p-6">
         <VendorForm onSubmit={handleSubmit} isLoading={isLoading} />
       </div>
-    </div>
+      </div>
+    </TMPageShell>
   );
 }

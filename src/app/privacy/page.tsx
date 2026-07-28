@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
-import Image from 'next/image';
-import Link from 'next/link';
+import { TMDocHeader, TMDocFooter } from '@/components/travelmanager/TMDocChrome';
 import {
   Database,
   Ban,
@@ -49,8 +48,8 @@ const sections: Section[] = [
     items: [
       'Account information: your email address (required for sign-in) and, optionally, your name and profile photo.',
       'Username: a unique @handle, auto-generated from your email and editable at any time. It lets other users find and add you as a friend. See “Friends & Connections” below for how it is shared and how to stay out of search.',
-      'Home location: if you enter a home city, we geocode it to latitude and longitude so the map view can center on it. This is never pulled from your device\u2019s GPS \u2014 you type it in manually.',
-      'Your business data: the trips, clients, vendors, bookings, meetings, itinerary items, expenses, checklists, and notes that you create in the app. This data is yours. We treat it as confidential and process it only to provide the service you\u2019re paying for (or using free during beta).',
+      'Home location: if you enter a home city, we geocode it to latitude and longitude so the map view can center on it. This is never pulled from your device’s GPS — you type it in manually.',
+      'Your business data: the trips, clients, vendors, bookings, meetings, itinerary items, expenses, checklists, and notes that you create in the app. This data is yours. We treat it as confidential and process it only to provide the service you’re paying for (or using free during beta).',
       'Attachments: any files you upload (receipts, booking confirmations, etc.).',
       'Push notification tokens: if you enable notifications, we store an Apple Push Notification Service (APNs) token so we can send you the alerts you requested.',
       'Usage analytics: we log in-app clicks and page visits to understand which features are used and to fix bugs. This is first-party only, linked to your account, and never sold or shared with advertisers. You can turn it off at any time from Settings → Privacy.',
@@ -66,7 +65,7 @@ const sections: Section[] = [
       'We do not sell or share your data with data brokers or ad networks.',
       'We do not read your email. Travel Manager does not connect to Gmail or any other mailbox.',
       'We do not send your business data or any other personal data to a third-party AI service.',
-      'We do not access your device\u2019s contacts, photos, camera, microphone, or location without an explicit in-app request and your permission.',
+      'We do not access your device’s contacts, photos, camera, microphone, or location without an explicit in-app request and your permission.',
     ],
   },
   {
@@ -108,15 +107,14 @@ const sections: Section[] = [
       'The following services may process limited data on our behalf:',
     ],
     items: [
-      'Supabase \u2014 database and authentication provider (processor).',
-      'Vercel \u2014 web hosting (processor).',
-      'Apple Push Notification Service \u2014 push delivery, if you enable it.',
-      'Open-Meteo \u2014 weather forecasts. We send only the latitude and longitude of the trip destination. No user identity is transmitted.',
-      'Frankfurter \u2014 currency exchange rates. We send only currency codes.',
-      'OpenStreetMap Nominatim \u2014 place search / geocoding. We send the place text you type when searching for a destination or address.',
-      'OSRM (Open Source Routing Machine) \u2014 driving distances and routes. We send only trip waypoint coordinates.',
-      'AeroDataBox (via RapidAPI) \u2014 flight lookups, if you use flight search. We send the flight number and date you enter.',
-      'GitHub and Resend \u2014 used only to deliver the in-app feedback/support messages you choose to send. They receive the message text and your account identifier so we can follow up.',
+      'Supabase — database and authentication provider (processor).',
+      'Vercel — web hosting (processor).',
+      'Apple Push Notification Service — push delivery, if you enable it.',
+      'Open-Meteo — weather forecasts. We send only the latitude and longitude of the trip destination. No user identity is transmitted.',
+      'OpenStreetMap Nominatim — place search / geocoding. We send the place text you type when searching for a destination or address.',
+      'OSRM (Open Source Routing Machine) — driving distances and routes. We send only trip waypoint coordinates.',
+      'AeroDataBox (via RapidAPI) — flight lookups, if you use flight search. We send the flight number and date you enter.',
+      'GitHub and Resend — used only to deliver the in-app feedback/support messages you choose to send. They receive the message text and your account identifier so we can follow up.',
     ],
   },
   {
@@ -156,23 +154,9 @@ const sections: Section[] = [
 
 export default function PrivacyPolicyPage() {
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-900">
-      <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 md:py-12">
-        <Link
-          href="/"
-          className="mb-8 inline-flex items-center gap-2 text-sm text-slate-600 transition-colors hover:text-amber-600"
-        >
-          <span aria-hidden="true">&larr;</span>
-          <Image src="/brand/logo.png" alt="" width={20} height={20} className="size-5" aria-hidden="true" />
-          Travel Manager
-        </Link>
-
-        <header className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-            Privacy Policy
-          </h1>
-          <p className="mt-2 text-sm text-slate-500">Effective date: July 5, 2026</p>
-        </header>
+    <main className="min-h-screen bg-tm-app text-tm-body">
+      <div className="mx-auto max-w-3xl px-4 pb-8 sm:px-6">
+        <TMDocHeader title="Privacy Policy" subtitle="Effective date: July 5, 2026" />
 
         <div className="mb-6 rounded-xl bg-white p-6 shadow-sm">
           <p className="text-sm leading-relaxed text-slate-600">
@@ -220,19 +204,7 @@ export default function PrivacyPolicyPage() {
           ))}
         </div>
 
-        <footer className="mt-10 flex flex-col items-center gap-3 text-center text-sm text-slate-500">
-          <div className="flex flex-wrap justify-center gap-x-4 gap-y-2">
-            <Link href="/terms" className="text-amber-600 hover:underline">
-              Terms of Service
-            </Link>
-            <Link href="/support" className="text-amber-600 hover:underline">
-              Support
-            </Link>
-            <Link href="/" className="text-amber-600 hover:underline">
-              Back to Travel Manager
-            </Link>
-          </div>
-        </footer>
+        <TMDocFooter current="privacy" />
       </div>
     </main>
   );

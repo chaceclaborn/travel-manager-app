@@ -1,10 +1,13 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { Shield, Download, FileText, Trash2, Loader2, Monitor, MapPin, X, Mail, Wrench, PanelLeft, RotateCcw, AtSign, BarChart3 } from 'lucide-react';
-import { useNavPreferences, TOGGLEABLE_NAV_ITEMS } from '@/lib/travelmanager/useNavPreferences';
+import { Shield, Download, FileText, Trash2, Loader2, Monitor, MapPin, X, Mail, PanelLeft, Smartphone, RotateCcw, AtSign, BarChart3, GripVertical, ChevronRight } from 'lucide-react';
+import { useNavPreferences, TOGGLEABLE_NAV_ITEMS, TABBABLE_NAV_ITEMS, MOBILE_TAB_SLOTS } from '@/lib/travelmanager/useNavPreferences';
+import { TMReorderList } from '@/components/travelmanager/TMReorderList';
+import { TMInfoHint } from '@/components/travelmanager/TMInfoHint';
 import { useGeocodingSearch, formatGeoName } from '@/lib/travelmanager/useGeocodingSearch';
 import type { GeoResult } from '@/lib/travelmanager/useGeocodingSearch';
 import { Input } from '@/components/ui/input';
@@ -17,9 +20,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { TMBreadcrumb } from '@/components/travelmanager/TMBreadcrumb';
+import { TMPageShell, TMScreenHeader } from '@/components/travelmanager/TMPageShell';
 import { useTMToast } from '@/components/travelmanager/TMToast';
-import { CurrencyConverter } from '@/components/travelmanager/CurrencyConverter';
 import { NotificationsSettingCard } from '@/components/travelmanager/NotificationsSettingCard';
 import { KeyboardShortcutsCard } from '@/components/travelmanager/KeyboardShortcutsCard';
 import { ANALYTICS_OPTOUT_KEY } from '@/components/travelmanager/ClickTracker';
@@ -93,14 +95,21 @@ function NavToggle({
       aria-checked={checked}
       aria-label={`${checked ? 'Hide' : 'Show'} ${label} in sidebar`}
       onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:ring-offset-2 after:absolute after:-inset-x-1 after:-inset-y-2.5 after:content-[''] ${
-        checked ? 'bg-amber-500' : 'bg-slate-300'
-      }`}
+      // The knob's `left` transition is one of only two motions in the whole
+      // design system. Everything else here is instantaneous.
+      className="relative h-[23px] w-10 shrink-0 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-tm-accent/40 after:absolute after:-inset-x-1 after:-inset-y-2.5 after:content-['']"
+      style={{ background: checked ? '#0F172A' : '#E4E8EE' }}
     >
       <span
-        className={`inline-block size-5 transform rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.25)] transition-transform ${
-          checked ? 'translate-x-[22px]' : 'translate-x-0.5'
-        }`}
+        className="absolute rounded-full bg-white"
+        style={{
+          width: 17,
+          height: 17,
+          top: 3,
+          left: checked ? 20 : 3,
+          transition: 'left 140ms ease',
+          boxShadow: '0 1px 3px rgba(15,23,42,0.3)',
+        }}
       />
     </button>
   );
@@ -109,7 +118,8 @@ function NavToggle({
 export default function SettingsPage() {
   const { user } = useAuth();
   const { showToast } = useTMToast();
-  const { isHidden, setHidden, reset: resetNav, hydrated: navHydrated } = useNavPreferences();
+  const { isHidden, setHidden, reset: resetNav, hydrated: navHydrated, tabKeys, setTabKey, setTabOrder, resetTabs } = useNavPreferences();
+  const offTabItems = TABBABLE_NAV_ITEMS.filter((i) => !tabKeys.includes(i.key));
   const hiddenCount = TOGGLEABLE_NAV_ITEMS.filter((i) => isHidden(i.key)).length;
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -351,22 +361,19 @@ export default function SettingsPage() {
   }
 
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="max-w-[720px] mx-auto space-y-[18px]">
-      <TMBreadcrumb
-        items={[
-          { label: 'Travel Manager', href: '/' },
-          { label: 'Settings' },
-        ]}
-      />
+    <TMPageShell width={760}>
+      <TMScreenHeader title="Settings" />
 
-      <motion.div variants={item}>
-        <h1 className="text-[26px] font-bold tracking-[-0.02em] text-slate-900">Settings</h1>
-        <p className="text-sm text-slate-500 mt-1">Manage your account, data, and preferences</p>
-      </motion.div>
+      <motion.div
+        variants={container}
+        initial="hidden"
+        animate="show"
+        className="flex flex-col gap-3 pt-4 md:gap-[18px] md:pt-7"
+      >
 
       {/* Account Info */}
-      <motion.div variants={item} className="rounded-2xl border border-[#eef2f6] bg-white p-[22px] shadow-card">
-        <h2 className="text-base font-semibold text-slate-900 mb-4">Account Information</h2>
+      <motion.div variants={item} className="tm-card px-4 py-4 md:px-6 md:py-[22px]">
+        <h2 className="mb-3 text-[15px] font-semibold tracking-[-0.01em] text-tm-ink md:mb-4">Account Information</h2>
         <div className="flex items-center gap-4">
           {avatarUrl && !avatarError ? (
             <Image
@@ -378,7 +385,7 @@ export default function SettingsPage() {
               onError={() => setAvatarError(true)}
             />
           ) : (
-            <div className="size-[60px] rounded-full bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-xl font-bold text-white shrink-0 shadow-[0_6px_16px_-4px_rgba(245,158,11,0.5)]">
+            <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-amber-600 text-[15px] font-semibold text-white shadow-[0_4px_12px_-4px_rgba(245,158,11,0.5)] md:size-[60px] md:text-xl">
               {initials}
             </div>
           )}
@@ -398,13 +405,13 @@ export default function SettingsPage() {
       </motion.div>
 
       {/* Username */}
-      <motion.div variants={item} className="rounded-2xl border border-[#eef2f6] bg-white p-[22px] shadow-card">
+      <motion.div variants={item} className="tm-card px-4 py-4 md:px-6 md:py-[22px]">
         <div className="flex items-center gap-2 mb-4">
-          <AtSign className="size-[18px] text-amber-600" />
-          <h2 className="text-base font-semibold text-slate-900">Username</h2>
+          <AtSign className="size-[18px] text-tm-muted" />
+          <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">Username</h2>
         </div>
         <p className="text-xs text-slate-500 mb-3">
-          Your unique @handle lets friends find and add you.
+          Friends find you by this handle.
           {currentUsername && (
             <>
               {' '}Currently{' '}
@@ -431,7 +438,7 @@ export default function SettingsPage() {
           <Button
             onClick={handleSaveUsername}
             disabled={savingUsername || usernameCheck.status !== 'available'}
-            className="h-[42px] rounded-[11px] px-5 bg-gradient-to-br from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 shadow-[0_4px_14px_-4px_rgba(245,158,11,0.55)] motion-safe:hover:-translate-y-px transition-transform"
+            className="tm-btn tm-btn-primary"
           >
             {savingUsername ? <Loader2 className="size-4 animate-spin" /> : 'Save'}
           </Button>
@@ -451,8 +458,7 @@ export default function SettingsPage() {
           <div className="flex-1">
             <p className="text-sm font-medium text-slate-800">Show me in friend search</p>
             <p className="mt-0.5 text-xs text-slate-500">
-              When on, others can find you by searching your @handle. When off, you stay out of
-              search results — friends can still add you if they know your exact username.
+              Off means you only appear to people who know your exact handle.
             </p>
           </div>
           <button
@@ -463,12 +469,12 @@ export default function SettingsPage() {
             disabled={!userInfo || savingPublic}
             onClick={() => handleTogglePublic(!(userInfo?.isPublic ?? true))}
             className={`relative mt-0.5 inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:ring-offset-2 disabled:opacity-50 ${
-              (userInfo?.isPublic ?? true) ? 'bg-amber-500' : 'bg-slate-300'
+              (userInfo?.isPublic ?? true) ? 'bg-tm-action' : 'bg-tm-control'
             }`}
           >
             <span
-              className={`inline-block size-5 transform rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.25)] transition-transform ${
-                (userInfo?.isPublic ?? true) ? 'translate-x-[22px]' : 'translate-x-0.5'
+              className={`inline-block size-[17px] transform rounded-full bg-white shadow-[0_1px_3px_rgba(15,23,42,0.3)] transition-transform duration-150 ${
+                (userInfo?.isPublic ?? true) ? 'translate-x-[20px]' : 'translate-x-[3px]'
               }`}
             />
           </button>
@@ -476,13 +482,13 @@ export default function SettingsPage() {
       </motion.div>
 
       {/* Home Location */}
-      <motion.div variants={item} className="rounded-2xl border border-[#eef2f6] bg-white p-[22px] shadow-card">
+      <motion.div variants={item} className="tm-card px-4 py-4 md:px-6 md:py-[22px]">
         <div className="flex items-center gap-2 mb-4">
-          <MapPin className="size-[18px] text-amber-600" />
-          <h2 className="text-base font-semibold text-slate-900">Home Location</h2>
+          <MapPin className="size-[18px] text-tm-muted" />
+          <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">Home Location</h2>
         </div>
         <p className="text-xs text-slate-500 mb-3">
-          Set your home city to calculate round-trip distances on the map.
+          Used for round-trip distances.
         </p>
         <div className="relative" ref={homeContainerRef}>
           <div className="flex items-center gap-2">
@@ -537,19 +543,112 @@ export default function SettingsPage() {
             </div>
           )}
         </div>
-        {userInfo?.homeCity && (
-          <p className="text-xs text-emerald-600 mt-2">
-            Home set to: {userInfo.homeCity}
-          </p>
+      </motion.div>
+
+      {/* Bottom tabs: phones only. Desktop has no tab bar, so this control
+          would configure something the user cannot see. */}
+      <motion.div variants={item} className="tm-card px-4 py-4 md:px-6 md:py-[22px] md:hidden">
+        <div className="mb-1 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Smartphone className="size-[18px] text-tm-muted" />
+            <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">Bottom tabs</h2>
+          </div>
+          <button
+            type="button"
+            onClick={() => { resetTabs(); showToast('Bottom tabs reset'); }}
+            className="inline-flex items-center gap-1.5 rounded px-1.5 py-1 text-xs font-medium text-slate-500 transition-colors hover:text-amber-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50"
+          >
+            <RotateCcw className="size-3.5" />
+            Reset
+          </button>
+        </div>
+        <p className="mb-3 text-[12px] leading-snug text-tm-subtle md:mb-4 md:text-[13px]">
+          Up to {MOBILE_TAB_SLOTS}, drag to reorder.{' '}
+          <TMInfoHint label="bottom tabs">
+            Home and More are always on the bar. Anything you leave off is still reachable under
+            More, so this only changes what is one tap away. Saved on this device.
+          </TMInfoHint>
+        </p>
+
+        {/* On the bar, in order — drag a row to rearrange. */}
+        <h3 className="tm-label-upper mb-1">On the bar &middot; drag to reorder</h3>
+        <TMReorderList
+          items={tabKeys
+            .map((k) => TABBABLE_NAV_ITEMS.find((i) => i.key === k))
+            .filter((i): i is (typeof TABBABLE_NAV_ITEMS)[number] => !!i)}
+          onReorder={setTabOrder}
+          renderItem={(navItem, { handleProps }) => {
+            const Icon = navItem.icon;
+            return (
+              <div className="flex w-full items-center gap-3 px-1">
+                {/* Only this grip starts a drag — the rest of the row stays
+                    tappable and the page still scrolls over the list. */}
+                <span
+                  {...handleProps}
+                  role="button"
+                  tabIndex={-1}
+                  aria-label={`Reorder ${navItem.label}`}
+                  className="-my-2 flex h-11 w-6 shrink-0 items-center justify-center text-tm-ghost hover:text-tm-muted"
+                >
+                  <GripVertical className="size-4" aria-hidden="true" />
+                </span>
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-tm-fill">
+                  <Icon className="size-[17px] text-tm-label" />
+                </span>
+                <p className="min-w-0 flex-1 truncate text-[13px] font-medium text-tm-ink">{navItem.label}</p>
+                <button
+                  type="button"
+                  onClick={() => { setTabKey(navItem.key, false); showToast(`${navItem.label} moved to More`); }}
+                  disabled={tabKeys.length <= 1}
+                  aria-label={`Remove ${navItem.label} from the bar`}
+                  className="tm-btn-icon size-8 disabled:opacity-30"
+                >
+                  <X className="size-3.5" />
+                </button>
+              </div>
+            );
+          }}
+        />
+
+        {offTabItems.length > 0 && (
+          <>
+            <h3 className="tm-label-upper mb-2 mt-5">Under More</h3>
+            <div className="divide-y divide-tm-divider">
+              {offTabItems.map(({ key, label, icon: Icon, description }) => (
+                <div key={key} className="flex items-center gap-3 py-2.5">
+                  <span className="w-4 shrink-0" />
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-tm-fill">
+                    <Icon className="size-[17px] text-tm-label" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[13px] font-medium text-tm-ink">{label}</p>
+                    <p className="truncate text-[12px] text-tm-subtle">{description}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const wasFull = tabKeys.length >= MOBILE_TAB_SLOTS;
+                      setTabKey(key, true);
+                      showToast(wasFull ? `${label} added — first tab moved to More` : `${label} added to the bar`);
+                    }}
+                    className="tm-btn tm-btn-secondary h-8 px-3 text-[12px]"
+                  >
+                    Add
+                  </button>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </motion.div>
 
-      {/* Sidebar Customization */}
-      <motion.div variants={item} className="rounded-2xl border border-[#eef2f6] bg-white p-[22px] shadow-card">
-        <div className="flex items-center justify-between gap-2 mb-1">
+      {/* Sidebar: desktop only, for the same reason in reverse — a phone never
+          renders the sidebar, so tuning it there configures nothing. */}
+      <motion.div variants={item} className="hidden tm-card px-4 py-4 md:px-6 md:py-[22px] md:block">
+        <div className="mb-1 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <PanelLeft className="size-[18px] text-amber-600" />
-            <h2 className="text-base font-semibold text-slate-900">Sidebar</h2>
+            <PanelLeft className="size-[18px] text-tm-muted" />
+            <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">Sidebar</h2>
           </div>
           {hiddenCount > 0 && (
             <button
@@ -563,7 +662,11 @@ export default function SettingsPage() {
           )}
         </div>
         <p className="text-xs text-slate-500 mb-4">
-          Choose which sections appear in your sidebar. Turn off anything you don&apos;t use to keep it tidy — this is saved on this device, and hidden sections stay reachable by search or keyboard shortcut.
+          Choose what appears in the sidebar.{' '}
+          <TMInfoHint label="sidebar sections">
+            Hidden sections stay reachable by search and by their keyboard shortcut. Saved on this
+            device, so each computer can differ.
+          </TMInfoHint>
         </p>
         <div className="divide-y divide-slate-100">
           {TOGGLEABLE_NAV_ITEMS.map(({ key, label, icon: Icon, description }) => {
@@ -591,37 +694,36 @@ export default function SettingsPage() {
         )}
       </motion.div>
 
-      {/* Keyboard Shortcuts */}
-      <KeyboardShortcutsCard />
+      {/* Keyboard shortcuts: desktop only — there is no keyboard to bind on a
+          phone, and the chords are driven by the sidebar nav above. */}
+      <div className="hidden md:block">
+        <KeyboardShortcutsCard />
+      </div>
 
       {/* Notifications */}
       <NotificationsSettingCard />
 
-      {/* Tools */}
-      <motion.div variants={item}>
-        <div className="mb-3 flex items-center gap-2 px-1">
-          <Wrench className="size-[18px] text-amber-600" />
-          <h2 className="text-base font-semibold text-slate-900">Tools</h2>
-        </div>
-        <p className="mb-3 px-1 text-xs text-slate-500">
-          Handy utilities for trip planning.
-        </p>
-        <CurrencyConverter />
-      </motion.div>
-
       {/* Privacy */}
-      <motion.div variants={item} className="rounded-2xl border border-[#eef2f6] bg-white p-[22px] shadow-card">
+      <motion.div variants={item} className="tm-card px-4 py-4 md:px-6 md:py-[22px]">
         <div className="flex items-center gap-2 mb-4">
-          <BarChart3 className="size-[18px] text-amber-600" />
-          <h2 className="text-base font-semibold text-slate-900">Privacy</h2>
+          <BarChart3 className="size-[18px] text-tm-muted" />
+          <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">Privacy</h2>
         </div>
         <div className="flex items-start justify-between gap-4 rounded-xl border border-slate-100 p-4">
-          <div>
-            <p className="text-sm font-medium text-slate-800">Usage analytics</p>
-            <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
-              First-party only: which features you click and pages you visit, used to fix bugs and
-              improve the app. Never sold or shared with anyone. Turn this off to stop all analytics
-              on this device.
+          <div className="min-w-0">
+            <p className="flex items-center gap-1.5 text-[13px] font-medium text-tm-ink">
+              Usage analytics
+              <TMInfoHint label="usage analytics">
+                First-party only — which features you click and pages you visit, used to fix bugs
+                and improve the app. Never sold or shared. Turning this off stops all analytics on
+                this device.
+              </TMInfoHint>
+            </p>
+            <p className="mt-0.5 text-[12px] text-tm-subtle">
+              Helps improve the app. Never sold.{' '}
+              <Link href="/privacy" className="font-medium text-tm-accent-text hover:text-tm-accent-text-hover">
+                Privacy policy
+              </Link>
             </p>
           </div>
           <button
@@ -638,13 +740,13 @@ export default function SettingsPage() {
               setAnalyticsOptOut(nextOptOut);
               showToast(nextOptOut ? 'Usage analytics turned off' : 'Usage analytics turned on');
             }}
-            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:ring-offset-2 ${
-              analyticsOptOut ? 'bg-slate-300' : 'bg-amber-500'
+            className={`relative inline-flex h-[23px] w-10 shrink-0 items-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:ring-offset-2 ${
+              analyticsOptOut ? 'bg-tm-control' : 'bg-tm-action'
             }`}
           >
             <span
-              className={`inline-block size-5 transform rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.25)] transition-transform ${
-                analyticsOptOut ? 'translate-x-0.5' : 'translate-x-[22px]'
+              className={`inline-block size-[17px] transform rounded-full bg-white shadow-[0_1px_3px_rgba(15,23,42,0.3)] transition-transform duration-150 ${
+                analyticsOptOut ? 'translate-x-[3px]' : 'translate-x-[20px]'
               }`}
             />
           </button>
@@ -652,10 +754,10 @@ export default function SettingsPage() {
       </motion.div>
 
       {/* Security */}
-      <motion.div variants={item} className="rounded-2xl border border-[#eef2f6] bg-white p-[22px] shadow-card">
+      <motion.div variants={item} className="tm-card px-4 py-4 md:px-6 md:py-[22px]">
         <div className="flex items-center gap-2 mb-4">
-          <Shield className="size-[18px] text-amber-600" />
-          <h2 className="text-base font-semibold text-slate-900">Security</h2>
+          <Shield className="size-[18px] text-tm-muted" />
+          <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">Security</h2>
         </div>
         <h3 className="text-sm font-medium text-slate-700 mb-3">Recent Sign-ins</h3>
         {loadingSessions ? (
@@ -663,7 +765,7 @@ export default function SettingsPage() {
             <Loader2 className="size-5 animate-spin text-slate-400" />
           </div>
         ) : sessions.length === 0 ? (
-          <p className="text-sm text-slate-400 py-4">No sign-in history available</p>
+          <p className="text-sm text-slate-400 py-2.5 md:py-4">No sign-in history available</p>
         ) : (
           <div className="overflow-x-auto -mx-6 px-6">
             <table className="w-full text-sm">
@@ -706,10 +808,10 @@ export default function SettingsPage() {
       </motion.div>
 
       {/* Data Management */}
-      <motion.div variants={item} className="rounded-2xl border border-[#eef2f6] bg-white p-[22px] shadow-card">
+      <motion.div variants={item} className="tm-card px-4 py-4 md:px-6 md:py-[22px]">
         <div className="flex items-center gap-2 mb-4">
-          <Download className="size-[18px] text-amber-600" />
-          <h2 className="text-base font-semibold text-slate-900">Data Management</h2>
+          <Download className="size-[18px] text-tm-muted" />
+          <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">Data Management</h2>
         </div>
 
         <div className="space-y-5">
@@ -766,45 +868,36 @@ export default function SettingsPage() {
       </motion.div>
 
       {/* About & Legal */}
-      <motion.div variants={item} className="rounded-2xl border border-[#eef2f6] bg-white p-[22px] shadow-card">
+      <motion.div variants={item} className="tm-card px-4 py-4 md:px-6 md:py-[22px]">
         <div className="flex items-center gap-2 mb-4">
-          <Shield className="size-[18px] text-amber-600" />
-          <h2 className="text-base font-semibold text-slate-900">About &amp; Legal</h2>
+          <Shield className="size-[18px] text-tm-muted" />
+          <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-tm-ink">About &amp; Legal</h2>
         </div>
-        <p className="text-xs text-slate-500 mb-4">
-          Review how Travel Manager handles your data and the terms of using the app.
-        </p>
-        <div className="flex flex-col divide-y divide-slate-100 border border-slate-100 rounded-xl overflow-hidden">
-          <a
-            href="/privacy"
-            className="flex items-center justify-between px-4 py-3 text-sm text-slate-700 active:bg-slate-50 hover:bg-slate-50 transition-colors"
-          >
-            <span className="flex items-center gap-2">
-              <Shield className="size-4 text-slate-400" />
-              Privacy Policy
-            </span>
-            <span className="text-slate-300">›</span>
-          </a>
-          <a
-            href="/terms"
-            className="flex items-center justify-between px-4 py-3 text-sm text-slate-700 active:bg-slate-50 hover:bg-slate-50 transition-colors"
-          >
-            <span className="flex items-center gap-2">
-              <FileText className="size-4 text-slate-400" />
-              Terms of Service
-            </span>
-            <span className="text-slate-300">›</span>
-          </a>
-          <a
-            href="/support"
-            className="flex items-center justify-between px-4 py-3 text-sm text-slate-700 active:bg-slate-50 hover:bg-slate-50 transition-colors"
-          >
-            <span className="flex items-center gap-2">
-              <Mail className="size-4 text-slate-400" />
-              Support
-            </span>
-            <span className="text-slate-300">›</span>
-          </a>
+        {/* next/link, never a raw <a>. A plain anchor is a full page load, and
+            Next only rewrites hrefs it renders itself — so `/privacy` shipped
+            without the trailing slash the static export needs, the Capacitor
+            file server 404'd it and fell back to index.html. That renders the
+            dashboard at pathname /privacy, which the (app) layout then treats
+            as a public page and strips the tab bar from: "I tapped Privacy
+            Policy and landed on the home screen with no nav bar." */}
+        <div className="flex flex-col divide-y divide-tm-divider overflow-hidden rounded-xl border border-tm-line">
+          {[
+            { href: '/privacy', label: 'Privacy Policy', icon: Shield },
+            { href: '/terms', label: 'Terms of Service', icon: FileText },
+            { href: '/support', label: 'Support', icon: Mail },
+          ].map(({ href, label, icon: Icon }) => (
+            <Link
+              key={href}
+              href={href}
+              className="flex min-h-[44px] items-center justify-between px-4 py-3 text-[13px] text-tm-body transition-colors hover:bg-tm-wash active:bg-tm-wash"
+            >
+              <span className="flex items-center gap-2.5">
+                <Icon className="size-4 text-tm-ghost" aria-hidden="true" />
+                {label}
+              </span>
+              <ChevronRight className="size-4 text-tm-ghost" aria-hidden="true" />
+            </Link>
+          ))}
         </div>
       </motion.div>
 
@@ -814,8 +907,8 @@ export default function SettingsPage() {
           <Trash2 className="size-[18px] text-red-600" />
           <h2 className="text-base font-semibold text-red-600">Danger Zone</h2>
         </div>
-        <p className="text-sm text-slate-500 mb-4">
-          Permanently delete your account and all associated data. This action cannot be undone.
+        <p className="mb-3 text-[12px] leading-snug text-tm-subtle md:mb-4 md:text-[13px]">
+          Deletes your account and all data. Cannot be undone.
         </p>
         <Button
           variant="destructive"
@@ -869,6 +962,7 @@ export default function SettingsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </motion.div>
+      </motion.div>
+    </TMPageShell>
   );
 }

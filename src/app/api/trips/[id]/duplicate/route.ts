@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { requireAuth } from '@/lib/travelmanager/auth';
+import { requireTripAccess, TripAccessError } from '@/lib/travelmanager/trip-access';
 import { rateLimit } from '@/lib/rate-limit';
 import { validateUUID } from '@/lib/sanitize';
 
@@ -17,8 +18,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: 'Invalid trip ID' }, { status: 400 });
     }
 
-    const trip = await prisma.trip.findFirst({
-      where: { id, userId: user.id },
+    // Owner-only. Duplicating forks the trip into the caller's own account, and
+    // that copy survives having access revoked — there is no way for the owner to
+    // take it back, so a collaborator must not be able to make one.
+    await requireTripAccess(id, user.id, 'owner');
+
+    const trip = await prisma.trip.findUnique({
+      where: { id },
       include: {
         itinerary: true,
         checklists: true,
@@ -111,6 +117,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     return NextResponse.json(fullTrip, { status: 201 });
   } catch (error) {
+    if (error instanceof TripAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('Error duplicating trip:', error instanceof Error ? error.message : error);
     return NextResponse.json({ error: 'Failed to duplicate trip' }, { status: 500 });
   }

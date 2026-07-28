@@ -1,12 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import { TMPageShell, TMBackRow } from '@/components/travelmanager/TMPageShell';
 import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { TMBreadcrumb } from '@/components/travelmanager/TMBreadcrumb';
 import { useTMToast } from '@/components/travelmanager/TMToast';
 
 export default function NewFriendPage() {
@@ -49,10 +49,11 @@ export default function NewFriendPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <TMBreadcrumb items={[{ label: 'Dashboard', href: '/' }, { label: 'Friends', href: '/friends' }, { label: 'New Friend' }]} />
+    <TMPageShell width={760}>
+      <TMBackRow href="/friends" section="Friends" />
+      <div className="space-y-5 pt-4 md:pt-6">
 
-      <h1 className="text-2xl font-bold text-slate-800">New Friend</h1>
+      <h1 className="text-[24px] font-semibold tracking-[-0.02em] text-tm-ink">New Friend</h1>
 
       <div className="rounded-xl bg-white p-4 sm:p-6 shadow-sm max-w-xl">
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -104,7 +105,7 @@ export default function NewFriendPage() {
             />
           </div>
           <div className="flex gap-2">
-            <Button type="submit" disabled={isLoading} className="bg-amber-500 hover:bg-amber-600">
+            <Button type="submit" disabled={isLoading} className="tm-btn tm-btn-primary">
               {isLoading ? 'Adding...' : 'Add Friend'}
             </Button>
             <Button type="button" variant="outline" onClick={() => router.push('/friends')}>
@@ -113,6 +114,7 @@ export default function NewFriendPage() {
           </div>
         </form>
       </div>
-    </div>
+      </div>
+    </TMPageShell>
   );
 }

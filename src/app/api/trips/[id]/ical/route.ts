@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { requireAuth } from '@/lib/travelmanager/auth';
+import { requireTripAccess, TripAccessError } from '@/lib/travelmanager/trip-access';
 import { rateLimit } from '@/lib/rate-limit';
 import { validateUUID } from '@/lib/sanitize';
 
@@ -34,8 +35,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: 'Invalid trip ID' }, { status: 400 });
     }
 
-    const trip = await prisma.trip.findFirst({
-      where: { id, userId: user.id },
+    // Only 'view': the .ics carries dates, titles, locations and notes — exactly
+    // the itinerary a collaborator is already entitled to read on screen. No
+    // contact or commission data reaches this file.
+    await requireTripAccess(id, user.id, 'view');
+
+    const trip = await prisma.trip.findUnique({
+      where: { id },
       include: { itinerary: { orderBy: [{ date: 'asc' }, { sortOrder: 'asc' }] } },
     });
 
@@ -100,6 +106,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       },
     });
   } catch (error) {
+    if (error instanceof TripAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('Error generating iCal:', error instanceof Error ? error.message : error);
     return NextResponse.json({ error: 'Failed to generate calendar file' }, { status: 500 });
   }

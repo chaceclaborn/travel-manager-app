@@ -3,36 +3,17 @@ import { detailHref } from '@/lib/travelmanager/detail-routes';
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import {
-  Pencil,
-  Trash2,
-  Mail,
-  Phone,
-  MapPin,
-  Globe,
-  FileText,
-  User,
-  AlertCircle,
-  RefreshCw,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
+import { Pencil, Trash2, Mail, MapPin, Building2 } from 'lucide-react';
 import { VendorForm } from '@/components/travelmanager/VendorForm';
 import { TMDeleteDialog } from '@/components/travelmanager/TMDeleteDialog';
 import { TMStatusBadge } from '@/components/travelmanager/TMStatusBadge';
-import { TMEmptyState } from '@/components/travelmanager/TMEmptyState';
-import { TMBreadcrumb } from '@/components/travelmanager/TMBreadcrumb';
+import { TMEmptyState, TMErrorState, TMSkeleton } from '@/components/travelmanager/TMEmptyState';
+import { TMPageShell, TMBackRow, TMActionFooter } from '@/components/travelmanager/TMPageShell';
+import { TMLetterTile, TMCard, TMCardHeader, TMCodeTile, TMFact } from '@/components/travelmanager/TMPrimitives';
+import { tripCode, vendorCategoryPalette } from '@/lib/travelmanager/design';
+import { formatDate } from '@/lib/date-utils';
 import { useTMToast } from '@/components/travelmanager/TMToast';
 import { useDeleteEntity } from '@/lib/travelmanager/useDeleteEntity';
-
-const categoryColors: Record<string, string> = {
-  SUPPLIER: 'bg-blue-100 text-blue-700',
-  HOTEL: 'bg-purple-100 text-purple-700',
-  TRANSPORT: 'bg-amber-100 text-amber-700',
-  RESTAURANT: 'bg-green-100 text-green-700',
-  OTHER: 'bg-slate-100 text-slate-700',
-};
 
 interface VendorTrip {
   id: string;
@@ -119,192 +100,227 @@ export default function VendorDetailContent({ id }: { id: string }) {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div className="h-8 w-48 animate-pulse rounded bg-slate-100" />
-        <div className="h-64 animate-pulse rounded-lg bg-slate-100" />
-      </div>
+      <TMPageShell width={1120}>
+        <TMBackRow href="/vendors" section="Vendors" />
+        <div className="pt-5 md:pt-6">
+          <TMSkeleton className="h-[132px] w-full" style={{ borderRadius: 16 }} />
+          <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_1.55fr]">
+            <TMSkeleton className="h-[220px] w-full" style={{ borderRadius: 14 }} />
+            <TMSkeleton className="h-[280px] w-full" style={{ borderRadius: 14 }} />
+          </div>
+        </div>
+      </TMPageShell>
     );
   }
 
   if (notFound) {
     return (
-      <TMEmptyState
-        title="Vendor not found"
-        description="This vendor may have been deleted."
-        actionLabel="Back to Vendors"
-        actionHref="/vendors"
-      />
+      <TMPageShell width={1120}>
+        <TMBackRow href="/vendors" section="Vendors" />
+        <div className="tm-card mt-6">
+          <TMEmptyState
+            title="Vendor not found"
+            description="This vendor may have been deleted. Head back to the list to pick another."
+            actionLabel="Back to Vendors"
+            actionHref="/vendors"
+            icon={Building2}
+          />
+        </div>
+      </TMPageShell>
     );
   }
 
   if (loadError || !vendor) {
     return (
-      <div className="flex flex-col items-center justify-center py-24 text-center">
-        <div className="relative mb-6">
-          <div className="size-20 rounded-full bg-red-50 flex items-center justify-center">
-            <AlertCircle className="size-10 text-red-400" />
-          </div>
-          <div className="absolute -bottom-1 -right-1 size-7 rounded-full bg-red-100 flex items-center justify-center">
-            <RefreshCw className="size-3.5 text-red-400" />
-          </div>
+      <TMPageShell width={1120}>
+        <TMBackRow href="/vendors" section="Vendors" />
+        <div className="tm-card mt-6">
+          <TMErrorState
+            title="Couldn't load this vendor"
+            description="Something went wrong on our end. Your data is safe — nothing was lost."
+            onRetry={fetchVendor}
+          />
         </div>
-        <h2 className="text-xl font-semibold text-slate-900">Couldn&apos;t load vendor</h2>
-        <p className="mt-2 text-sm text-slate-500 max-w-sm">
-          Something went wrong. Check your connection and try again.
-        </p>
-        <Button
-          onClick={fetchVendor}
-          className="mt-6 bg-slate-900 hover:bg-slate-800 text-white shadow-sm"
-        >
-          <RefreshCw className="mr-2 size-4" />
-          Try again
-        </Button>
-      </div>
+      </TMPageShell>
     );
   }
 
   const location = [vendor.address, vendor.city, vendor.state].filter(Boolean).join(', ');
-  const colorClass = categoryColors[vendor.category] || categoryColors.OTHER;
+  const palette = vendorCategoryPalette(vendor.category);
   const categoryLabel = vendor.category.charAt(0) + vendor.category.slice(1).toLowerCase();
   const associatedTrips = vendor.trips?.map((tv) => tv.trip) || [];
 
-  return (
-    <div className="space-y-6">
-      <TMBreadcrumb items={[{ label: 'Dashboard', href: '/' }, { label: 'Vendors', href: '/vendors' }, { label: vendor.name }]} />
-
-      {isEditing ? (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-slate-800">Edit Vendor</h1>
-            <Button variant="outline" size="sm" onClick={() => setIsEditing(false)}>
-              Cancel
-            </Button>
-          </div>
-          <div className="max-w-2xl rounded-lg bg-white p-6 shadow-sm">
-            <VendorForm
-              initialData={vendor}
-              onSubmit={handleUpdate}
-              isLoading={isSaving}
-            />
-          </div>
+  if (isEditing) {
+    return (
+      <TMPageShell width={860}>
+        <TMBackRow href="/vendors" section="Vendors" />
+        <div className="flex items-center justify-between pt-5 md:pt-8">
+          <h1 className="text-[24px] font-semibold tracking-[-0.02em] text-tm-ink">Edit vendor</h1>
+          <button type="button" className="tm-btn tm-btn-secondary" onClick={() => setIsEditing(false)}>
+            Cancel
+          </button>
         </div>
-      ) : (
-        <>
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-bold text-slate-800">{vendor.name}</h1>
-                <Badge className={`${colorClass} border-0`}>{categoryLabel}</Badge>
+        <div className="tm-card mt-5 p-6">
+          <VendorForm initialData={vendor} onSubmit={handleUpdate} isLoading={isSaving} />
+        </div>
+      </TMPageShell>
+    );
+  }
+
+  return (
+    <TMPageShell width={1120}>
+      <TMBackRow
+        href="/vendors"
+        section="Vendors"
+        action={
+          <button type="button" onClick={() => setIsEditing(true)} className="tm-btn-icon size-8" aria-label="Edit vendor">
+            <Pencil className="size-4" />
+          </button>
+        }
+      />
+
+      {/* Header card */}
+      <div className="tm-card mt-4 px-5 py-5 md:mt-6 md:px-7 md:py-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-4">
+            <TMLetterTile label={vendor.name} size={52} bg={palette.bg} fg={palette.fg} />
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <h1 className="truncate text-[22px] font-semibold tracking-[-0.02em] text-tm-ink md:text-[24px]">
+                  {vendor.name}
+                </h1>
+                <span
+                  className="shrink-0 rounded-full px-[9px] py-[3px] text-[11px] font-medium"
+                  style={{ background: palette.bg, color: palette.fg }}
+                >
+                  {categoryLabel}
+                </span>
+              </div>
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-tm-muted">
+                {location && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <MapPin className="size-3.5 text-tm-faint" aria-hidden="true" />
+                    {location}
+                  </span>
+                )}
+                {vendor.contactName && <span>{vendor.contactName}</span>}
+                <span>
+                  {associatedTrips.length} {associatedTrips.length === 1 ? 'trip' : 'trips'} together
+                </span>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsEditing(true)}
-              >
-                <Pencil className="mr-1 size-4" />
-                Edit
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-red-500 hover:text-red-700"
-                onClick={() => setShowDelete(true)}
-              >
-                <Trash2 className="mr-1 size-4" />
-                Delete
-              </Button>
-            </div>
           </div>
 
-          <Card className="bg-white p-6">
-            <h2 className="mb-4 text-lg font-semibold text-slate-800">Contact Details</h2>
-            <div className="space-y-3">
-              {vendor.contactName && (
-                <div className="flex items-center gap-2 text-sm text-slate-600">
-                  <User className="size-4 text-slate-400" />
-                  <span>{vendor.contactName}</span>
-                </div>
-              )}
+          <div className="hidden items-center gap-2 md:flex">
+            <button type="button" className="tm-btn tm-btn-secondary" onClick={() => setIsEditing(true)}>
+              Edit
+            </button>
+            {vendor.email && (
+              <a href={`mailto:${vendor.email}`} className="tm-btn tm-btn-primary">
+                <Mail className="size-3.5" aria-hidden="true" />
+                Contact
+              </a>
+            )}
+            <button type="button" className="tm-btn-icon" onClick={() => setShowDelete(true)} aria-label="Delete vendor">
+              <Trash2 className="size-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_1.55fr]">
+        <div className="flex flex-col gap-5">
+          <TMCard>
+            <TMCardHeader title="Contact" />
+            <div className="mt-3.5 space-y-2.5">
+              {vendor.contactName && <TMFact label="Contact">{vendor.contactName}</TMFact>}
               {vendor.email && (
-                <div className="flex items-center gap-2 text-sm text-slate-600">
-                  <Mail className="size-4 text-slate-400" />
-                  <a href={`mailto:${vendor.email}`} className="text-amber-600 hover:text-amber-700 transition-colors">
+                <TMFact label="Email">
+                  <a href={`mailto:${vendor.email}`} className="break-all text-tm-accent-text hover:text-tm-accent-text-hover">
                     {vendor.email}
                   </a>
-                </div>
+                </TMFact>
               )}
               {vendor.phone && (
-                <div className="flex items-center gap-2 text-sm text-slate-600">
-                  <Phone className="size-4 text-slate-400" />
-                  <a href={`tel:${vendor.phone}`} className="text-amber-600 hover:text-amber-700 transition-colors">
+                <TMFact label="Phone">
+                  <a href={`tel:${vendor.phone}`} className="font-mono text-[12px] text-tm-body hover:text-tm-ink">
                     {vendor.phone}
                   </a>
-                </div>
+                </TMFact>
               )}
-              {location && (
-                <div className="flex items-center gap-2 text-sm text-slate-600">
-                  <MapPin className="size-4 text-slate-400" />
-                  <span>{location}</span>
-                </div>
-              )}
+              {location && <TMFact label="City">{location}</TMFact>}
               {vendor.website && (
-                <div className="flex items-center gap-2 text-sm text-slate-600">
-                  <Globe className="size-4 text-slate-400" />
+                <TMFact label="Website">
                   <a
                     href={vendor.website}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-amber-600 hover:text-amber-700 transition-colors"
+                    className="break-all text-tm-accent-text hover:text-tm-accent-text-hover"
                   >
                     {vendor.website}
                   </a>
-                </div>
+                </TMFact>
               )}
-              {vendor.notes && (
-                <div className="flex items-start gap-2 text-sm text-slate-600">
-                  <FileText className="mt-0.5 size-4 text-slate-400" />
-                  <span>{vendor.notes}</span>
-                </div>
-              )}
-              {!vendor.contactName && !vendor.email && !vendor.phone && !location && !vendor.website && !vendor.notes && (
-                <p className="text-sm text-slate-400">No contact details added yet.</p>
-              )}
+              <TMFact label="Category">{categoryLabel}</TMFact>
             </div>
-          </Card>
+          </TMCard>
 
-          <div>
-            <h2 className="mb-4 text-lg font-semibold text-slate-800">Associated Trips</h2>
-            {associatedTrips.length === 0 ? (
-              <p className="text-sm text-slate-400">No trips associated with this vendor.</p>
-            ) : (
-              <div className="space-y-3">
-                {associatedTrips.map((trip) => (
-                  <Link key={trip.id} href={detailHref('trips', trip.id)}>
-                    <Card className="bg-white p-4 hover:shadow-md transition-shadow cursor-pointer">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="font-medium text-slate-800">{trip.title}</h3>
-                          {trip.destination && (
-                            <p className="text-sm text-slate-500">{trip.destination}</p>
-                          )}
-                          <p className="text-xs text-slate-400 mt-1">
-                            {trip.startDate && trip.endDate
-                              ? `${new Date(trip.startDate).toLocaleDateString('en-US', { timeZone: 'UTC' })} — ${new Date(trip.endDate).toLocaleDateString('en-US', { timeZone: 'UTC' })}`
-                              : 'Dates not set'}
-                          </p>
-                        </div>
-                        <TMStatusBadge status={trip.status} />
-                      </div>
-                    </Card>
+          {vendor.notes && (
+            <TMCard>
+              <TMCardHeader title="Notes" />
+              <p className="tm-prose mt-3 whitespace-pre-wrap text-[13px] leading-[1.6] text-tm-muted">
+                {vendor.notes}
+              </p>
+            </TMCard>
+          )}
+        </div>
+
+        <TMCard>
+          <TMCardHeader title={`Linked trips (${associatedTrips.length})`} />
+          {associatedTrips.length === 0 ? (
+            <p className="mt-3 text-[13px] text-tm-faint">No trips linked to this vendor yet.</p>
+          ) : (
+            <div className="mt-3">
+              {associatedTrips.map((trip, i) => (
+                <div key={trip.id}>
+                  {i > 0 && <div className="h-px bg-tm-divider" />}
+                  <Link
+                    href={detailHref('trips', trip.id)}
+                    className="-mx-2 flex items-center gap-3 rounded-[10px] px-2 py-[11px] hover:bg-tm-wash"
+                  >
+                    <TMCodeTile code={tripCode(trip.destination, trip.title)} size={36} />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[13px] font-medium text-tm-ink">{trip.title}</p>
+                      <p className="mt-0.5 truncate text-[12px] text-tm-subtle tm-nums">
+                        {trip.startDate && trip.endDate
+                          ? `${formatDate(trip.startDate)} – ${formatDate(trip.endDate)}`
+                          : 'Dates not set'}
+                      </p>
+                    </div>
+                    <TMStatusBadge status={trip.status} />
                   </Link>
-                ))}
-              </div>
-            )}
-          </div>
-        </>
-      )}
+                </div>
+              ))}
+            </div>
+          )}
+        </TMCard>
+      </div>
+
+      <TMActionFooter>
+        <button type="button" className="tm-btn tm-btn-secondary h-11 flex-1" onClick={() => setShowDelete(true)}>
+          Delete
+        </button>
+        {vendor.email ? (
+          <a href={`mailto:${vendor.email}`} className="tm-btn tm-btn-primary h-11 flex-[2]">
+            <Mail className="size-4" aria-hidden="true" />
+            Contact
+          </a>
+        ) : (
+          <button type="button" className="tm-btn tm-btn-primary h-11 flex-[2]" onClick={() => setIsEditing(true)}>
+            Edit vendor
+          </button>
+        )}
+      </TMActionFooter>
 
       <TMDeleteDialog
         open={showDelete}
@@ -314,6 +330,6 @@ export default function VendorDetailContent({ id }: { id: string }) {
         description={`Are you sure you want to delete "${vendor.name}"? This action cannot be undone.`}
         isDeleting={isDeleting}
       />
-    </div>
+    </TMPageShell>
   );
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStops, createStop, clearStops, STOP_TRAVEL_MODES } from '@/lib/travelmanager/stops';
 import { requireAuth } from '@/lib/travelmanager/auth';
+import { requireTripAccess, TripAccessError } from '@/lib/travelmanager/trip-access';
 import { rateLimit } from '@/lib/rate-limit';
 import { sanitizeObject, validateUUID, validateDateString, validateEnum } from '@/lib/sanitize';
 
@@ -18,9 +19,14 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     if (!validateUUID(id)) {
       return NextResponse.json({ error: 'Invalid trip ID' }, { status: 400 });
     }
+    await requireTripAccess(id, user.id, 'view');
+
     const stops = await getStops(id, user.id);
     return NextResponse.json(stops);
   } catch (error) {
+    if (error instanceof TripAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('Error fetching stops:', error instanceof Error ? error.message : error);
     return NextResponse.json({ error: 'Failed to fetch stops' }, { status: 500 });
   }
@@ -38,6 +44,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (!validateUUID(tripId)) {
       return NextResponse.json({ error: 'Invalid trip ID' }, { status: 400 });
     }
+
+    await requireTripAccess(tripId, user.id, 'edit');
 
     const body = await request.json();
     const sanitized = sanitizeObject(body, STOP_ALLOWED_FIELDS);
@@ -78,6 +86,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     );
     return NextResponse.json(stop, { status: 201 });
   } catch (error) {
+    if (error instanceof TripAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('Error creating stop:', error instanceof Error ? error.message : error);
     return NextResponse.json({ error: 'Failed to create stop' }, { status: 500 });
   }
@@ -97,9 +108,17 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       return NextResponse.json({ error: 'Invalid trip ID' }, { status: 400 });
     }
 
+    // 'edit', not 'owner': this wipes the route's stops, but stops are ordinary
+    // trip content an editor may add and remove one at a time anyway. Only the
+    // trip itself is owner-gated.
+    await requireTripAccess(tripId, user.id, 'edit');
+
     const count = await clearStops(tripId, user.id);
     return NextResponse.json({ success: true, deleted: count });
   } catch (error) {
+    if (error instanceof TripAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('Error clearing stops:', error instanceof Error ? error.message : error);
     return NextResponse.json({ error: 'Failed to clear stops' }, { status: 500 });
   }

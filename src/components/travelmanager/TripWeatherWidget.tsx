@@ -191,7 +191,7 @@ export function TripWeatherWidget({
   }));
 
   return (
-    <div className="h-full rounded-xl border border-sky-100 bg-gradient-to-br from-sky-50 to-indigo-50 p-6 shadow-sm transition-shadow duration-300 hover:shadow-md">
+    <div className="h-full rounded-xl border border-sky-100 bg-gradient-to-br from-sky-50 to-indigo-50 p-4 shadow-sm md:p-6">
       <div className="mb-4 flex items-center justify-between">
         <h3 className="text-sm font-semibold uppercase tracking-wider text-sky-700">
           Weather
@@ -204,9 +204,9 @@ export function TripWeatherWidget({
       </div>
 
       {/* Current conditions */}
-      <div className="flex items-center gap-4">
-        <div className="flex size-14 items-center justify-center rounded-full bg-white/70 shadow-sm">
-          <CurrentIcon className="size-8 text-sky-600" strokeWidth={1.75} />
+      <div className="flex items-center gap-3 md:gap-4">
+        <div className="flex size-11 items-center justify-center rounded-full bg-white/70 shadow-sm md:size-14">
+          <CurrentIcon className="size-6 text-sky-600 md:size-8" strokeWidth={1.75} />
         </div>
         <div className="min-w-0 flex-1">
           <div className="text-3xl font-bold text-slate-900">
@@ -218,13 +218,13 @@ export function TripWeatherWidget({
       </div>
 
       {/* 5-day forecast */}
-      <div className="mt-5 grid grid-cols-5 gap-1.5">
+      <div className="mt-3.5 grid grid-cols-5 gap-1.5 md:mt-5">
         {days.map((day) => {
           const Icon = iconForCode(day.code);
           return (
             <div
               key={day.date}
-              className="flex flex-col items-center gap-1 rounded-lg bg-white/60 px-1 py-2 text-center"
+              className="flex flex-col items-center gap-0.5 rounded-lg bg-white/60 px-1 py-1.5 text-center md:gap-1 md:py-2"
             >
               <span className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
                 {formatWeekday(day.date)}

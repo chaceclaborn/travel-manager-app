@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { TMPageShell } from '@/components/travelmanager/TMPageShell';
 import { motion } from 'framer-motion';
 import {
   ShieldAlert,
@@ -115,7 +116,8 @@ export default function AdminPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
+      <TMPageShell width={1120}>
+      <div className="space-y-6 pt-6">
         <div className="h-8 w-48 rounded-lg bg-slate-100 animate-pulse" />
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3, 4, 5].map((i) => (
@@ -129,12 +131,14 @@ export default function AdminPage() {
           ))}
         </div>
       </div>
+      </TMPageShell>
     );
   }
 
   if (forbidden) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+      <TMPageShell width={1120}>
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4">
         <div className="flex items-center justify-center size-16 rounded-full bg-red-50">
           <Lock className="size-8 text-red-500" />
         </div>
@@ -144,17 +148,20 @@ export default function AdminPage() {
           restricted.
         </p>
       </div>
+      </TMPageShell>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="space-y-6">
+      <TMPageShell width={1120}>
+      <div className="space-y-6 pt-6">
         <h1 className="text-2xl font-bold text-slate-800">Admin Dashboard</h1>
         <div className="rounded-xl bg-white border border-slate-100 p-8 text-center">
           <p className="text-slate-500">Failed to load admin analytics.</p>
         </div>
       </div>
+      </TMPageShell>
     );
   }
 
@@ -192,7 +199,8 @@ export default function AdminPage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <TMPageShell width={1120}>
+    <div className="space-y-6 pt-6">
       {/* Header */}
       <div className="flex items-center gap-3">
         <motion.div
@@ -462,5 +470,6 @@ export default function AdminPage() {
       </motion.div>
 
     </div>
+    </TMPageShell>
   );
 }

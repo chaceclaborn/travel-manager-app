@@ -3,14 +3,15 @@ import { detailHref } from '@/lib/travelmanager/detail-routes';
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Mail, Phone, Building2, Pencil, X, AlertCircle, RefreshCw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
+import { Building2, Pencil, X, Trash2, Users } from 'lucide-react';
 import { ClientForm } from '@/components/travelmanager/ClientForm';
 import { TMDeleteDialog } from '@/components/travelmanager/TMDeleteDialog';
 import { TMStatusBadge } from '@/components/travelmanager/TMStatusBadge';
-import { TMBreadcrumb } from '@/components/travelmanager/TMBreadcrumb';
+import { TMEmptyState, TMErrorState, TMSkeleton } from '@/components/travelmanager/TMEmptyState';
+import { TMPageShell, TMBackRow, TMActionFooter } from '@/components/travelmanager/TMPageShell';
+import { TMAvatar, TMChip, TMCard, TMCardHeader, TMCodeTile, TMFact } from '@/components/travelmanager/TMPrimitives';
+import { tripCode } from '@/lib/travelmanager/design';
+import { formatDate } from '@/lib/date-utils';
 import { useTMToast } from '@/components/travelmanager/TMToast';
 import { useDeleteEntity } from '@/lib/travelmanager/useDeleteEntity';
 
@@ -98,89 +99,112 @@ export default function ClientDetailContent({ id }: { id: string }) {
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="h-5 w-28 animate-pulse rounded bg-slate-200" />
-        <div className="h-8 w-48 animate-pulse rounded bg-slate-200" />
-        <div className="h-40 animate-pulse rounded-lg bg-slate-200" />
-      </div>
+      <TMPageShell width={1120}>
+        <TMBackRow href="/clients" section="Clients" />
+        <div className="pt-5 md:pt-6">
+          <TMSkeleton className="h-[132px] w-full" style={{ borderRadius: 16 }} />
+          <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_1.55fr]">
+            <TMSkeleton className="h-[220px] w-full" style={{ borderRadius: 14 }} />
+            <TMSkeleton className="h-[280px] w-full" style={{ borderRadius: 14 }} />
+          </div>
+        </div>
+      </TMPageShell>
     );
   }
 
   if (notFound) {
     return (
-      <div className="space-y-4">
-        <Link
-          href="/clients"
-          className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors"
-        >
-          <ArrowLeft className="size-4" />
-          Back to Clients
-        </Link>
-        <p className="text-slate-500">Client not found. This client may have been deleted.</p>
-      </div>
+      <TMPageShell width={1120}>
+        <TMBackRow href="/clients" section="Clients" />
+        <div className="tm-card mt-6">
+          <TMEmptyState
+            title="Client not found"
+            description="This client may have been deleted. Head back to the list to pick another."
+            actionLabel="Back to Clients"
+            actionHref="/clients"
+            icon={Users}
+          />
+        </div>
+      </TMPageShell>
     );
   }
 
   if (error || !client) {
     return (
-      <div className="flex flex-col items-center justify-center py-24 text-center">
-        <div className="relative mb-6">
-          <div className="size-20 rounded-full bg-red-50 flex items-center justify-center">
-            <AlertCircle className="size-10 text-red-400" />
-          </div>
-          <div className="absolute -bottom-1 -right-1 size-7 rounded-full bg-red-100 flex items-center justify-center">
-            <RefreshCw className="size-3.5 text-red-400" />
-          </div>
+      <TMPageShell width={1120}>
+        <TMBackRow href="/clients" section="Clients" />
+        <div className="tm-card mt-6">
+          <TMErrorState
+            title="Couldn't load this client"
+            description="Something went wrong on our end. Your data is safe — nothing was lost."
+            onRetry={fetchClient}
+          />
         </div>
-        <h2 className="text-xl font-semibold text-slate-900">Couldn&apos;t load client</h2>
-        <p className="mt-2 text-sm text-slate-500 max-w-sm">
-          Something went wrong. Check your connection and try again.
-        </p>
-        <Button
-          onClick={fetchClient}
-          className="mt-6 bg-slate-900 hover:bg-slate-800 text-white shadow-sm"
-        >
-          <RefreshCw className="mr-2 size-4" />
-          Try again
-        </Button>
-      </div>
+      </TMPageShell>
     );
   }
 
-  return (
-    <div className="space-y-6">
-      <TMBreadcrumb items={[{ label: 'Dashboard', href: '/' }, { label: 'Clients', href: '/clients' }, { label: client.name }]} />
+  const trips = client.trips.map((t) => t.trip);
+  // "Upcoming" is what makes this record urgent, so it earns the accent pill
+  // in the header — nothing else on the page uses accent.
+  const nextTrip = trips
+    .filter((t) => t.startDate && new Date(t.startDate) >= new Date() && t.status !== 'COMPLETED' && t.status !== 'CANCELLED')
+    .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())[0];
 
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800">{client.name}</h1>
-          {client.company && (
-            <p className="mt-0.5 text-slate-500">{client.company}</p>
-          )}
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setEditing(!editing)}
-          >
-            {editing ? <X className="mr-1.5 size-4" /> : <Pencil className="mr-1.5 size-4" />}
-            {editing ? 'Cancel' : 'Edit'}
-          </Button>
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={() => setDeleteOpen(true)}
-          >
-            Delete
-          </Button>
+  return (
+    <TMPageShell width={1120}>
+      <TMBackRow
+        href="/clients"
+        section="Clients"
+        action={
+          <button type="button" onClick={() => setEditing(!editing)} className="tm-btn-icon size-8" aria-label={editing ? 'Cancel editing' : 'Edit client'}>
+            {editing ? <X className="size-4" /> : <Pencil className="size-4" />}
+          </button>
+        }
+      />
+
+      {/* Header card */}
+      <div className="tm-card mt-4 px-5 py-5 md:mt-6 md:px-7 md:py-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-4">
+            <TMAvatar name={client.name} email={client.email} size={52} />
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <h1 className="truncate text-[22px] font-semibold tracking-[-0.02em] text-tm-ink md:text-[24px]">
+                  {client.name}
+                </h1>
+                {nextTrip && <TMChip tone="accent">Traveling {formatDate(nextTrip.startDate)}</TMChip>}
+              </div>
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-tm-muted">
+                {client.company && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <Building2 className="size-3.5 text-tm-faint" aria-hidden="true" />
+                    {client.company}
+                  </span>
+                )}
+                <span>
+                  {trips.length} {trips.length === 1 ? 'trip' : 'trips'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="hidden items-center gap-2 md:flex">
+            <button type="button" className="tm-btn tm-btn-secondary" onClick={() => setEditing(!editing)}>
+              {editing ? 'Cancel' : 'Edit'}
+            </button>
+            <Link href="/trips/new" className="tm-btn tm-btn-primary">
+              New Trip
+            </Link>
+            <button type="button" className="tm-btn-icon" onClick={() => setDeleteOpen(true)} aria-label="Delete client">
+              <Trash2 className="size-4" />
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Edit form or info display */}
       {editing ? (
-        <Card className="bg-white p-6">
+        <div className="tm-card mt-5 p-6">
           <ClientForm
             initialData={{
               name: client.name,
@@ -192,73 +216,87 @@ export default function ClientDetailContent({ id }: { id: string }) {
             onSubmit={handleUpdate}
             isLoading={saving}
           />
-        </Card>
+        </div>
       ) : (
-        <Card className="bg-white p-6">
-          <div className="space-y-3">
-            {client.company && (
-              <div className="flex items-center gap-2 text-sm text-slate-600">
-                <Building2 className="size-4 text-slate-400" />
-                <span>{client.company}</span>
+        /* The narrow column sits on the LEFT for entity pages: the record's
+           own facts are short and fixed, while its relationships are long. */
+        <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_1.55fr]">
+          <div className="flex flex-col gap-5">
+            <TMCard>
+              <TMCardHeader title="Contact" />
+              <div className="mt-3.5 space-y-2.5">
+                {client.email && (
+                  <TMFact label="Email">
+                    <a href={`mailto:${client.email}`} className="break-all text-tm-accent-text hover:text-tm-accent-text-hover">
+                      {client.email}
+                    </a>
+                  </TMFact>
+                )}
+                {client.phone && (
+                  <TMFact label="Phone">
+                    <a href={`tel:${client.phone}`} className="font-mono text-[12px] text-tm-body hover:text-tm-ink">
+                      {client.phone}
+                    </a>
+                  </TMFact>
+                )}
+                {client.company && <TMFact label="Company">{client.company}</TMFact>}
+                {!client.email && !client.phone && !client.company && (
+                  <p className="text-[13px] text-tm-faint">No contact details saved yet.</p>
+                )}
               </div>
-            )}
-            {client.email && (
-              <div className="flex items-center gap-2 text-sm text-slate-600">
-                <Mail className="size-4 text-slate-400" />
-                <a href={`mailto:${client.email}`} className="text-amber-600 hover:text-amber-700 transition-colors">
-                  {client.email}
-                </a>
-              </div>
-            )}
-            {client.phone && (
-              <div className="flex items-center gap-2 text-sm text-slate-600">
-                <Phone className="size-4 text-slate-400" />
-                <a href={`tel:${client.phone}`} className="text-amber-600 hover:text-amber-700 transition-colors">
-                  {client.phone}
-                </a>
-              </div>
-            )}
+            </TMCard>
+
             {client.notes && (
-              <>
-                <Separator className="my-3" />
-                <div>
-                  <p className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-1">Notes</p>
-                  <p className="text-sm text-slate-600 whitespace-pre-wrap">{client.notes}</p>
-                </div>
-              </>
+              <TMCard>
+                <TMCardHeader title="Notes" />
+                <p className="tm-prose mt-3 whitespace-pre-wrap text-[13px] leading-[1.6] text-tm-muted">
+                  {client.notes}
+                </p>
+              </TMCard>
             )}
           </div>
-        </Card>
+
+          <TMCard>
+            <TMCardHeader title={`Trips (${trips.length})`} />
+            {trips.length === 0 ? (
+              <p className="mt-3 text-[13px] text-tm-faint">No trips linked to this client yet.</p>
+            ) : (
+              <div className="mt-3">
+                {trips.map((trip, i) => (
+                  <div key={trip.id}>
+                    {i > 0 && <div className="h-px bg-tm-divider" />}
+                    <Link
+                      href={detailHref('trips', trip.id)}
+                      className="-mx-2 flex items-center gap-3 rounded-[10px] px-2 py-[11px] hover:bg-tm-wash"
+                    >
+                      <TMCodeTile code={tripCode(trip.destination, trip.title)} size={36} />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[13px] font-medium text-tm-ink">{trip.title}</p>
+                        <p className="mt-0.5 truncate text-[12px] text-tm-subtle tm-nums">
+                          {trip.startDate && trip.endDate
+                            ? `${formatDate(trip.startDate)} – ${formatDate(trip.endDate)}`
+                            : 'Dates not set'}
+                        </p>
+                      </div>
+                      <TMStatusBadge status={trip.status} />
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            )}
+          </TMCard>
+        </div>
       )}
 
-      {/* Associated Trips */}
-      <div>
-        <h2 className="text-lg font-semibold text-slate-800 mb-3">Associated Trips</h2>
-        {client.trips.length === 0 ? (
-          <p className="text-sm text-slate-400">No trips linked to this client yet.</p>
-        ) : (
-          <div className="space-y-2">
-            {client.trips.map(({ trip }) => (
-              <Link key={trip.id} href={detailHref('trips', trip.id)}>
-                <Card className="bg-white p-4 hover:shadow-md transition-shadow cursor-pointer">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium text-slate-800">{trip.title}</p>
-                      <p className="text-sm text-slate-500">
-                        {trip.destination ? `${trip.destination} \u00B7 ` : ''}
-                        {trip.startDate && trip.endDate
-                          ? `${new Date(trip.startDate).toLocaleDateString('en-US', { timeZone: 'UTC' })} \u2013 ${new Date(trip.endDate).toLocaleDateString('en-US', { timeZone: 'UTC' })}`
-                          : 'Dates not set'}
-                      </p>
-                    </div>
-                    <TMStatusBadge status={trip.status} />
-                  </div>
-                </Card>
-              </Link>
-            ))}
-          </div>
-        )}
-      </div>
+      {/* Mobile action footer — the tab bar is replaced on detail screens. */}
+      <TMActionFooter>
+        <button type="button" className="tm-btn tm-btn-secondary h-11 flex-1" onClick={() => setDeleteOpen(true)}>
+          Delete
+        </button>
+        <Link href="/trips/new" className="tm-btn tm-btn-primary h-11 flex-[2]">
+          New Trip
+        </Link>
+      </TMActionFooter>
 
       {/* Delete confirmation */}
       <TMDeleteDialog
@@ -269,6 +307,6 @@ export default function ClientDetailContent({ id }: { id: string }) {
         description={`Are you sure you want to delete "${client.name}"? This action cannot be undone.`}
         isDeleting={deleting}
       />
-    </div>
+    </TMPageShell>
   );
 }

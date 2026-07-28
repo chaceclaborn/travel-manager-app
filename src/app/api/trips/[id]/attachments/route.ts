@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTripAttachments, createTripAttachment } from '@/lib/travelmanager/trips';
 import { requireAuth } from '@/lib/travelmanager/auth';
+import { requireTripAccess, TripAccessError } from '@/lib/travelmanager/trip-access';
 import { rateLimit } from '@/lib/rate-limit';
 import { createSupabaseAdmin } from '@/lib/supabase/admin';
 import { validateUUID, validateEnum, validateMagicBytes, ATTACHMENT_CATEGORY_VALUES } from '@/lib/sanitize';
@@ -28,9 +29,14 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     if (!validateUUID(id)) {
       return NextResponse.json({ error: 'Invalid trip ID' }, { status: 400 });
     }
+    await requireTripAccess(id, user.id, 'view');
+
     const attachments = await getTripAttachments(id, user.id);
     return NextResponse.json(attachments);
   } catch (error) {
+    if (error instanceof TripAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('Error fetching attachments:', error instanceof Error ? error.message : error);
     return NextResponse.json({ error: 'Failed to fetch attachments' }, { status: 500 });
   }
@@ -48,6 +54,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (!validateUUID(tripId)) {
       return NextResponse.json({ error: 'Invalid trip ID' }, { status: 400 });
     }
+
+    const access = await requireTripAccess(tripId, user.id, 'edit');
 
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
@@ -77,7 +85,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     // Sanitize filename to prevent path traversal and injection
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const storagePath = `${user.id}/${tripId}/${Date.now()}-${safeName}`;
+    // Keyed on the trip OWNER, not the uploader, so a file's storage lifetime
+    // matches the trip's. Under the uploader's prefix a collaborator deleting
+    // their own account (which wipes that whole prefix) would tear files out of
+    // someone else's live trip.
+    const storagePath = `${access.ownerId}/${tripId}/${Date.now()}-${safeName}`;
 
     const admin = createSupabaseAdmin();
     const { error: uploadError } = await admin.storage
@@ -102,6 +114,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     return NextResponse.json(attachment, { status: 201 });
   } catch (error) {
+    if (error instanceof TripAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('Error uploading attachment:', error instanceof Error ? error.message : error);
     return NextResponse.json({ error: 'Failed to upload attachment' }, { status: 500 });
   }
