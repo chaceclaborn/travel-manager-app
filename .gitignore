@@ -1,4 +1,8 @@
-node_modules/
+# No trailing slash: `node_modules/` matches only a real directory, so a
+# node_modules SYMLINK (as used to share deps between git worktrees) slipped
+# past it and got committed, which broke `yarn install` on Vercel with
+# "EEXIST: file already exists, mkdir '/vercel/path0/node_modules'".
+node_modules
 .next/
 .env.local
 .env
