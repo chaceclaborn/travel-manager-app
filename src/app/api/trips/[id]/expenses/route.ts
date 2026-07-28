@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getExpenses, createExpense } from '@/lib/travelmanager/expenses';
 import { requireAuth } from '@/lib/travelmanager/auth';
+import { requireTripAccess, TripAccessError } from '@/lib/travelmanager/trip-access';
 import { rateLimit } from '@/lib/rate-limit';
 import { sanitizeObject, validateUUID, validateDateString, validateEnum, EXPENSE_CATEGORY_VALUES } from '@/lib/sanitize';
 
@@ -18,9 +19,14 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     if (!validateUUID(id)) {
       return NextResponse.json({ error: 'Invalid trip ID' }, { status: 400 });
     }
+    await requireTripAccess(id, user.id, 'view');
+
     const expenses = await getExpenses(id, user.id);
     return NextResponse.json(expenses);
   } catch (error) {
+    if (error instanceof TripAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('Error fetching expenses:', error instanceof Error ? error.message : error);
     return NextResponse.json({ error: 'Failed to fetch expenses' }, { status: 500 });
   }
@@ -38,6 +44,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (!validateUUID(tripId)) {
       return NextResponse.json({ error: 'Invalid trip ID' }, { status: 400 });
     }
+
+    await requireTripAccess(tripId, user.id, 'edit');
 
     const body = await request.json();
     const sanitized = sanitizeObject(body, EXPENSE_ALLOWED_FIELDS);
@@ -61,6 +69,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const expense = await createExpense({ ...sanitized, tripId } as Parameters<typeof createExpense>[0], user.id);
     return NextResponse.json(expense, { status: 201 });
   } catch (error) {
+    if (error instanceof TripAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('Error creating expense:', error instanceof Error ? error.message : error);
     return NextResponse.json({ error: 'Failed to create expense' }, { status: 500 });
   }

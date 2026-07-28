@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTripById, updateTrip, deleteTrip } from '@/lib/travelmanager/trips';
 import { requireAuth } from '@/lib/travelmanager/auth';
+import { requireTripAccess, TripAccessError } from '@/lib/travelmanager/trip-access';
 import { rateLimit } from '@/lib/rate-limit';
 import { sanitizeObject, validateUUID, validateDateString, validateEnum, TRIP_STATUS_VALUES, TRANSPORT_MODE_VALUES, TRIP_TYPE_VALUES } from '@/lib/sanitize';
 
@@ -16,10 +17,15 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     if (!validateUUID(id)) {
       return NextResponse.json({ error: 'Invalid trip ID' }, { status: 400 });
     }
+    await requireTripAccess(id, user.id, 'view');
+
     const trip = await getTripById(id, user.id);
     if (!trip) return NextResponse.json({ error: 'Trip not found' }, { status: 404 });
     return NextResponse.json(trip);
   } catch (error) {
+    if (error instanceof TripAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('Error fetching trip:', error instanceof Error ? error.message : error);
     return NextResponse.json({ error: 'Failed to fetch trip' }, { status: 500 });
   }
@@ -38,7 +44,12 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: 'Invalid trip ID' }, { status: 400 });
     }
 
+    await requireTripAccess(id, user.id, 'edit');
+
     const body = await request.json();
+    // The allowlist below is now doing security work, not just hygiene: it is the
+    // only thing standing between an EDITOR collaborator and userId / shareToken /
+    // shareEnabled / shareExpiresAt. Never widen it to a denylist.
     const sanitized = sanitizeObject(body, ['title', 'destination', 'startDate', 'endDate', 'status', 'tripType', 'notes', 'budget', 'transportMode', 'departureAirportCode', 'departureAirportName', 'departureAirportLat', 'departureAirportLng', 'arrivalAirportCode', 'arrivalAirportName', 'arrivalAirportLat', 'arrivalAirportLng', 'hideHomeDeparture', 'hideHomeReturn']);
 
     if (sanitized.status && !validateEnum(sanitized.status as string, TRIP_STATUS_VALUES)) {
@@ -75,6 +86,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const trip = await updateTrip(id, sanitized as Parameters<typeof updateTrip>[1], user.id);
     return NextResponse.json(trip);
   } catch (error) {
+    if (error instanceof TripAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('Error updating trip:', error instanceof Error ? error.message : error);
     return NextResponse.json({ error: 'Failed to update trip' }, { status: 500 });
   }
@@ -92,9 +106,16 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     if (!validateUUID(id)) {
       return NextResponse.json({ error: 'Invalid trip ID' }, { status: 400 });
     }
+    // Owner-only: the delete cascades every child row, including expenses, notes
+    // and attachments contributed by other collaborators.
+    await requireTripAccess(id, user.id, 'owner');
+
     await deleteTrip(id, user.id);
     return NextResponse.json({ success: true });
   } catch (error) {
+    if (error instanceof TripAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('Error deleting trip:', error instanceof Error ? error.message : error);
     return NextResponse.json({ error: 'Failed to delete trip' }, { status: 500 });
   }

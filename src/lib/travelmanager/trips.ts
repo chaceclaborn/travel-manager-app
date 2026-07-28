@@ -3,6 +3,15 @@ import prisma from '@/lib/prisma';
 import type { Prisma } from '@/lib/generated/prisma';
 import type { CreateTripInput, UpdateTripInput, TripWithRelations, CreateItineraryItemInput, UpdateItineraryItemInput, CreateTripAttachmentInput } from './types';
 import { geocodeDestination } from './geocode';
+import {
+  requireTripAccess,
+  tripScopeWhere,
+  redactTripForViewer,
+  TripAccessError,
+  type TripAccess,
+  type TripRoleValue,
+  type ViewerRole,
+} from './trip-access';
 
 const tripInclude = {
   vendors: { include: { vendor: true } },
@@ -11,10 +20,47 @@ const tripInclude = {
   itinerary: { orderBy: [{ date: 'asc' as const }, { sortOrder: 'asc' as const }] },
 };
 
-async function verifyTripOwnership(tripId: string, userId: string) {
-  const trip = await prisma.trip.findFirst({ where: { id: tripId, userId } });
-  if (!trip) throw new Error('Trip not found');
-  return trip;
+/**
+ * The caller's own collaborator row, pulled along with a list query.
+ *
+ * Every row a tripScopeWhere() query returns is by construction either owned by
+ * the caller or shared with them through an ACCEPTED row, so the row itself
+ * carries everything needed to decide what to redact — a list of twenty trips
+ * costs one query, not twenty authorization round-trips.
+ */
+const viewerCollaborator = (userId: string) => ({
+  collaborators: { where: { userId }, select: { role: true as const } },
+});
+
+type ScopedTripRow = { userId: string; collaborators: { role: TripRoleValue }[] };
+
+function accessForRow(row: ScopedTripRow, userId: string): Pick<TripAccess, 'isOwner' | 'viewerRole'> {
+  const isOwner = row.userId === userId;
+  const viewerRole: ViewerRole = isOwner
+    ? 'OWNER'
+    : row.collaborators[0]?.role === 'EDITOR'
+      ? 'EDITOR'
+      : 'VIEWER';
+  return { isOwner, viewerRole };
+}
+
+/**
+ * Drop the join row we only fetched to classify the viewer, then redact.
+ *
+ * These list reads use `include` with no `select`, so without this the full Trip
+ * row — shareToken included — plus the owner's hydrated address book would be
+ * serialized to every collaborator.
+ */
+function redactScopedTrip<T extends ScopedTripRow>(
+  row: T,
+  userId: string
+): Omit<T, 'collaborators'> & { viewerRole: ViewerRole } {
+  const access = accessForRow(row, userId);
+  const trip = { ...row } as Record<string, unknown>;
+  delete trip.collaborators;
+  return redactTripForViewer(trip, access) as unknown as Omit<T, 'collaborators'> & {
+    viewerRole: ViewerRole;
+  };
 }
 
 async function verifyVendorOwnership(vendorId: string, userId: string) {
@@ -29,12 +75,34 @@ async function verifyClientOwnership(clientId: string, userId: string) {
   return client;
 }
 
+/**
+ * An EDITOR may write itinerary items but may not attach contacts to them.
+ *
+ * Without this the vendor/client lookups below — which are scoped to the
+ * *caller's* address book — would throw a bare `Vendor not found` into a
+ * generic catch and answer 500. Contacts being owner-only is a deliberate v1
+ * boundary, so it should read as a 403.
+ */
+function assertMayLinkContacts(
+  data: { vendorId?: string | null; clientId?: string | null },
+  access: TripAccess
+) {
+  if (access.isOwner) return;
+  if (data.vendorId || data.clientId) {
+    throw new TripAccessError('Only the trip owner can link vendors or clients', 403);
+  }
+}
+
 export async function getTrips(userId: string, mode: 'full' | 'minimal' = 'full') {
+  const where = await tripScopeWhere(userId);
+
   if (mode === 'minimal') {
-    return prisma.trip.findMany({
-      where: { userId },
+    const rows = await prisma.trip.findMany({
+      where,
       select: {
         id: true,
+        userId: true,
+        ...viewerCollaborator(userId),
         title: true,
         destination: true,
         startDate: true,
@@ -57,20 +125,35 @@ export async function getTrips(userId: string, mode: 'full' | 'minimal' = 'full'
       },
       orderBy: { startDate: 'asc' },
     });
+
+    // The card suppresses its edit/delete row actions and drops out of Select
+    // mode for anything but OWNER, so the role has to travel with the row —
+    // there is no second request the list could ask.
+    return rows.map((row) => {
+      const { collaborators, ...trip } = row;
+      return { ...trip, viewerRole: accessForRow(row, userId).viewerRole };
+    });
   }
 
-  return prisma.trip.findMany({
-    where: { userId },
-    include: tripInclude,
+  const rows = await prisma.trip.findMany({
+    where,
+    include: { ...tripInclude, ...viewerCollaborator(userId) },
     orderBy: { startDate: 'asc' },
   });
+  return rows.map((row) => redactScopedTrip(row, userId));
 }
 
-export async function getTripById(id: string, userId: string): Promise<TripWithRelations | null> {
-  return prisma.trip.findFirst({
-    where: { id, userId },
-    include: tripInclude,
-  });
+export async function getTripById(
+  id: string,
+  userId: string
+): Promise<(TripWithRelations & { viewerRole: ViewerRole }) | null> {
+  // Reads are 'view': an owner, an EDITOR and a VIEWER all get here. Anyone
+  // else gets a 404 out of the chokepoint rather than a null, so a stranger
+  // cannot tell an unshared trip from a nonexistent one.
+  const access = await requireTripAccess(id, userId, 'view');
+  const trip = await prisma.trip.findUnique({ where: { id }, include: tripInclude });
+  if (!trip) return null;
+  return redactTripForViewer(trip, access) as TripWithRelations & { viewerRole: ViewerRole };
 }
 
 export async function createTrip(data: CreateTripInput, userId: string) {
@@ -112,7 +195,7 @@ export async function createTrip(data: CreateTripInput, userId: string) {
 }
 
 export async function updateTrip(id: string, data: UpdateTripInput, userId: string) {
-  await verifyTripOwnership(id, userId);
+  await requireTripAccess(id, userId, 'edit');
   const updateData: Record<string, unknown> = { ...data };
   if (data.startDate) updateData.startDate = new Date(data.startDate);
   if (data.endDate) updateData.endDate = new Date(data.endDate);
@@ -148,12 +231,20 @@ export async function updateTrip(id: string, data: UpdateTripInput, userId: stri
 }
 
 export async function deleteTrip(id: string, userId: string) {
-  await verifyTripOwnership(id, userId);
+  // 'owner' — this cascades every child row, including expenses, notes and
+  // photos other collaborators authored. Nobody but the owner destroys that.
+  await requireTripAccess(id, userId, 'owner');
   return prisma.trip.delete({ where: { id } });
 }
 
+// The six contact-link helpers below stay 'owner' even though they are ordinary
+// trip mutations. Vendors, clients and Friend rows are the owner's private
+// address book — emails, phone numbers, addresses, notes — and a collaborator
+// linking one would be offering *their* address book against someone else's
+// trip. Making contacts collaborative needs a second ownership model that
+// "view and edit the trip" does not, so v1 keeps them owner-only.
 export async function linkVendorToTrip(tripId: string, vendorId: string, userId: string, notes?: string) {
-  await verifyTripOwnership(tripId, userId);
+  await requireTripAccess(tripId, userId, 'owner');
   const vendor = await prisma.vendor.findFirst({ where: { id: vendorId, userId } });
   if (!vendor) throw new Error('Vendor not found');
   return prisma.tripVendor.create({
@@ -163,14 +254,14 @@ export async function linkVendorToTrip(tripId: string, vendorId: string, userId:
 }
 
 export async function unlinkVendorFromTrip(tripId: string, vendorId: string, userId: string) {
-  await verifyTripOwnership(tripId, userId);
+  await requireTripAccess(tripId, userId, 'owner');
   return prisma.tripVendor.delete({
     where: { tripId_vendorId: { tripId, vendorId } },
   });
 }
 
 export async function linkClientToTrip(tripId: string, clientId: string, userId: string, notes?: string) {
-  await verifyTripOwnership(tripId, userId);
+  await requireTripAccess(tripId, userId, 'owner');
   const client = await prisma.client.findFirst({ where: { id: clientId, userId } });
   if (!client) throw new Error('Client not found');
   return prisma.tripClient.create({
@@ -180,14 +271,14 @@ export async function linkClientToTrip(tripId: string, clientId: string, userId:
 }
 
 export async function unlinkClientFromTrip(tripId: string, clientId: string, userId: string) {
-  await verifyTripOwnership(tripId, userId);
+  await requireTripAccess(tripId, userId, 'owner');
   return prisma.tripClient.delete({
     where: { tripId_clientId: { tripId, clientId } },
   });
 }
 
 export async function getTripVendors(tripId: string, userId: string) {
-  await verifyTripOwnership(tripId, userId);
+  await requireTripAccess(tripId, userId, 'owner');
   return prisma.tripVendor.findMany({
     where: { tripId },
     include: { vendor: true },
@@ -195,7 +286,7 @@ export async function getTripVendors(tripId: string, userId: string) {
 }
 
 export async function linkFriendToTrip(tripId: string, friendId: string, userId: string, notes?: string) {
-  await verifyTripOwnership(tripId, userId);
+  await requireTripAccess(tripId, userId, 'owner');
   const friend = await prisma.friend.findFirst({ where: { id: friendId, userId } });
   if (!friend) throw new Error('Friend not found');
   return prisma.tripFriend.create({
@@ -205,14 +296,14 @@ export async function linkFriendToTrip(tripId: string, friendId: string, userId:
 }
 
 export async function unlinkFriendFromTrip(tripId: string, friendId: string, userId: string) {
-  await verifyTripOwnership(tripId, userId);
+  await requireTripAccess(tripId, userId, 'owner');
   return prisma.tripFriend.delete({
     where: { tripId_friendId: { tripId, friendId } },
   });
 }
 
 export async function getTripFriends(tripId: string, userId: string) {
-  await verifyTripOwnership(tripId, userId);
+  await requireTripAccess(tripId, userId, 'owner');
   return prisma.tripFriend.findMany({
     where: { tripId },
     include: { friend: true },
@@ -220,7 +311,7 @@ export async function getTripFriends(tripId: string, userId: string) {
 }
 
 export async function getTripClients(tripId: string, userId: string) {
-  await verifyTripOwnership(tripId, userId);
+  await requireTripAccess(tripId, userId, 'owner');
   return prisma.tripClient.findMany({
     where: { tripId },
     include: { client: true },
@@ -228,8 +319,8 @@ export async function getTripClients(tripId: string, userId: string) {
 }
 
 export async function getTripItinerary(tripId: string, userId: string) {
-  await verifyTripOwnership(tripId, userId);
-  return prisma.itineraryItem.findMany({
+  const access = await requireTripAccess(tripId, userId, 'view');
+  const items = await prisma.itineraryItem.findMany({
     where: { tripId },
     orderBy: [{ date: 'asc' }, { sortOrder: 'asc' }],
     include: {
@@ -237,10 +328,16 @@ export async function getTripItinerary(tripId: string, userId: string) {
       client: { select: { id: true, name: true, company: true } },
     },
   });
+  if (access.isOwner) return items;
+  // Same address book, different door: an itinerary item hydrates the linked
+  // Vendor/Client, so leaving them on would hand a collaborator the contacts
+  // that redactTripForViewer strips out of the trip payload itself.
+  return items.map((item) => ({ ...item, vendor: null, client: null }));
 }
 
 export async function createItineraryItem(data: CreateItineraryItemInput, userId: string) {
-  await verifyTripOwnership(data.tripId, userId);
+  const access = await requireTripAccess(data.tripId, userId, 'edit');
+  assertMayLinkContacts(data, access);
   if (data.vendorId) await verifyVendorOwnership(data.vendorId, userId);
   if (data.clientId) await verifyClientOwnership(data.clientId, userId);
   return prisma.itineraryItem.create({
@@ -267,7 +364,8 @@ export async function createItineraryItem(data: CreateItineraryItemInput, userId
 export async function updateItineraryItem(id: string, data: UpdateItineraryItemInput, userId: string) {
   const item = await prisma.itineraryItem.findUnique({ where: { id }, select: { tripId: true } });
   if (!item) throw new Error('Itinerary item not found');
-  await verifyTripOwnership(item.tripId, userId);
+  const access = await requireTripAccess(item.tripId, userId, 'edit');
+  assertMayLinkContacts(data, access);
   if (data.vendorId) await verifyVendorOwnership(data.vendorId, userId);
   if (data.clientId) await verifyClientOwnership(data.clientId, userId);
 
@@ -289,23 +387,32 @@ export async function updateItineraryItem(id: string, data: UpdateItineraryItemI
 export async function deleteItineraryItem(id: string, userId: string) {
   const item = await prisma.itineraryItem.findUnique({ where: { id }, select: { tripId: true } });
   if (!item) throw new Error('Itinerary item not found');
-  await verifyTripOwnership(item.tripId, userId);
+  await requireTripAccess(item.tripId, userId, 'edit');
   return prisma.itineraryItem.delete({ where: { id } });
 }
 
 export async function getDashboardStats(userId: string) {
+  const tripWhere: Prisma.TripWhereInput = await tripScopeWhere(userId);
+  // Bookings now carry an *author*, not an owner, so a booking this user added
+  // to a friend's trip belongs on the friend's dashboard and not on theirs.
+  // Vendors, clients and meetings have no trip dimension, so they are untouched.
+  const myBookings: Prisma.BookingWhereInput = {
+    userId,
+    OR: [{ tripId: null }, { trip: { userId } }],
+  };
+
   const [totalTrips, upcomingTrips, totalVendors, totalClients, totalMeetings, totalBookings, pendingCommissions] = await Promise.all([
-    prisma.trip.count({ where: { userId } }),
-    prisma.trip.count({ where: { userId, startDate: { gte: new Date() }, status: { in: ['PLANNED', 'IN_PROGRESS'] } } }),
+    prisma.trip.count({ where: tripWhere }),
+    prisma.trip.count({ where: { ...tripWhere, startDate: { gte: new Date() }, status: { in: ['PLANNED', 'IN_PROGRESS'] } } }),
     prisma.vendor.count({ where: { userId } }),
     prisma.client.count({ where: { userId } }),
     prisma.meeting.count({ where: { userId } }),
     // Counted so the dashboard can tell a genuinely new workspace from one
     // that merely has no trips right now. Standalone bookings are the one
     // record type a user can own without ever creating a trip.
-    prisma.booking.count({ where: { userId } }),
+    prisma.booking.count({ where: myBookings }),
     prisma.booking.aggregate({
-      where: { userId, status: 'ACTIVE', commissionPaid: false, commissionAmount: { not: null } },
+      where: { ...myBookings, status: 'ACTIVE', commissionPaid: false, commissionAmount: { not: null } },
       _sum: { commissionAmount: true },
     }),
   ]);
@@ -322,32 +429,40 @@ export async function getDashboardStats(userId: string) {
 }
 
 export async function getUpcomingTrips(userId: string, limit = 5) {
-  return prisma.trip.findMany({
-    where: { userId, startDate: { gte: new Date() }, status: { in: ['PLANNED', 'IN_PROGRESS'] } },
+  const where: Prisma.TripWhereInput = await tripScopeWhere(userId);
+  const rows = await prisma.trip.findMany({
+    where: { ...where, startDate: { gte: new Date() }, status: { in: ['PLANNED', 'IN_PROGRESS'] } },
     // Checklists come along here (and only here) because the dashboard hero
     // shows "Checklist · 6 of 9" for the next trip. Loading them for every
     // trip list would be waste; loading them lazily would make the hero pop in.
-    include: { ...tripInclude, checklists: true },
+    include: { ...tripInclude, checklists: true, ...viewerCollaborator(userId) },
     orderBy: { startDate: 'asc' },
     take: limit,
   });
+  return rows.map((row) => redactScopedTrip(row, userId));
 }
 
 export async function getRecentActivity(userId: string, limit = 5) {
-  return prisma.trip.findMany({
-    where: { userId },
+  const where: Prisma.TripWhereInput = await tripScopeWhere(userId);
+  const rows = await prisma.trip.findMany({
+    where,
     orderBy: { updatedAt: 'desc' },
     take: limit,
-    include: tripInclude,
+    include: { ...tripInclude, ...viewerCollaborator(userId) },
   });
+  return rows.map((row) => redactScopedTrip(row, userId));
 }
 
 export async function searchAll(query: string, userId: string) {
+  const tripWhere: Prisma.TripWhereInput = await tripScopeWhere(userId);
   const [trips, vendors, clients] = await Promise.all([
+    // AND, not a spread: tripScopeWhere already owns the top-level OR, and
+    // spreading the text-match OR over it would silently drop the scope.
     prisma.trip.findMany({
-      where: { userId, OR: [{ title: { contains: query, mode: 'insensitive' } }, { destination: { contains: query, mode: 'insensitive' } }] },
+      where: { AND: [tripWhere, { OR: [{ title: { contains: query, mode: 'insensitive' } }, { destination: { contains: query, mode: 'insensitive' } }] }] },
       take: 5,
       orderBy: { updatedAt: 'desc' },
+      include: viewerCollaborator(userId),
     }),
     prisma.vendor.findMany({
       where: { userId, OR: [{ name: { contains: query, mode: 'insensitive' } }, { city: { contains: query, mode: 'insensitive' } }] },
@@ -360,13 +475,15 @@ export async function searchAll(query: string, userId: string) {
       orderBy: { updatedAt: 'desc' },
     }),
   ]);
-  return { trips, vendors, clients };
+  // This branch has no `select`, so a matched shared trip would otherwise carry
+  // its owner's shareToken into a search dropdown.
+  return { trips: trips.map((row) => redactScopedTrip(row, userId)), vendors, clients };
 }
 
 // ─── Attachments ───
 
 export async function getTripAttachments(tripId: string, userId: string) {
-  await verifyTripOwnership(tripId, userId);
+  await requireTripAccess(tripId, userId, 'view');
   return prisma.tripAttachment.findMany({
     where: { tripId },
     orderBy: { createdAt: 'desc' },
@@ -374,7 +491,7 @@ export async function getTripAttachments(tripId: string, userId: string) {
 }
 
 export async function createTripAttachment(data: CreateTripAttachmentInput, userId: string) {
-  await verifyTripOwnership(data.tripId, userId);
+  await requireTripAccess(data.tripId, userId, 'edit');
   return prisma.tripAttachment.create({
     data: {
       fileName: data.fileName,
@@ -391,7 +508,7 @@ export async function createTripAttachment(data: CreateTripAttachmentInput, user
 export async function deleteTripAttachment(id: string, userId: string) {
   const attachment = await prisma.tripAttachment.findUnique({ where: { id }, select: { tripId: true } });
   if (!attachment) throw new Error('Attachment not found');
-  await verifyTripOwnership(attachment.tripId, userId);
+  await requireTripAccess(attachment.tripId, userId, 'edit');
   return prisma.tripAttachment.delete({ where: { id } });
 }
 
@@ -428,10 +545,13 @@ export async function getUserData(userId: string) {
   const vendors = await prisma.vendor.findMany({ where: { userId } });
   const clients = await prisma.client.findMany({ where: { userId } });
   const friends = await prisma.friend.findMany({ where: { userId } });
-  const expenses = await prisma.expense.findMany({ where: { userId } });
-  const bookings = await prisma.booking.findMany({ where: { userId } });
-  const checklistItems = await prisma.checklistItem.findMany({ where: { userId } });
-  const tripNotes = await prisma.tripNote.findMany({ where: { userId } });
+  // An export is "my data", and on these five models userId now means author,
+  // not owner. A line the user wrote on a friend's trip is the friend's trip
+  // data — shipping it here would export someone else's itinerary by proxy.
+  const expenses = await prisma.expense.findMany({ where: { userId, trip: { userId } } });
+  const bookings = await prisma.booking.findMany({ where: { userId, OR: [{ tripId: null }, { trip: { userId } }] } });
+  const checklistItems = await prisma.checklistItem.findMany({ where: { userId, trip: { userId } } });
+  const tripNotes = await prisma.tripNote.findMany({ where: { userId, trip: { userId } } });
   const auditLogs = await prisma.auditLog.findMany({ where: { userId }, orderBy: { createdAt: 'desc' } });
 
   return { trips, vendors, clients, friends, expenses, bookings, checklistItems, tripNotes, auditLogs };
@@ -463,13 +583,31 @@ export async function deleteAllUserData(userId: string) {
     await prisma.tripFriend.deleteMany({ where: { tripId: { in: tripIds } } });
   }
 
-  // Standalone rows (not tied to a trip, or with their own User FK)
-  await prisma.meeting.deleteMany({ where: { userId } });           // Meeting: no cascade on User
-  await prisma.booking.deleteMany({ where: { userId } });           // catches tripId=null bookings
-  await prisma.expense.deleteMany({ where: { userId } });           // defensive: any orphan expenses
-  await prisma.checklistItem.deleteMany({ where: { userId } });     // defensive
-  await prisma.tripNote.deleteMany({ where: { userId } });          // defensive
-  await prisma.tripAttachment.deleteMany({ where: { userId } });    // defensive
+  // Hand back what this user contributed to OTHER people's trips before we
+  // start deleting by userId. On these five models userId is the author, so a
+  // departing collaborator's rows are live content inside a trip that is not
+  // theirs — deleting them would strip expenses, notes, checklist items,
+  // bookings and files out of a stranger's trip as a side effect of one
+  // person closing their account. Reattributing to the trip owner keeps the
+  // trip whole and leaves nothing pointing at the User row we are about to
+  // drop. Raw SQL because Prisma cannot set a column from a joined row.
+  await prisma.$executeRaw`UPDATE "Expense" e SET "userId" = t."userId" FROM "Trip" t WHERE e."tripId" = t."id" AND e."userId" = ${userId} AND t."userId" <> ${userId}`;
+  await prisma.$executeRaw`UPDATE "Booking" b SET "userId" = t."userId" FROM "Trip" t WHERE b."tripId" = t."id" AND b."userId" = ${userId} AND t."userId" <> ${userId}`;
+  await prisma.$executeRaw`UPDATE "ChecklistItem" c SET "userId" = t."userId" FROM "Trip" t WHERE c."tripId" = t."id" AND c."userId" = ${userId} AND t."userId" <> ${userId}`;
+  await prisma.$executeRaw`UPDATE "TripNote" n SET "userId" = t."userId" FROM "Trip" t WHERE n."tripId" = t."id" AND n."userId" = ${userId} AND t."userId" <> ${userId}`;
+  await prisma.$executeRaw`UPDATE "TripAttachment" a SET "userId" = t."userId" FROM "Trip" t WHERE a."tripId" = t."id" AND a."userId" = ${userId} AND t."userId" <> ${userId}`;
+
+  // Standalone rows (not tied to a trip, or with their own User FK). The trip
+  // clause is belt-and-braces against the reassignment above ever being skipped
+  // or reordered: a leftover row then fails the User delete loudly instead of
+  // quietly taking someone else's data with it.
+  const onMyOwnTrip = { trip: { userId } };
+  await prisma.meeting.deleteMany({ where: { userId } });                            // Meeting: no cascade on User
+  await prisma.booking.deleteMany({ where: { userId, OR: [{ tripId: null }, onMyOwnTrip] } }); // catches tripId=null bookings
+  await prisma.expense.deleteMany({ where: { userId, ...onMyOwnTrip } });            // defensive: any orphan expenses
+  await prisma.checklistItem.deleteMany({ where: { userId, ...onMyOwnTrip } });      // defensive
+  await prisma.tripNote.deleteMany({ where: { userId, ...onMyOwnTrip } });           // defensive
+  await prisma.tripAttachment.deleteMany({ where: { userId, ...onMyOwnTrip } });     // defensive
 
   await prisma.trip.deleteMany({ where: { userId } });
   await prisma.vendor.deleteMany({ where: { userId } });
@@ -498,7 +636,7 @@ function generateShareToken(): string {
 }
 
 export async function getTripShareInfo(tripId: string, userId: string) {
-  await verifyTripOwnership(tripId, userId);
+  await requireTripAccess(tripId, userId, 'owner');
   const trip = await prisma.trip.findUnique({
     where: { id: tripId },
     select: { shareToken: true, shareEnabled: true, shareExpiresAt: true },
@@ -508,7 +646,7 @@ export async function getTripShareInfo(tripId: string, userId: string) {
 }
 
 export async function enableTripShare(tripId: string, userId: string, expiresAt: Date | null) {
-  await verifyTripOwnership(tripId, userId);
+  await requireTripAccess(tripId, userId, 'owner');
 
   // ALWAYS rotate the token on enable. Reusing an old token would let anyone
   // who previously had the URL (e.g. a revoked client) regain access the
@@ -527,7 +665,7 @@ export async function enableTripShare(tripId: string, userId: string, expiresAt:
 }
 
 export async function disableTripShare(tripId: string, userId: string) {
-  await verifyTripOwnership(tripId, userId);
+  await requireTripAccess(tripId, userId, 'owner');
   // The old token stays in the row but is inert (shareEnabled=false gates
   // all public lookups). Re-enabling will rotate to a fresh token anyway.
   return prisma.trip.update({
@@ -538,7 +676,7 @@ export async function disableTripShare(tripId: string, userId: string) {
 }
 
 export async function updateTripShareExpiry(tripId: string, userId: string, expiresAt: Date | null) {
-  await verifyTripOwnership(tripId, userId);
+  await requireTripAccess(tripId, userId, 'owner');
   return prisma.trip.update({
     where: { id: tripId },
     data: { shareExpiresAt: expiresAt },

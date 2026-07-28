@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getBookings, createBooking } from '@/lib/travelmanager/bookings';
 import { requireAuth } from '@/lib/travelmanager/auth';
+import { requireTripAccess, TripAccessError } from '@/lib/travelmanager/trip-access';
 import { rateLimit } from '@/lib/rate-limit';
 import { sanitizeObject, validateUUID, validateEnum, validateDateString, BOOKING_TYPE_VALUES } from '@/lib/sanitize';
 
@@ -18,9 +19,14 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     if (!validateUUID(id)) {
       return NextResponse.json({ error: 'Invalid trip ID' }, { status: 400 });
     }
+    await requireTripAccess(id, user.id, 'view');
+
     const bookings = await getBookings(id, user.id);
     return NextResponse.json(bookings);
   } catch (error) {
+    if (error instanceof TripAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('Error fetching bookings:', error instanceof Error ? error.message : error);
     return NextResponse.json({ error: 'Failed to fetch bookings' }, { status: 500 });
   }
@@ -38,6 +44,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (!validateUUID(tripId)) {
       return NextResponse.json({ error: 'Invalid trip ID' }, { status: 400 });
     }
+
+    await requireTripAccess(tripId, user.id, 'edit');
 
     const body = await request.json();
     const sanitized = sanitizeObject(body, BOOKING_ALLOWED_FIELDS);
@@ -57,6 +65,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const booking = await createBooking({ ...sanitized, tripId } as Parameters<typeof createBooking>[0], user.id);
     return NextResponse.json(booking, { status: 201 });
   } catch (error) {
+    if (error instanceof TripAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('Error creating booking:', error instanceof Error ? error.message : error);
     return NextResponse.json({ error: 'Failed to create booking' }, { status: 500 });
   }

@@ -40,6 +40,8 @@ model User {
   linkedAsFriend         Friend[]     @relation("FriendLinkedUser")
   sentFriendRequests     Friendship[] @relation("FriendshipRequester")
   receivedFriendRequests Friendship[] @relation("FriendshipAddressee")
+  tripCollaborations     TripCollaborator[] @relation("TripCollaboratorUser")
+  sentTripInvites        TripCollaborator[] @relation("TripCollaboratorInviter")
   attachments TripAttachment[]
   auditLogs   AuditLog[]
   expenses        Expense[]
@@ -160,6 +162,7 @@ model Trip {
   vendors     TripVendor[]
   clients     TripClient[]
   friends     TripFriend[]
+  collaborators TripCollaborator[]
   itinerary   ItineraryItem[]
   attachments TripAttachment[]
   stops       TripStop[]
@@ -331,6 +334,48 @@ model TripFriend {
 enum FriendshipStatus {
   PENDING
   ACCEPTED
+}
+
+enum TripRole {
+  VIEWER
+  EDITOR
+}
+
+enum TripCollaboratorStatus {
+  PENDING
+  ACCEPTED
+}
+
+/// A friend granted access to someone else's Trip.
+///
+/// The trip OWNER is Trip.userId and is never a row here — modelling the owner
+/// as a row too would create two sources of truth and an "owner can be removed"
+/// failure mode.
+///
+/// Access requires status = ACCEPTED *and* a live ACCEPTED Friendship between
+/// userId and the trip owner, re-checked on every request. The friendship is a
+/// continuing precondition, not a one-time gate: removeFriendship() deletes only
+/// the Friendship row, so anything cached or purely row-based would leave an
+/// unfriended user with access forever. Never key access off Friend.linkedUserId
+/// — that field survives unfriending by design.
+model TripCollaborator {
+  id          String   @id @default(cuid())
+  tripId      String
+  trip        Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation("TripCollaboratorUser", fields: [userId], references: [id], onDelete: Cascade)
+  invitedById String
+  invitedBy   User     @relation("TripCollaboratorInviter", fields: [invitedById], references: [id], onDelete: Cascade)
+  role        TripRole               @default(VIEWER)
+  status      TripCollaboratorStatus @default(PENDING)
+  acceptedAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Doubles as duplicate-invite protection: P2002 becomes a clean 409.
+  @@unique([tripId, userId])
+  @@index([userId, status])
+  @@index([tripId])
 }
 
 // A real account-to-account connection (mutual). Distinct from Friend, which

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { reorderStops } from '@/lib/travelmanager/stops';
 import { requireAuth } from '@/lib/travelmanager/auth';
+import { requireTripAccess, TripAccessError } from '@/lib/travelmanager/trip-access';
 import { rateLimit } from '@/lib/rate-limit';
 import { sanitizeObject, validateUUID } from '@/lib/sanitize';
 
@@ -10,7 +11,7 @@ import { sanitizeObject, validateUUID } from '@/lib/sanitize';
  *
  * Mirrors /api/itinerary/reorder: updates `sortOrder` for every stop to
  * match its position in `orderedIds`, in a single transaction, after
- * verifying trip ownership and that every id belongs to the trip.
+ * verifying trip access and that every id belongs to the trip.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -40,9 +41,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'orderedIds must be valid IDs' }, { status: 400 });
     }
 
+    await requireTripAccess(tripId, user.id, 'edit');
+
     await reorderStops(tripId, user.id, orderedIds);
     return NextResponse.json({ success: true });
   } catch (error) {
+    if (error instanceof TripAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('Error reordering stops:', error instanceof Error ? error.message : error);
     return NextResponse.json({ error: 'Failed to reorder stops' }, { status: 500 });
   }
