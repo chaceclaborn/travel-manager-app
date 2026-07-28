@@ -102,7 +102,17 @@ export function useAuth() {
   const [authKnownBad, setAuthKnownBad] = useState(false);
 
   useEffect(() => {
-    if (!supabase?.auth) return;
+    if (!supabase?.auth) {
+      // No client at all — the build is missing NEXT_PUBLIC_SUPABASE_URL /
+      // ANON_KEY, so nothing can ever authenticate. Declare auth bad so the
+      // layout sends the user to the tour instead of rendering an empty shell
+      // forever. `loading` is already false here (it is derived from the same
+      // condition), so without this the screen just stays blank with no
+      // redirect and no error — which is exactly what a misconfigured build
+      // looked like on the Simulator.
+      setAuthKnownBad(true);
+      return;
+    }
 
     /**
      * Cold-launch auth, offline-tolerant.
