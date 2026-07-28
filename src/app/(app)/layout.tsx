@@ -51,7 +51,7 @@ export default function TravelManagerLayout({
   const { isAdmin, checked: isAdminChecked } = useIsAdmin();
   const pathname = usePathname();
   const router = useRouter();
-  const { user, loading, signOut } = useAuth();
+  const { user, loading, authKnownBad, signOut } = useAuth();
 
   const PUBLIC_PATHS = ['/tour', '/privacy', '/terms', '/support'];
   const isPublicPage = PUBLIC_PATHS.includes(pathname);
@@ -115,11 +115,17 @@ export default function TravelManagerLayout({
 
   // Redirect unauthenticated users to the tour page.
   // Must run in an effect (not during render) — render must be a pure function.
+  //
+  // Gated on `authKnownBad`, NOT on `!user`: a cold launch with no network used
+  // to leave `user` null (getUser() is a network call) and bounce a signed-in
+  // traveller to the marketing page — precisely when they need their itinerary
+  // most. `authKnownBad` is only set when the SERVER rejects the token or the
+  // SDK reports a local sign-out, so a transport failure never signs anyone out.
   useEffect(() => {
-    if (!loading && !user && !isPublicPage) {
+    if (!loading && authKnownBad && !isPublicPage) {
       router.push('/tour');
     }
-  }, [loading, user, isPublicPage, router]);
+  }, [loading, authKnownBad, isPublicPage, router]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
