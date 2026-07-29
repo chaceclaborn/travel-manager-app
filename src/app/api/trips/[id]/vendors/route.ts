@@ -3,6 +3,7 @@ import { getTripVendors, linkVendorToTrip, unlinkVendorFromTrip } from '@/lib/tr
 import { requireAuth } from '@/lib/travelmanager/auth';
 import { rateLimit } from '@/lib/rate-limit';
 import { sanitizeString, validateUUID } from '@/lib/sanitize';
+import { TripAccessError } from '@/lib/travelmanager/trip-access';
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -19,6 +20,12 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const vendors = await getTripVendors(id, user.id);
     return NextResponse.json(vendors);
   } catch (error) {
+    // These delegate to helpers that authorize via requireTripAccess, so
+    // without this a denial escapes as a 500 — an authorization failure
+    // dressed up as a server fault.
+    if (error instanceof TripAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('Error fetching trip vendors:', error instanceof Error ? error.message : error);
     return NextResponse.json({ error: 'Failed to fetch trip vendors' }, { status: 500 });
   }
@@ -54,6 +61,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const link = await linkVendorToTrip(id, vendorId, user.id, sanitizedNotes);
     return NextResponse.json(link, { status: 201 });
   } catch (error) {
+    // These delegate to helpers that authorize via requireTripAccess, so
+    // without this a denial escapes as a 500 — an authorization failure
+    // dressed up as a server fault.
+    if (error instanceof TripAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('Error linking vendor to trip:', error instanceof Error ? error.message : error);
     return NextResponse.json({ error: 'Failed to link vendor to trip' }, { status: 500 });
   }
