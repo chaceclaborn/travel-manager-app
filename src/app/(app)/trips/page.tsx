@@ -19,6 +19,7 @@ import {
   TMCardGridSkeleton,
 } from '@/components/travelmanager/TMEmptyState';
 import { TMPageShell, TMScreenHeader } from '@/components/travelmanager/TMPageShell';
+import { TripInvitations } from '@/components/travelmanager/TripInvitations';
 import { TMDeleteDialog } from '@/components/travelmanager/TMDeleteDialog';
 import { useTMToast } from '@/components/travelmanager/TMToast';
 
@@ -79,6 +80,8 @@ interface TripListItem {
   vendors?: unknown[];
   clients?: unknown[];
   _count?: { vendors: number; clients: number };
+  /** Absent on owner-only payloads; see the note in detail-content.tsx. */
+  viewerRole?: 'OWNER' | 'EDITOR' | 'VIEWER';
 }
 
 function TripsPageContent() {
@@ -307,6 +310,11 @@ function TripsPageContent() {
         }
       />
 
+      {/* Where the invite push lands (url: '/trips'), so it goes first —
+          a notification that drops you somewhere you then have to search is
+          worse than none. Renders nothing when there are no invitations. */}
+      <TripInvitations onAccepted={fetchTrips} />
+
       {/* Filter row: search, type segments, status, sort. Stays mounted even
           when the result set is empty — that's how the user sees *why*.
 
@@ -447,19 +455,24 @@ function TripsPageContent() {
           <div className="grid gap-2 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
             {filtered.map((trip) => {
               const isSelected = selectedIds.has(trip.id);
+              // Bulk delete is deliberately owner-only server-side (it filters
+              // on userId and must never widen), so a shared trip that could be
+              // ticked would silently do nothing on submit. Better not to offer
+              // the checkbox at all.
+              const selectable = (trip.viewerRole ?? 'OWNER') === 'OWNER';
               return (
                 <div
                   key={trip.id}
                   className={`relative min-w-0 rounded-[14px] ${selectMode && isSelected ? 'ring-2 ring-tm-accent ring-offset-2' : ''}`}
                   onClick={(e) => {
-                    if (selectMode) {
+                    if (selectMode && selectable) {
                       e.preventDefault();
                       e.stopPropagation();
                       toggleSelected(trip.id, !isSelected);
                     }
                   }}
                 >
-                  {selectMode && (
+                  {selectMode && selectable && (
                     <label
                       className="absolute left-2 top-2 z-10 flex cursor-pointer items-center justify-center rounded bg-white/95 p-1.5 shadow-sm ring-1 ring-tm-line"
                       onClick={(e) => e.stopPropagation()}

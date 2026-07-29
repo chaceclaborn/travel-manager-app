@@ -34,3 +34,54 @@ CREATE INDEX IF NOT EXISTS "Friend_linkedUserId_idx"
 CREATE UNIQUE INDEX IF NOT EXISTS "Friend_userId_linkedUserId_key"
   ON "Friend"("userId", "linkedUserId")
   WHERE "linkedUserId" IS NOT NULL;
+
+-- Backfill: connections accepted BEFORE this feature existed would otherwise
+-- stay inert forever — the contact is only created at accept time, and those
+-- accepts already happened. Create the missing contact for both sides of every
+-- ACCEPTED friendship.
+--
+-- Idempotent via NOT EXISTS rather than ON CONFLICT, which would have to
+-- restate the partial index predicate. Also skips anyone who already has a
+-- contact for that account, so re-running is a no-op.
+INSERT INTO "Friend" ("id", "userId", "name", "email", "linkedUserId", "createdAt", "updatedAt")
+SELECT
+  gen_random_uuid()::text,
+  owner_id,
+  COALESCE(NULLIF(btrim(u."name"), ''), '@' || u."username", 'Friend'),
+  u."email",
+  other_id,
+  NOW(),
+  NOW()
+FROM (
+  -- Both directions of every accepted connection.
+  SELECT "requesterId" AS owner_id, "addresseeId" AS other_id
+    FROM "Friendship" WHERE "status" = 'ACCEPTED'
+  UNION ALL
+  SELECT "addresseeId" AS owner_id, "requesterId" AS other_id
+    FROM "Friendship" WHERE "status" = 'ACCEPTED'
+) pairs
+JOIN "User" u ON u."id" = pairs.other_id
+WHERE NOT EXISTS (
+  SELECT 1 FROM "Friend" f
+  WHERE f."userId" = pairs.owner_id AND f."linkedUserId" = pairs.other_id
+);
+
+-- Adopt, rather than duplicate: if someone already had a hand-typed contact
+-- with the same email as a newly connected account, link that row instead of
+-- leaving two contacts for one person.
+UPDATE "Friend" f
+SET "linkedUserId" = u."id"
+FROM "User" u
+WHERE f."linkedUserId" IS NULL
+  AND f."email" IS NOT NULL
+  AND lower(f."email") = lower(u."email")
+  AND EXISTS (
+    SELECT 1 FROM "Friendship" fs
+    WHERE fs."status" = 'ACCEPTED'
+      AND ((fs."requesterId" = f."userId" AND fs."addresseeId" = u."id")
+        OR (fs."addresseeId" = f."userId" AND fs."requesterId" = u."id"))
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM "Friend" g
+    WHERE g."userId" = f."userId" AND g."linkedUserId" = u."id"
+  );

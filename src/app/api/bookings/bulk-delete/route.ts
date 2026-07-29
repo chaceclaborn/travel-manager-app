@@ -28,15 +28,33 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No valid ids provided' }, { status: 400 });
     }
 
-    // Verify ownership inside a transaction, then delete atomically
+    // `userId` on a Booking means AUTHOR, not owner — collaboration changed
+    // that. A bare `{ userId: user.id }` filter therefore stopped being an
+    // ownership check: a collaborator who booked flights on someone else's trip
+    // could still hard-delete those rows after being demoted to VIEWER,
+    // removed from the trip, or unfriended entirely, because their user id is
+    // still stamped on them.
+    //
+    // Restrict to rows that are genuinely the caller's to destroy: unattached
+    // bookings, or bookings on a trip they own. Anything on someone else's trip
+    // must go through DELETE /api/bookings/[id], which requires 'edit' on that
+    // trip and re-checks the friendship. Deliberately NOT widened to
+    // collaborators — bulk delete is an owner-scale action.
+    const deletableByCaller = {
+      userId: user.id,
+      OR: [{ tripId: null }, { trip: { userId: user.id } }],
+    };
+
     const deletedCount = await prisma.$transaction(async (tx) => {
       const owned = await tx.booking.findMany({
-        where: { id: { in: ids }, userId: user.id },
+        where: { id: { in: ids }, ...deletableByCaller },
         select: { id: true },
       });
       const ownedIds = owned.map((b) => b.id);
       if (ownedIds.length === 0) return 0;
-      const result = await tx.booking.deleteMany({ where: { id: { in: ownedIds }, userId: user.id } });
+      const result = await tx.booking.deleteMany({
+        where: { id: { in: ownedIds }, ...deletableByCaller },
+      });
       return result.count;
     });
 

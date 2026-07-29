@@ -3,6 +3,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import prisma from '@/lib/prisma';
 import { requireAuth } from '@/lib/travelmanager/auth';
+import { requireTripAccess, TripAccessError } from '@/lib/travelmanager/trip-access';
 import { rateLimit } from '@/lib/rate-limit';
 import { validateUUID } from '@/lib/sanitize';
 import { formatDate as _formatDate } from '@/lib/date-utils';
@@ -67,8 +68,14 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid trip ID' }, { status: 400 });
     }
 
-    const trip = await prisma.trip.findFirst({
-      where: { id, userId: user.id },
+    // Owner-only, and it is the PDF's contents that decide this: the query below
+    // hydrates full Vendor rows (name, email, phone) into a "Vendor Contacts"
+    // table, i.e. the owner's CRM. Widening this to 'view' means first dropping
+    // the vendors include and the section that prints it — a separate change.
+    await requireTripAccess(id, user.id, 'owner');
+
+    const trip = await prisma.trip.findUnique({
+      where: { id },
       include: {
         itinerary: { orderBy: [{ date: 'asc' }, { sortOrder: 'asc' }] },
         expenses: { orderBy: { date: 'asc' } },
@@ -255,6 +262,9 @@ export async function GET(
       },
     });
   } catch (error) {
+    if (error instanceof TripAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('Error generating trip report:', error instanceof Error ? error.message : error);
     return NextResponse.json({ error: 'Failed to generate report' }, { status: 500 });
   }

@@ -23,7 +23,8 @@
     "verify:mobile": "node scripts/verify-mobile-bundle.mjs",
     "cap:ios": "yarn cap:sync && npx cap open ios",
     "mobile:init": "npx cap add ios",
-    "postinstall": "patch-package"
+    "postinstall": "patch-package",
+    "test:integration": "vitest run --config vitest.integration.config.ts"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.0",

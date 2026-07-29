@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTripNotes, createTripNote } from '@/lib/travelmanager/notes';
 import { requireAuth } from '@/lib/travelmanager/auth';
+import { requireTripAccess, TripAccessError } from '@/lib/travelmanager/trip-access';
 import { rateLimit } from '@/lib/rate-limit';
 import { sanitizeObject, validateUUID, validateDateString } from '@/lib/sanitize';
 
@@ -16,9 +17,14 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     if (!validateUUID(id)) {
       return NextResponse.json({ error: 'Invalid trip ID' }, { status: 400 });
     }
+    await requireTripAccess(id, user.id, 'view');
+
     const notes = await getTripNotes(id, user.id);
     return NextResponse.json(notes);
   } catch (error) {
+    if (error instanceof TripAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('Error fetching notes:', error instanceof Error ? error.message : error);
     return NextResponse.json({ error: 'Failed to fetch notes' }, { status: 500 });
   }
@@ -36,6 +42,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (!validateUUID(tripId)) {
       return NextResponse.json({ error: 'Invalid trip ID' }, { status: 400 });
     }
+
+    await requireTripAccess(tripId, user.id, 'edit');
 
     const body = await request.json();
     const sanitized = sanitizeObject(body, ['content', 'date']);
@@ -55,6 +63,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const note = await createTripNote({ ...sanitized, tripId } as Parameters<typeof createTripNote>[0], user.id);
     return NextResponse.json(note, { status: 201 });
   } catch (error) {
+    if (error instanceof TripAccessError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('Error creating note:', error instanceof Error ? error.message : error);
     return NextResponse.json({ error: 'Failed to create note' }, { status: 500 });
   }

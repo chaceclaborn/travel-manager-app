@@ -1,10 +1,9 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Search, UserPlus, Check, X, Loader2, Users, Clock } from 'lucide-react';
+import { Search, UserPlus, Check, X, Loader2, Clock } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useTMToast } from '@/components/travelmanager/TMToast';
 import { TMDeleteDialog } from '@/components/travelmanager/TMDeleteDialog';
@@ -21,7 +20,7 @@ function initials(user: PublicUserSummary): string {
     .toUpperCase();
 }
 
-function UserAvatar({ user, className }: { user: PublicUserSummary; className?: string }) {
+export function UserAvatar({ user, className }: { user: PublicUserSummary; className?: string }) {
   return (
     <Avatar className={className}>
       {user.avatarUrl && <AvatarImage src={user.avatarUrl} alt={user.name || user.username || ''} />}
@@ -32,13 +31,48 @@ function UserAvatar({ user, className }: { user: PublicUserSummary; className?: 
   );
 }
 
-function UserIdentity({ user }: { user: PublicUserSummary }) {
+export function UserIdentity({ user }: { user: PublicUserSummary }) {
   return (
     <div className="min-w-0 flex-1">
-      {user.name && <p className="truncate text-sm font-semibold text-slate-800">{user.name}</p>}
-      <p className="truncate text-xs text-slate-500">
+      {user.name && <p className="truncate text-[14px] font-medium text-tm-ink">{user.name}</p>}
+      <p className="truncate text-[12px] text-tm-subtle">
         {user.username ? `@${user.username}` : 'No username'}
       </p>
+    </div>
+  );
+}
+
+/**
+ * One person, as a row.
+ *
+ * These were each a <Card>, which is `flex flex-col gap-6 … py-6` at its base.
+ * Adding `flex items-center` to that does nothing — flex-col wins on stylesheet
+ * order — so every connection rendered as a ~170px centred column: avatar on
+ * its own line, then name, then handle, then the button. Three people filled a
+ * phone screen. Explicit flex-row here, and the group sits in ONE bordered
+ * container with dividers rather than a card per person.
+ */
+export function ConnectionRow({
+  user,
+  children,
+}: {
+  user: PublicUserSummary;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div className="flex min-h-[56px] flex-row items-center gap-3 px-3 py-2.5">
+      <UserAvatar user={user} className="size-9 shrink-0" />
+      <UserIdentity user={user} />
+      <div className="flex shrink-0 flex-row items-center gap-1.5">{children}</div>
+    </div>
+  );
+}
+
+/** Bordered container for a run of ConnectionRows. */
+export function RowGroup({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="divide-y divide-tm-divider overflow-hidden rounded-[14px] border border-tm-line bg-tm-surface shadow-tm-card">
+      {children}
     </div>
   );
 }
@@ -189,16 +223,10 @@ export function ConnectionsPanel() {
   };
 
   return (
-    <section className="space-y-5">
-      <div className="flex items-center gap-2">
-        <Users className="size-5 text-emerald-500" />
-        <h2 className="text-lg font-semibold text-slate-800">Friends</h2>
-        {accepted.length > 0 && (
-          <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
-            {accepted.length}
-          </span>
-        )}
-      </div>
+    <section className="space-y-4">
+      {/* The page header already says "Friends"; a second h2 saying it again
+          cost a whole row on a phone. The count moves onto the section
+          heading below, where it labels the list it actually counts. */}
 
       {/* Search / add by username */}
       <div className="space-y-3">
@@ -217,16 +245,14 @@ export function ConnectionsPanel() {
         </div>
 
         {query.trim() && (
-          <Card className="divide-y divide-slate-100 overflow-hidden p-0">
+          <RowGroup>
             {visibleResults.length === 0 ? (
-              <p className="px-4 py-3 text-sm text-slate-500">
+              <p className="px-4 py-3 text-[13px] text-tm-subtle">
                 {searching ? 'Searching…' : 'No matching people found.'}
               </p>
             ) : (
               visibleResults.map((user) => (
-                <div key={user.id} className="flex items-center gap-3 px-4 py-2.5">
-                  <UserAvatar user={user} />
-                  <UserIdentity user={user} />
+                <ConnectionRow key={user.id} user={user}>
                   <Button
                     size="sm"
                     onClick={() => addFriend(user)}
@@ -240,64 +266,63 @@ export function ConnectionsPanel() {
                     )}
                     Add
                   </Button>
-                </div>
+                </ConnectionRow>
               ))
             )}
-          </Card>
+          </RowGroup>
         )}
       </div>
 
       {/* Incoming requests */}
       {incoming.length > 0 && (
         <div className="space-y-2">
-          <h3 className="text-sm font-medium text-slate-600">Requests</h3>
-          <div className="space-y-2">
+          <h3 className="tm-label-upper px-1">Requests</h3>
+          <RowGroup>
             {incoming.map((c) => (
-              <Card key={c.friendshipId} className="flex items-center gap-3 p-3">
-                <UserAvatar user={c.user} />
-                <UserIdentity user={c.user} />
-                <div className="flex items-center gap-1.5">
-                  <Button
-                    size="sm"
-                    onClick={() => acceptRequest(c)}
-                    disabled={busyId === c.friendshipId}
-                    className="bg-emerald-500 hover:bg-emerald-600 text-white"
-                  >
-                    {busyId === c.friendshipId ? (
-                      <Loader2 className="size-3.5 animate-spin" />
-                    ) : (
-                      <Check className="size-3.5" />
-                    )}
-                    Accept
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => deleteConnection(c, 'Request declined')}
-                    disabled={busyId === c.friendshipId}
-                  >
-                    <X className="size-3.5" />
-                    Decline
-                  </Button>
-                </div>
-              </Card>
+              <ConnectionRow key={c.friendshipId} user={c.user}>
+                <Button
+                  size="sm"
+                  onClick={() => acceptRequest(c)}
+                  disabled={busyId === c.friendshipId}
+                  className="bg-emerald-500 text-white hover:bg-emerald-600"
+                >
+                  {busyId === c.friendshipId ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <Check className="size-3.5" />
+                  )}
+                  Accept
+                </Button>
+                {/* Icon-only below sm: "Accept" + "Decline" side by side pushed
+                    the name into a truncate on a phone. */}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => deleteConnection(c, 'Request declined')}
+                  disabled={busyId === c.friendshipId}
+                  aria-label="Decline request"
+                >
+                  <X className="size-3.5" />
+                  <span className="hidden sm:inline">Decline</span>
+                </Button>
+              </ConnectionRow>
             ))}
-          </div>
+          </RowGroup>
         </div>
       )}
 
       {/* Outgoing / pending */}
       {outgoing.length > 0 && (
         <div className="space-y-2">
-          <h3 className="text-sm font-medium text-slate-600">Sent</h3>
-          <div className="space-y-2">
+          <h3 className="tm-label-upper px-1">Sent</h3>
+          <RowGroup>
             {outgoing.map((c) => (
-              <Card key={c.friendshipId} className="flex items-center gap-3 p-3">
-                <UserAvatar user={c.user} />
-                <UserIdentity user={c.user} />
-                <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-500">
-                  <Clock className="size-3.5" />
-                  Requested
+              <ConnectionRow key={c.friendshipId} user={c.user}>
+                {/* The clock icon alone carries "pending" on a phone; the word
+                    only earns its width once there is room for it. */}
+                <span className="inline-flex flex-row items-center gap-1 text-[12px] font-medium text-tm-subtle">
+                  <Clock className="size-3.5" aria-hidden="true" />
+                  <span className="hidden sm:inline">Requested</span>
                 </span>
                 <Button
                   size="sm"
@@ -307,32 +332,30 @@ export function ConnectionsPanel() {
                 >
                   {busyId === c.friendshipId ? <Loader2 className="size-3.5 animate-spin" /> : 'Cancel'}
                 </Button>
-              </Card>
+              </ConnectionRow>
             ))}
-          </div>
+          </RowGroup>
         </div>
       )}
 
       {/* Accepted friends */}
       {accepted.length > 0 && (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {accepted.map((c) => (
-            <Card
-              key={c.friendshipId}
-              className="flex items-center gap-3 border-emerald-100 p-4 ring-1 ring-emerald-500/5"
-            >
-              <UserAvatar user={c.user} className="size-10" />
-              <UserIdentity user={c.user} />
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setRemoveTarget(c)}
-                className="text-slate-500 hover:text-red-600"
-              >
-                Remove
-              </Button>
-            </Card>
-          ))}
+        <div className="space-y-2">
+          <h3 className="tm-label-upper px-1">Friends · {accepted.length}</h3>
+          <RowGroup>
+            {accepted.map((c) => (
+              <ConnectionRow key={c.friendshipId} user={c.user}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setRemoveTarget(c)}
+                  className="text-tm-subtle hover:text-tm-danger"
+                >
+                  Remove
+                </Button>
+              </ConnectionRow>
+            ))}
+          </RowGroup>
         </div>
       )}
 

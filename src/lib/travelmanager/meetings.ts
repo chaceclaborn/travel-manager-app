@@ -1,10 +1,24 @@
 import prisma from '@/lib/prisma';
+import { requireTripAccess } from './trip-access';
 import type { CreateMeetingInput, UpdateMeetingInput } from './types';
 
-async function verifyTripOwnership(tripId: string, userId: string) {
-  const trip = await prisma.trip.findFirst({ where: { id: tripId, userId } });
-  if (!trip) throw new Error('Trip not found');
-  return trip;
+/**
+ * Meetings are the one trip child that does not become collaborative.
+ *
+ * Every other child is authorized by its trip, so widening the trip widens the
+ * child. A Meeting is authorized purely by meeting.userId, and its trip relation
+ * is onDelete: SetNull — so it is the only child that outlives the trip it was
+ * attached to. A collaborator attaching a meeting would therefore create a row on
+ * the owner's trip that the owner can neither read nor delete, and that survives
+ * them deleting the trip entirely. Requiring 'owner' to attach keeps the meeting's
+ * two authorities — its userId and its tripId — pointing at the same person.
+ *
+ * Reads stay narrow for the same reason: getMyMeetings and getMeetingById filter
+ * on userId alone, so there is nothing to widen without giving meetings a second
+ * access model.
+ */
+async function requireMeetingTripOwner(tripId: string, userId: string) {
+  return requireTripAccess(tripId, userId, 'owner');
 }
 
 async function verifyClientOwnership(clientId: string, userId: string) {
@@ -37,7 +51,7 @@ export async function getMeetingById(id: string, userId: string) {
 }
 
 export async function createMeeting(data: CreateMeetingInput, userId: string) {
-  if (data.tripId) await verifyTripOwnership(data.tripId, userId);
+  if (data.tripId) await requireMeetingTripOwner(data.tripId, userId);
   if (data.clientId) await verifyClientOwnership(data.clientId, userId);
 
   return prisma.meeting.create({
@@ -59,7 +73,7 @@ export async function updateMeeting(id: string, data: UpdateMeetingInput, userId
   const existing = await prisma.meeting.findUnique({ where: { id }, select: { userId: true } });
   if (!existing || existing.userId !== userId) throw new Error('Meeting not found');
 
-  if (data.tripId) await verifyTripOwnership(data.tripId, userId);
+  if (data.tripId) await requireMeetingTripOwner(data.tripId, userId);
   if (data.clientId) await verifyClientOwnership(data.clientId, userId);
 
   const updateData: Record<string, unknown> = {};
