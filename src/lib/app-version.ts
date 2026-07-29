@@ -20,7 +20,11 @@ export const MIN_SUPPORTED_APP_VERSION = '1.0';
  * The newest version live on the App Store. Drives the soft "update
  * available" banner. Update when a release is approved (not merely submitted).
  */
-export const LATEST_APP_VERSION = '1.0.2';
+// 1.0.3 is READY_FOR_SALE (verified against the ASC API). This was left at
+// 1.0.2 after that release, which meant 1.0.2 users were never shown the
+// update banner for it. Raise to 1.0.4 only once 1.0.4 is APPROVED — per the
+// note above, this tracks what is live, not what has been submitted.
+export const LATEST_APP_VERSION = '1.0.3';
 
 export const IOS_APP_STORE_URL = 'https://apps.apple.com/app/id6787768170';
 
