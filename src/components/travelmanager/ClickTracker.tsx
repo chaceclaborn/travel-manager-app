@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef } from 'react';
 import { isNativePlatform } from '@/lib/mobile-auth';
+import { detectRageClick, type ClickPoint } from '@/lib/analytics/rage-click';
 
 // Users can opt out of first-party usage analytics from Settings. The flag is
 // stored per-device in localStorage and checked before any event is recorded.
@@ -36,27 +37,13 @@ function getTrackLabel(el: Element | null): string | null {
   return null;
 }
 
-// Rage-click thresholds. A rage click is the recognised signal for "this thing
-// looks tappable and isn't" / "this is stuck": several clicks in fast succession
-// on effectively the same spot.
-//
-// The previous heuristic recorded `frustration:whitespace` for EVERY click that
-// wasn't near an interactive element, which made map drags, card taps, text
-// selection and modal-backdrop dismissals all read as user frustration — 76% of
-// all recorded events, drowning the real signal. These thresholds are the
-// conventional ones (Hotjar/FullStory use 3 clicks within ~500ms in a small
-// radius), and they only fire on genuine repetition.
-const RAGE_CLICK_COUNT = 3;
-const RAGE_WINDOW_MS = 500;
-const RAGE_RADIUS_PX = 40;
-
 type QueuedEvent = { type: string; label: string; page: string; platform: string };
 
 export function ClickTracker() {
   const queue = useRef<QueuedEvent[]>([]);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Sliding window of recent click positions, used only for rage detection.
-  const recentClicks = useRef<{ x: number; y: number; t: number }[]>([]);
+  const recentClicks = useRef<ClickPoint[]>([]);
 
   const flush = () => {
     if (queue.current.length === 0) return;
@@ -122,26 +109,21 @@ export function ClickTracker() {
       // Rage detection runs on every click, including ones that hit a real
       // control — repeatedly stabbing a button that isn't responding is exactly
       // the case worth catching, and the old heuristic missed it entirely.
-      const now = Date.now();
-      const recent = recentClicks.current.filter((c) => now - c.t < RAGE_WINDOW_MS);
-      recent.push({ x: e.clientX, y: e.clientY, t: now });
-      recentClicks.current = recent;
-
-      if (recent.length >= RAGE_CLICK_COUNT) {
-        const first = recent[0];
-        const clustered = recent.every(
-          (c) => Math.hypot(c.x - first.x, c.y - first.y) <= RAGE_RADIUS_PX
-        );
-        if (clustered) {
-          queue.current.push({
-            type: 'frustration',
-            label: trackLabel ? `rage:${trackLabel}` : 'rage',
-            page,
-            platform,
-          });
-          // Reset so one long burst reports once, not once per extra click.
-          recentClicks.current = [];
-        }
+      // The thresholds live in lib/analytics/rage-click.ts so they are testable
+      // without a DOM; this component owns only the buffer.
+      const { buffer, isRage } = detectRageClick(recentClicks.current, {
+        x: e.clientX,
+        y: e.clientY,
+        t: Date.now(),
+      });
+      recentClicks.current = buffer;
+      if (isRage) {
+        queue.current.push({
+          type: 'frustration',
+          label: trackLabel ? `rage:${trackLabel}` : 'rage',
+          page,
+          platform,
+        });
       }
 
       if (queue.current.length >= 10) flush();

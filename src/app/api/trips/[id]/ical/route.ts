@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { attachmentDisposition } from '@/lib/travelmanager/content-disposition';
 import prisma from '@/lib/prisma';
 import { requireAuth } from '@/lib/travelmanager/auth';
 import { requireTripAccess, TripAccessError } from '@/lib/travelmanager/trip-access';
@@ -96,13 +97,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     lines.push('END:VCALENDAR');
 
     const icsContent = lines.join('\r\n');
-    const safeTitle = trip.title.replace(/[^a-zA-Z0-9-_]/g, '-').toLowerCase();
-
     return new NextResponse(icsContent, {
       status: 200,
       headers: {
         'Content-Type': 'text/calendar; charset=utf-8',
-        'Content-Disposition': `attachment; filename="trip-${safeTitle}.ics"`,
+        // Shares the report route's RFC 6266 helper: the old ASCII-only strip
+        // turned a non-Latin trip title into a row of dashes.
+        'Content-Disposition': attachmentDisposition(`trip-${trip.title}.ics`, 'trip'),
       },
     });
   } catch (error) {

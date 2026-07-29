@@ -6,6 +6,7 @@ import { requireAuth } from '@/lib/travelmanager/auth';
 import { requireTripAccess, TripAccessError } from '@/lib/travelmanager/trip-access';
 import { rateLimit } from '@/lib/rate-limit';
 import { validateUUID } from '@/lib/sanitize';
+import { attachmentDisposition } from '@/lib/travelmanager/content-disposition';
 import { formatDate as _formatDate } from '@/lib/date-utils';
 
 function formatDate(date: Date) {
@@ -239,26 +240,16 @@ export async function GET(
 
     const pdfBuffer = Buffer.from(doc.output('arraybuffer'));
 
-    // Trip titles are free text, so they can contain emoji, CJK, Cyrillic —
-    // anything. HTTP header values are ByteStrings: a single code point above
-    // U+00FF makes the Response constructor throw, which the catch below turns
-    // into a 500. The result was that "PDF report" failed permanently for any
-    // trip called e.g. "Tokyo 2026" in Japanese, with no explanation.
-    //
-    // RFC 6266: send a plain ASCII `filename` for old clients plus a UTF-8
-    // `filename*` carrying the real name. fileNameFromDisposition() in
-    // native-fetch.ts already prefers the starred form and decodes it, so the
-    // share sheet gets the proper title for free.
-    const rawName = `trip-report-${trip.title.trim().replace(/\s+/g, '-')}.pdf`;
-    const asciiName =
-      `trip-report-${trip.title.toLowerCase().replace(/[^a-zA-Z0-9-_]+/g, '-').replace(/^-+|-+$/g, '')}.pdf`
-        .replace(/-+\.pdf$/, '.pdf');
-    const safeAscii = asciiName === 'trip-report-.pdf' ? 'trip-report.pdf' : asciiName;
-
+    // Trip titles are free text — emoji, CJK, Cyrillic — and a header value is a
+    // ByteString, so naming the file naively made this route 500. See
+    // attachmentDisposition() for the RFC 6266 pair that fixes it.
     return new NextResponse(pdfBuffer, {
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="${safeAscii}"; filename*=UTF-8''${encodeURIComponent(rawName)}`,
+        'Content-Disposition': attachmentDisposition(
+          `trip-report-${trip.title}.pdf`,
+          'trip-report'
+        ),
       },
     });
   } catch (error) {

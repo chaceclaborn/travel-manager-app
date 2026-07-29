@@ -99,7 +99,7 @@ export async function downloadAndShare({
  * Disposition is generated from a user-controlled trip title, so it can carry
  * slashes or traversal sequences.
  */
-function sanitizeFileName(name: string): string {
+export function sanitizeFileName(name: string): string {
   const cleaned = name
     // Path separators would escape the cache directory.
     .replace(/[/\\]/g, '-')
